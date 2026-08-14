@@ -6,7 +6,7 @@ import { isStaff, requireSession } from "@/lib/auth";
 import { merchantScope } from "@/lib/scope";
 import { money } from "@/lib/utils";
 import { REFUND_STATUS, REFUND_TYPE } from "@/lib/labels";
-import { decideRefund } from "@/lib/actions/refunds";
+import { approveRefund, rejectRefund } from "@/lib/actions/refunds";
 import { Button, Card, Empty, PageHeader, StatusBadge, TableWrap, Tabs, Td, Th } from "@/components/ui";
 
 const TABS = [
@@ -76,10 +76,10 @@ export default async function RefundsPage({
                   <Td>
                     {staff && refund.status === "PENDING" ? (
                       <div className="flex gap-2">
-                        <form action={decideRefund.bind(null, refund.id, "APPROVED")}>
+                        <form action={approveRefund.bind(null, refund.id)}>
                           <Button type="submit">Approve</Button>
                         </form>
-                        <form action={decideRefund.bind(null, refund.id, "REJECTED")}>
+                        <form action={rejectRefund.bind(null, refund.id)}>
                           <Button type="submit" variant="danger">
                             Reject
                           </Button>

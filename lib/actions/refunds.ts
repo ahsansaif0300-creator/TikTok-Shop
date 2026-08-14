@@ -100,3 +100,11 @@ export async function createRefund(formData: FormData) {
   });
   revalidatePath("/", "layout");
 }
+
+export async function approveRefund(refundId: string) {
+  await decideRefund(refundId, "APPROVED");
+}
+
+export async function rejectRefund(refundId: string) {
+  await decideRefund(refundId, "REJECTED");
+}

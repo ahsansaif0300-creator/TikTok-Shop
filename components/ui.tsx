@@ -181,7 +181,7 @@ export function TableWrap({ children }: { children: ReactNode }) {
   );
 }
 
-export function Th({ children, className }: { children: ReactNode; className?: string }) {
+export function Th({ children, className }: { children?: ReactNode; className?: string }) {
   return (
     <th className={cn("border-b border-line px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted", className)}>
       {children}

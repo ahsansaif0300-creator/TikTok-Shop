@@ -373,7 +373,7 @@ async function main() {
     });
     orders.push(order);
 
-    if (["SHIPPED", "DELIVERED", "COMPLETED"].includes(status)) {
+    if (status === OrderStatus.SHIPPED || status === OrderStatus.DELIVERED || status === OrderStatus.COMPLETED) {
       await prisma.shipment.create({
         data: {
           orderId: order.id,
@@ -424,8 +424,11 @@ async function main() {
     }
   }
 
-  const refundable = orders.filter((o) =>
-    [OrderStatus.DELIVERED, OrderStatus.COMPLETED, OrderStatus.SHIPPED].includes(o.status),
+  const refundable = orders.filter(
+    (o) =>
+      o.status === OrderStatus.DELIVERED ||
+      o.status === OrderStatus.COMPLETED ||
+      o.status === OrderStatus.SHIPPED,
   );
   for (let i = 0; i < 6; i++) {
     const order = refundable[i];

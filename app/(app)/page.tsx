@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
-import { merchantScope } from "@/lib/scope";
+import { getDashboardData } from "@/lib/dashboard";
 import { money } from "@/lib/utils";
 import { ORDER_STATUS } from "@/lib/labels";
 import { Card, PageHeader, StatCard, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
@@ -10,59 +9,7 @@ import { RevenueChart } from "@/components/charts";
 
 export default async function DashboardPage() {
   const session = await requireSession();
-  const scope = merchantScope(session);
-  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-
-  const [
-    orderCount,
-    paidOrders,
-    pendingRefunds,
-    pendingPayouts,
-    activeMerchants,
-    recentOrders,
-    chartOrders,
-    lowStock,
-  ] = await Promise.all([
-    prisma.order.count({ where: scope }),
-    prisma.order.aggregate({
-      where: { ...scope, status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] } },
-      _sum: { total: true },
-    }),
-    prisma.refund.count({ where: { status: "PENDING", order: scope } }),
-    prisma.payout.count({ where: { status: { in: ["PENDING", "APPROVED"] }, ...scope } }),
-    prisma.merchant.count({ where: session.role === "MERCHANT" ? { id: session.merchantId ?? "__none__" } : { status: "ACTIVE" } }),
-    prisma.order.findMany({
-      where: scope,
-      include: { merchant: true, customer: true },
-      orderBy: { createdAt: "desc" },
-      take: 8,
-    }),
-    prisma.order.findMany({
-      where: { ...scope, createdAt: { gte: since }, status: { not: "CANCELLED" } },
-      select: { createdAt: true, total: true },
-    }),
-    prisma.product.findMany({
-      where: { ...scope, stock: { lte: 20 }, status: "ACTIVE" },
-      include: { merchant: true },
-      orderBy: { stock: "asc" },
-      take: 6,
-    }),
-  ]);
-
-  const byDay = new Map<string, { revenue: number; orders: number }>();
-  for (let i = 13; i >= 0; i--) {
-    const day = format(new Date(Date.now() - i * 86400000), "MMM d");
-    byDay.set(day, { revenue: 0, orders: 0 });
-  }
-  for (const order of chartOrders) {
-    const day = format(order.createdAt, "MMM d");
-    const current = byDay.get(day);
-    if (current) {
-      current.revenue += order.total;
-      current.orders += 1;
-    }
-  }
-  const chart = [...byDay.entries()].map(([day, value]) => ({ day, ...value }));
+  const data = await getDashboardData(session);
 
   return (
     <div>
@@ -71,25 +18,25 @@ export default async function DashboardPage() {
         subtitle="Live demo workspace with seeded merchants, orders, and payouts."
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Gross merchandise" value={money(paidOrders._sum.total ?? 0)} hint="Excludes unpaid and cancelled" />
-        <StatCard label="Orders" value={String(orderCount)} hint="All statuses" />
+        <StatCard label="Gross merchandise" value={money(data.gmv)} hint="Excludes unpaid and cancelled" />
+        <StatCard label="Orders" value={String(data.orderCount)} hint="All statuses" />
         <StatCard
           label={session.role === "MERCHANT" ? "Pending refunds" : "Active merchants"}
-          value={String(session.role === "MERCHANT" ? pendingRefunds : activeMerchants)}
+          value={String(session.role === "MERCHANT" ? data.pendingRefunds : data.activeMerchants)}
         />
-        <StatCard label="Open payouts" value={String(pendingPayouts)} hint={`${pendingRefunds} refunds in queue`} />
+        <StatCard label="Open payouts" value={String(data.pendingPayouts)} hint={`${data.pendingRefunds} refunds in queue`} />
       </div>
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-medium text-ink">Revenue · last 14 days</h2>
           </div>
-          <RevenueChart data={chart} />
+          <RevenueChart data={data.chart} />
         </Card>
         <Card className="p-5">
           <h2 className="font-medium text-ink">Low stock</h2>
           <div className="mt-4 space-y-3">
-            {lowStock.map((product) => (
+            {data.lowStock.map((product) => (
               <Link key={product.id} href={`/products/${product.id}`} className="flex items-center justify-between rounded-xl bg-[#f6f1e8] px-3 py-2">
                 <div>
                   <p className="text-sm font-medium">{product.title}</p>
@@ -119,7 +66,7 @@ export default async function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {recentOrders.map((order) => (
+            {data.recentOrders.map((order) => (
               <tr key={order.id} className="hover:bg-[#faf6ef]">
                 <Td>
                   <Link href={`/orders/${order.id}`} className="font-medium text-accent hover:underline">
