@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  OPS
+  MERCHANT
+}
+
+enum MerchantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum RefundType {
+  REFUND_ONLY
+  RETURN_AND_REFUND
+  EXCHANGE
+}
+
+enum PayoutStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  PAID
+  REJECTED
+}
+
+enum ShipmentStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  EXCEPTION
+}
+
+enum LedgerType {
+  SALE
+  REFUND
+  FEE
+  PAYOUT
+  ADJUSTMENT
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  passwordHash  String
+  role          Role           @default(OPS)
+  merchantId    String?
+  merchant      Merchant?      @relation(fields: [merchantId], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  reviews       MerchantApplication[] @relation("ApplicationReviewer")
+}
+
+model Plan {
+  id             String     @id @default(cuid())
+  name           String
+  description    String
+  monthlyFee     Float
+  commissionRate Float
+  maxProducts    Int
+  features       String
+  merchants      Merchant[]
+}
+
+model Merchant {
+  id               String                 @id @default(cuid())
+  name             String
+  slug             String                 @unique
+  legalName        String
+  email            String
+  phone            String
+  country          String
+  city             String
+  address          String
+  status           MerchantStatus         @default(PENDING)
+  planId           String
+  plan             Plan                   @relation(fields: [planId], references: [id])
+  availableBalance Float                  @default(0)
+  pendingBalance   Float                  @default(0)
+  rating           Float                  @default(5)
+  reviewCount      Int                    @default(0)
+  bankName         String?
+  bankAccountLast4 String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  users            User[]
+  products         Product[]
+  orders           Order[]
+  payouts          Payout[]
+  ledger           LedgerEntry[]
+  applications     MerchantApplication[]
+}
+
+model MerchantApplication {
+  id           String            @id @default(cuid())
+  businessName String
+  contactName  String
+  email        String
+  phone        String
+  country      String
+  category     String
+  notes        String
+  status       ApplicationStatus @default(PENDING)
+  reviewNote   String?
+  reviewerId   String?
+  reviewer     User?             @relation("ApplicationReviewer", fields: [reviewerId], references: [id])
+  merchantId   String?
+  merchant     Merchant?         @relation(fields: [merchantId], references: [id])
+  createdAt    DateTime          @default(now())
+  reviewedAt   DateTime?
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  products Product[]
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  merchantId  String
+  merchant    Merchant      @relation(fields: [merchantId], references: [id])
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  title       String
+  sku         String        @unique
+  description String
+  price       Float
+  cost        Float
+  stock       Int
+  status      ProductStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  orderItems  OrderItem[]
+  reviews     Review[]
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  address   String
+  city      String
+  country   String
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  merchantId  String
+  merchant    Merchant    @relation(fields: [merchantId], references: [id])
+  customerId  String
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  status      OrderStatus @default(PENDING_PAYMENT)
+  subtotal    Float
+  shippingFee Float
+  tax         Float
+  total       Float
+  cost        Float
+  profit      Float
+  platformFee Float
+  notes       String      @default("")
+  paidAt      DateTime?
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       OrderItem[]
+  shipments   Shipment[]
+  refunds     Refund[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  title     String
+  sku       String
+  quantity  Int
+  price     Float
+  cost      Float
+}
+
+model Carrier {
+  id          String     @id @default(cuid())
+  name        String
+  code        String     @unique
+  trackingUrl String
+  active      Boolean    @default(true)
+  shipments   Shipment[]
+}
+
+model Shipment {
+  id             String         @id @default(cuid())
+  orderId        String
+  order          Order          @relation(fields: [orderId], references: [id])
+  carrierId      String
+  carrier        Carrier        @relation(fields: [carrierId], references: [id])
+  trackingNumber String
+  status         ShipmentStatus @default(PENDING)
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime       @default(now())
+}
+
+model Refund {
+  id           String       @id @default(cuid())
+  refundNumber String       @unique
+  orderId      String
+  order        Order        @relation(fields: [orderId], references: [id])
+  type         RefundType
+  reason       String
+  amount       Float
+  status       RefundStatus @default(PENDING)
+  restock      Boolean      @default(true)
+  adminNote    String?
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+}
+
+model Payout {
+  id           String       @id @default(cuid())
+  payoutNumber String       @unique
+  merchantId   String
+  merchant     Merchant     @relation(fields: [merchantId], references: [id])
+  amount       Float
+  status       PayoutStatus @default(PENDING)
+  bankName     String
+  accountLast4 String
+  note         String?
+  createdAt    DateTime     @default(now())
+  processedAt  DateTime?
+}
+
+model LedgerEntry {
+  id         String     @id @default(cuid())
+  merchantId String
+  merchant   Merchant   @relation(fields: [merchantId], references: [id])
+  type       LedgerType
+  amount     Float
+  reference  String
+  note       String
+  createdAt  DateTime   @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  author    String
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  href      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  detail    String
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String
+}
