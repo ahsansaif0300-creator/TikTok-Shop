@@ -13,6 +13,13 @@ export type SessionUser = {
 
 const COOKIE = "harbor_session";
 
+function cookieSecure() {
+  const raw = process.env.AUTH_COOKIE_SECURE?.trim().toLowerCase();
+  if (raw === "true" || raw === "1") return true;
+  if (raw === "false" || raw === "0") return false;
+  return process.env.NODE_ENV === "production";
+}
+
 function secret() {
   const value = process.env.AUTH_SECRET;
   if (!value) {
@@ -32,7 +39,7 @@ export async function createSession(user: SessionUser) {
   store.set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });

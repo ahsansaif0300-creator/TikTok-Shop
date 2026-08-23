@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "prisma generate && next build",
-    "start": "node scripts/bootstrap.mjs && next start --hostname 0.0.0.0 --port ${PORT:-3000}",
+    "start": "node scripts/start.mjs",
     "lint": "eslint",
     "setup": "prisma generate && prisma db push --skip-generate && tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
@@ -13,6 +13,9 @@
     "verify": "node scripts/verify-phases.mjs",
     "verify:http": "node scripts/verify-phases.mjs --http",
     "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

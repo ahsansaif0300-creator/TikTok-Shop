@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Phase checklist runner for Harbor Commerce OS.
- *   node scripts/verify-phases.mjs           # files + seed + lifecycle (phases 1–6)
+ *   node scripts/verify-phases.mjs           # files + seed + lifecycle (phases 1–7)
  *   node scripts/verify-phases.mjs --http    # also hit a running server (phases 2–7)
  */
 
@@ -144,6 +144,7 @@ async function phase1Static() {
     "lib/scope.ts",
     "proxy.ts",
     "scripts/bootstrap.mjs",
+    "scripts/start.mjs",
     "app/login/page.tsx",
     "next.config.ts",
   ];
@@ -913,9 +914,12 @@ async function phase7Static() {
   console.log("\nPhase 7 — Hosting and preview");
   await check(7, "start script bootstraps DB and binds PORT", () => {
     const pkg = JSON.parse(read("package.json"));
-    assert(pkg.scripts.start.includes("scripts/bootstrap.mjs"), "start does not bootstrap");
-    assert(pkg.scripts.start.includes("0.0.0.0"), "start does not bind all interfaces");
-    assert(pkg.scripts.start.includes("PORT"), "start ignores PORT");
+    assert(pkg.scripts.start.includes("scripts/start.mjs"), "start must use scripts/start.mjs");
+    assert(pkg.engines?.node?.includes("20"), "engines.node must require Node 20+");
+    const start = read("scripts/start.mjs");
+    assert(start.includes("bootstrap.mjs"), "start does not bootstrap");
+    assert(start.includes("0.0.0.0"), "start does not bind all interfaces");
+    assert(start.includes("PORT"), "start ignores PORT");
     const boot = read("scripts/bootstrap.mjs");
     assert(
       boot.includes("prisma") && boot.includes("dev.db"),
@@ -923,19 +927,35 @@ async function phase7Static() {
     );
     assert(boot.includes("prisma/seed.ts") || boot.includes("seed.ts"), "bootstrap does not seed");
   });
+  await check(7, "Session cookie can stay off Secure on plain HTTP", () => {
+    const auth = read("lib/auth.ts");
+    assert(auth.includes("AUTH_COOKIE_SECURE"), "AUTH_COOKIE_SECURE override missing");
+    assert(auth.includes("cookieSecure"), "cookieSecure helper missing");
+    const envExample = read(".env.example");
+    assert(envExample.includes("AUTH_COOKIE_SECURE"), ".env.example missing AUTH_COOKIE_SECURE");
+  });
   await check(7, "Preview hosts are allowed for Server Actions", () => {
     const config = read("next.config.ts");
     assert(config.includes("allowedDevOrigins"), "allowedDevOrigins missing");
     assert(config.includes("*.agent.cvm.dev"), "agent.cvm.dev origin missing");
     assert(config.includes("*.cursorvm.com"), "cursorvm.com origin missing");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
+    assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.ts");
+    assert(!/\.agent\.cvm\.dev/.test(config.replaceAll("*.agent.cvm.dev", "")), "stale agent.cvm.dev hostname");
   });
   await check(7, "README documents Hostinger Node hosting, not PHP public_html", () => {
     const readme = read("README.md");
     assert(readme.includes("Hostinger"), "Hostinger section missing");
     assert(/not run as a normal PHP site|public_html/.test(readme), "PHP warning missing");
     assert(readme.includes("AUTH_SECRET"), "AUTH_SECRET warning missing");
+    assert(readme.includes("SSL") || readme.includes("Let’s Encrypt") || readme.includes("Let's Encrypt"), "SSL note missing");
+    assert(readme.includes("npm run start"), "Hostinger start command should be npm run start");
+    assert(!readme.includes("npm run start -- -p"), "Hostinger start must not pass a second -p");
     assert(exists("PROJECT_PLAN.md"), "PROJECT_PLAN.md missing");
+    assert(exists("USAGE.md"), "USAGE.md missing");
+    const usage = read("USAGE.md");
+    assert(usage.includes("localhost:3000/login"), "USAGE.md missing local login URL");
+    assert(usage.includes("Hostinger"), "USAGE.md missing Hostinger steps");
   });
 }
 

@@ -25,7 +25,7 @@ If a phase checklist would require any of the above, the phase is wrong — do n
 ### Deliverables
 
 - Next.js App Router + TypeScript + Tailwind + Prisma + SQLite
-- `.env.example` with `DATABASE_URL`, `AUTH_SECRET`, `PORT`
+- `.env.example` with `DATABASE_URL`, `AUTH_SECRET`, `PORT` (optional `AUTH_COOKIE_SECURE`)
 - `prisma/schema.prisma` with roles, merchants, orders, refunds, shipments, payouts, ledger
 - JWT cookie session `harbor_session` (`lib/auth.ts`)
 - `proxy.ts` sends anonymous users to `/login`
@@ -33,7 +33,7 @@ If a phase checklist would require any of the above, the phase is wrong — do n
   - Super admin `oscar.d@example.net` / `HarborAdmin!2026`
   - Ops `sarah.b@example.net` / `HarborOps!2026`
   - Merchant Northline Outfitters `iris.p@example.org` / `HarborMerchant!2026`
-- Scripts: `setup`, `db:seed`, `db:reset`, `start` via `scripts/bootstrap.mjs`
+- Scripts: `setup`, `db:seed`, `db:reset`, `start` via `scripts/start.mjs` (bootstraps then `next start`)
 
 ### Checklist
 
@@ -210,9 +210,11 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Deliverables
 
-- `npm run start` bootstraps SQLite if missing, binds `0.0.0.0:${PORT:-3000}`
-- `next.config.ts` allows Cursor preview hosts for Server Actions
-- README Hostinger (Business/Cloud Node app or VPS) — not PHP `public_html`
+- `npm run start` runs `scripts/start.mjs`: bootstrap SQLite if missing, then bind `0.0.0.0:${PORT:-3000}`
+- `package.json` `engines.node` is `>=20`
+- `AUTH_COOKIE_SECURE` can override Secure cookies for plain-HTTP `next start`
+- `next.config.ts` allows Cursor preview hosts (`*.agent.cvm.dev`, `*.cursorvm.com`) — no stale pod hostnames
+- README + `USAGE.md` Hostinger (Business/Cloud Node app or VPS) — not PHP `public_html`
 - `npm run lint` and `npm run build` succeed
 - `npm run verify` and `npm run verify:http` succeed
 
@@ -256,7 +258,7 @@ Change `AUTH_SECRET` and these passwords before inviting real users.
 | Command | What it covers |
 | --- | --- |
 | `npm run setup` | Prisma client, schema push, seed |
-| `npm run verify` | Phases 1–6: files, forbidden product, seed, order/refund/payout/application lifecycle |
+| `npm run verify` | Phases 1–7: files, forbidden product, seed, order/refund/payout/application lifecycle, hosting scripts |
 | `npm run verify:http` | Phase 2–7 routes, auth redirects, role HTML |
 | `npm run lint` | ESLint |
 | `npm run build` | Production compile |

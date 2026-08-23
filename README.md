@@ -2,6 +2,8 @@
 
 A professional multi-merchant commerce operations dashboard. It covers the legitimate parts of a seller-center style admin — orders, catalog, onboarding, refunds, shipping, and bank payouts — without marketplace impersonation, fake orders, or MLM mechanics.
 
+**Day-to-day usage (local, roles, ops loop, Hostinger):** see [`USAGE.md`](./USAGE.md).
+
 ## What you get
 
 - **Roles:** Super admin, operations staff, and merchant (store-scoped)
@@ -32,9 +34,11 @@ npm run setup
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000/login](http://localhost:3000/login).
 
 `npm run setup` generates the Prisma client, creates the SQLite database, and loads demo merchants, products, orders, refunds, and payouts.
+
+Requires **Node.js 20 or newer**.
 
 ## Phases and verification
 
@@ -75,7 +79,7 @@ If you bought it somewhere else:
 1. In Hostinger hPanel open **Domains** → your domain → **DNS / Nameservers**.
 2. Either set Hostinger nameservers, or add an **A record** `@` to the hosting IP Hostinger shows you.
 3. Wait until the domain resolves (often 15 minutes to a few hours).
-4. Turn on **SSL** (Let’s Encrypt) in hPanel so you can use `https://your-domain.com`.
+4. Turn on **SSL** (Let’s Encrypt) in hPanel so you can use `https://your-domain.com`. Session cookies are **Secure** in production unless you set `AUTH_COOKIE_SECURE=false` for plain HTTP.
 
 You can send the domain name anytime and we can fill it into env/docs. You do not need to put the domain in the source code.
 
@@ -90,13 +94,15 @@ You can send the domain name anytime and we can fill it into env/docs. You do no
    - Node.js: **20** or **22**
    - Install: `npm ci`
    - Build: `npm run build`
-   - Start: `npm run start -- -p $PORT`
+   - Start: `npm run start`
 6. Environment variables in the app settings:
 
 ```
 DATABASE_URL=file:./dev.db
 AUTH_SECRET=a-long-random-string-you-generate
 ```
+
+Generate a new `AUTH_SECRET` for production. Do not reuse the local example value.
 
 7. Deploy. The first start creates the SQLite database and demo accounts if the DB file is missing.
 8. Open `https://your-domain.com/login`.
@@ -127,6 +133,8 @@ pm2 startup
 Put Nginx in front of port 3000 and issue SSL with Certbot for your domain. Hostinger’s VPS docs cover Nginx + Let’s Encrypt.
 
 ### Daily use
+
+Follow [`USAGE.md`](./USAGE.md). Short version:
 
 1. Visit `https://your-domain.com/login`
 2. Sign in with a demo account (or change the admin password under **Profile**)
