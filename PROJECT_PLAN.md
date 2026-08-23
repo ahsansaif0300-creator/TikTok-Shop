@@ -191,11 +191,12 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Checklist
 
-- [ ] Seed has ledger rows and payouts in PAID / PENDING / APPROVED
-- [ ] Paying a payout decrements `availableBalance` and writes a PAYOUT ledger row
-- [ ] Requesting more than available balance is rejected
-- [ ] Ops cannot open `/users` or `/settings`
-- [ ] Merchant payouts are scoped to their store
+- [x] Seed has ledger rows and payouts in PAID / PENDING / APPROVED
+- [x] Paying a payout decrements `availableBalance` and writes a PAYOUT ledger row
+- [x] Requesting more than available balance is rejected
+- [x] Ops cannot open `/users` or `/settings`
+- [x] Merchant payouts are scoped to their store
+- [x] Pending payouts cannot skip straight to paid; paid payouts cannot be paid twice
 
 ### Verify
 
