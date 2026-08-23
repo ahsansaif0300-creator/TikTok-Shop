@@ -20,6 +20,7 @@ function sqlitePath() {
 
 const dbFile = sqlitePath();
 process.env.DATABASE_URL = `file:${dbFile}`;
+const force = process.env.HARBOR_FORCE_DB === "1";
 
 function run(bin, args) {
   const result = spawnSync(process.execPath, [bin, ...args], {
@@ -33,8 +34,8 @@ function run(bin, args) {
   }
 }
 
-if (!existsSync(dbFile)) {
-  console.log("No database found. Creating schema and demo data…");
+if (!existsSync(dbFile) || force) {
+  console.log(force ? "Rebuilding SQLite database…" : "No database found. Creating schema and demo data…");
   const prismaBin = require.resolve("prisma/build/index.js");
   const tsxBin = require.resolve("tsx/dist/cli.mjs");
   run(prismaBin, ["db", "push", "--skip-generate", "--accept-data-loss"]);

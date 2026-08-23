@@ -924,7 +924,7 @@ async function phase7Static() {
     assert(start.includes("PORT"), "start ignores PORT");
     assert(start.includes("-p") && start.includes("resolvePort"), "start must accept Hostinger -p PORT");
     const ensure = read("lib/ensure-db.ts");
-    assert(ensure.includes("pushAndSeed") || ensure.includes("db push"), "ensure-db does not create SQLite");
+    assert(ensure.includes("bootstrap.mjs"), "ensure-db does not run scripts/bootstrap.mjs");
     assert(read("instrumentation.ts").includes("ensureDatabase"), "instrumentation does not prepare the database");
     const boot = read("scripts/bootstrap.mjs");
     assert(

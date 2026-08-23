@@ -1,37 +1,32 @@
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { createRequire } from "node:module";
 import path from "node:path";
 import { applyRuntimeEnv, sqliteFilePath } from "./runtime-env";
 
-const require = createRequire(import.meta.url);
-
-function run(bin: string, args: string[]) {
-  const result = spawnSync(process.execPath, [bin, ...args], {
+function runBootstrap(force = false) {
+  applyRuntimeEnv();
+  const script = path.join(process.cwd(), "scripts", "bootstrap.mjs");
+  console.log("[harbor] Creating schema and demo accounts…");
+  const result = spawnSync(process.execPath, [script], {
     stdio: "inherit",
-    env: process.env,
+    env: { ...process.env, ...(force ? { HARBOR_FORCE_DB: "1" } : {}) },
     shell: false,
     cwd: process.cwd(),
   });
   if (result.status !== 0) {
-    throw new Error(`Command failed: ${path.basename(bin)} ${args.join(" ")}`);
+    throw new Error("Database bootstrap failed. Check Hostinger Runtime logs.");
   }
 }
 
 export function pushAndSeed() {
-  applyRuntimeEnv();
-  const prismaBin = require.resolve("prisma/build/index.js");
-  const tsxBin = require.resolve("tsx/dist/cli.mjs");
-  console.log("[harbor] Creating schema and demo accounts…");
-  run(prismaBin, ["db", "push", "--skip-generate", "--accept-data-loss"]);
-  run(tsxBin, [path.join(process.cwd(), "prisma", "seed.ts")]);
+  runBootstrap();
 }
 
 export async function ensureDatabase() {
   applyRuntimeEnv();
   const dbFile = sqliteFilePath();
   if (!existsSync(dbFile)) {
-    pushAndSeed();
+    runBootstrap();
   }
 
   const { prisma } = await import("./db");
@@ -40,7 +35,7 @@ export async function ensureDatabase() {
     if (!user) {
       await prisma.$disconnect();
       console.log("[harbor] Database has no users; seeding demo accounts…");
-      pushAndSeed();
+      runBootstrap(true);
     }
   } catch (error) {
     console.error("[harbor] Database is not ready; rebuilding SQLite.", error);
@@ -49,6 +44,6 @@ export async function ensureDatabase() {
     } catch {
       /* ignore */
     }
-    pushAndSeed();
+    runBootstrap(true);
   }
 }
