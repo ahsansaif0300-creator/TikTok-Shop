@@ -28,9 +28,9 @@ export default async function CategoriesPage() {
             <tbody>
               {categories.length === 0 ? (
                 <tr>
-                  <Td className="text-muted">No categories yet.</Td>
-                  <Td></Td>
-                  <Td></Td>
+                  <Td>No categories yet.</Td>
+                  <Td>—</Td>
+                  <Td>—</Td>
                 </tr>
               ) : (
                 categories.map((category) => (
