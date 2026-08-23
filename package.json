@@ -10,6 +10,8 @@
     "setup": "prisma generate && prisma db push --skip-generate && tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset --skip-generate && tsx prisma/seed.ts",
+    "verify": "node scripts/verify-phases.mjs",
+    "verify:http": "node scripts/verify-phases.mjs --http",
     "postinstall": "prisma generate"
   },
   "prisma": {

@@ -36,6 +36,21 @@ Open [http://localhost:3000](http://localhost:3000).
 
 `npm run setup` generates the Prisma client, creates the SQLite database, and loads demo merchants, products, orders, refunds, and payouts.
 
+## Phases and verification
+
+Work is split into seven phases in [`PROJECT_PLAN.md`](./PROJECT_PLAN.md). After setup:
+
+```bash
+npm run verify        # files, seed, order/refund/payout lifecycle
+npm run lint
+npm run build
+npm run dev           # or: npm run start
+# in another terminal, with the app listening:
+npm run verify:http   # login wall, role routes, merchant scoping
+```
+
+A phase is done only when its checklist in `PROJECT_PLAN.md` passes those commands.
+
 ## Stack
 
 Next.js (App Router), TypeScript, Tailwind CSS, Prisma, SQLite.
