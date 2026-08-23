@@ -69,11 +69,13 @@ npm run verify
 
 ### Checklist
 
-- [ ] Super admin sees Team and Settings
-- [ ] Ops does **not** see Team or Settings
-- [ ] Merchant does **not** see Merchants, Applications, Plans, Customers, Categories, Team, Settings
-- [ ] Dashboard numbers are scoped for merchants (`lib/scope.ts`)
-- [ ] Unread notification count appears in the shell
+- [x] Super admin sees Team and Settings
+- [x] Ops does **not** see Team or Settings
+- [x] Merchant does **not** see Merchants, Applications, Plans, Customers, Categories, Team, Settings
+- [x] Dashboard numbers are scoped for merchants (`lib/scope.ts`)
+- [x] Unread notification count appears in the shell
+- [x] Header shows store name for merchants and “All merchants” for staff
+- [x] Mobile menu opens the same role-filtered nav
 
 ### Verify
 
