@@ -12,27 +12,39 @@ export async function loginAction(formData: FormData) {
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  let user: Awaited<ReturnType<typeof prisma.user.findUnique>> | null = null;
   try {
     await ensureDatabase();
+  } catch (error) {
+    console.error("[harbor] login database failed", error);
+    redirect("/login?error=setup");
+  }
+
+  let user: Awaited<ReturnType<typeof prisma.user.findUnique>> | null = null;
+  try {
     user = await prisma.user.findUnique({ where: { email } });
-    if (user && (await bcrypt.compare(password, user.passwordHash))) {
-      await createSession({
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        merchantId: user.merchantId,
-      });
-    } else {
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       user = null;
     }
   } catch (error) {
-    console.error("[harbor] login failed", error);
+    console.error("[harbor] login query failed", error);
     redirect("/login?error=setup");
   }
 
   if (!user) redirect("/login?error=1");
+
+  try {
+    await createSession({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      merchantId: user.merchantId,
+    });
+  } catch (error) {
+    console.error("[harbor] login session failed", error);
+    redirect("/login?error=setup");
+  }
+
   redirect("/");
 }
 
@@ -52,9 +64,7 @@ export async function updateProfileAction(formData: FormData) {
     where: { id: session.userId },
     data: {
       name,
-      ...(password
-        ? { passwordHash: await bcrypt.hash(password, 10) }
-        : {}),
+      ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
     },
   });
   await createSession({ ...session, name });

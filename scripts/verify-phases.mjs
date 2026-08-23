@@ -147,6 +147,7 @@ async function phase1Static() {
     "scripts/start.mjs",
     "instrumentation.ts",
     "lib/ensure-db.ts",
+    "prisma/demo.sqlite",
     "app/login/page.tsx",
     "next.config.ts",
   ];
@@ -924,7 +925,9 @@ async function phase7Static() {
     assert(start.includes("PORT"), "start ignores PORT");
     assert(start.includes("-p") && start.includes("resolvePort"), "start must accept Hostinger -p PORT");
     const ensure = read("lib/ensure-db.ts");
-    assert(ensure.includes("bootstrap.mjs"), "ensure-db does not run scripts/bootstrap.mjs");
+    assert(ensure.includes("installDemoDb") || ensure.includes("demo.sqlite"), "ensure-db does not install packed SQLite");
+    assert(exists("prisma/demo.sqlite"), "prisma/demo.sqlite missing");
+    assert(exists("scripts/copy-demo-db.mjs"), "scripts/copy-demo-db.mjs missing");
     assert(read("instrumentation.ts").includes("ensureDatabase"), "instrumentation does not prepare the database");
     const boot = read("scripts/bootstrap.mjs");
     assert(
