@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { ensureDatabase } from "@/lib/ensure-db";
 import { clearSession, createSession, requireSession } from "@/lib/auth";
 
 export async function loginAction(formData: FormData) {
@@ -11,18 +12,27 @@ export async function loginAction(formData: FormData) {
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    redirect("/login?error=1");
+  let user: Awaited<ReturnType<typeof prisma.user.findUnique>> | null = null;
+  try {
+    await ensureDatabase();
+    user = await prisma.user.findUnique({ where: { email } });
+    if (user && (await bcrypt.compare(password, user.passwordHash))) {
+      await createSession({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        merchantId: user.merchantId,
+      });
+    } else {
+      user = null;
+    }
+  } catch (error) {
+    console.error("[harbor] login failed", error);
+    redirect("/login?error=setup");
   }
 
-  await createSession({
-    userId: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    merchantId: user.merchantId,
-  });
+  if (!user) redirect("/login?error=1");
   redirect("/");
 }
 

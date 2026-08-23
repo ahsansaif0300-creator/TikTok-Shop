@@ -120,6 +120,7 @@ Change these under **Profile** before you invite anyone.
 
 - **Build failed:** open **Deployments** and read the log. Node must be 20+.
 - **Site not reachable / 403:** do not edit `public_html/.htaccess`. Redeploy so Hostinger regenerates it.
+- **“This page couldn’t load” after Sign in:** the app could not open SQLite or the login action was blocked. Redeploy this latest `main` branch, confirm Environment variables, then Restart the Node process. Runtime logs will show `[harbor] login failed` if the database is still missing.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
 - **Empty data after every deploy:** SQLite lives in the app folder and can reset on redeploy. Fine for a demo. For real orders, move to a VPS disk or hosted Postgres later.
 

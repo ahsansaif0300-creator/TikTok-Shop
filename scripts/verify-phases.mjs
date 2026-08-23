@@ -145,6 +145,8 @@ async function phase1Static() {
     "proxy.ts",
     "scripts/bootstrap.mjs",
     "scripts/start.mjs",
+    "instrumentation.ts",
+    "lib/ensure-db.ts",
     "app/login/page.tsx",
     "next.config.ts",
   ];
@@ -921,6 +923,9 @@ async function phase7Static() {
     assert(start.includes("0.0.0.0"), "start does not bind all interfaces");
     assert(start.includes("PORT"), "start ignores PORT");
     assert(start.includes("-p") && start.includes("resolvePort"), "start must accept Hostinger -p PORT");
+    const ensure = read("lib/ensure-db.ts");
+    assert(ensure.includes("bootstrap.mjs"), "ensure-db does not run scripts/bootstrap.mjs");
+    assert(read("instrumentation.ts").includes("ensureDatabase"), "instrumentation does not prepare the database");
     const boot = read("scripts/bootstrap.mjs");
     assert(
       boot.includes("prisma") && boot.includes("dev.db"),
