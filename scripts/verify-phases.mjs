@@ -592,12 +592,19 @@ async function phase4Static() {
     }
     const pages = [
       "app/(app)/merchants/page.tsx",
+      "app/(app)/merchants/[id]/page.tsx",
       "app/(app)/merchants/applications/page.tsx",
       "app/(app)/merchants/plans/page.tsx",
     ];
     for (const file of pages) {
       assert(read(file).includes("isStaff"), `${file} is not staff-gated`);
     }
+    const actions = read("lib/actions/merchants.ts");
+    assert(actions.includes('decision !== "APPROVED"'), "Approve must be explicit");
+    assert(actions.includes("createApplication"), "Inbound application intake missing");
+    assert(actions.includes("Assigned plan"), "Plan assignment is not audited");
+    assert(read("app/(app)/merchants/applications/page.tsx").includes("Log inbound seller"), "Intake form missing");
+    assert(read("app/(app)/merchants/plans/page.tsx").includes("merchants"), "Plans do not list stores");
   });
 }
 
@@ -660,6 +667,32 @@ async function phase4Database(prisma) {
 
     await prisma.merchantApplication.delete({ where: { id: application.id } });
     await prisma.merchant.delete({ where: { id: merchant.id } });
+  });
+
+  await check(4, "Rejecting an application does not create a merchant", async () => {
+    const before = await prisma.merchant.count();
+    const application = await prisma.merchantApplication.create({
+      data: {
+        businessName: "VERIFY Reject Co",
+        contactName: "Verify Reject",
+        email: `verify.reject.${Date.now()}@example.test`,
+        phone: "+1-555-0009",
+        country: "US",
+        category: "Test",
+        notes: "Should stay rejected",
+        status: "PENDING",
+      },
+    });
+    await prisma.merchantApplication.update({
+      where: { id: application.id },
+      data: { status: "REJECTED", reviewNote: "Not a fit", reviewedAt: new Date() },
+    });
+    const updated = await prisma.merchantApplication.findUnique({ where: { id: application.id } });
+    assert(updated.status === "REJECTED", "Application was not rejected");
+    assert(!updated.merchantId, "Rejected application linked a merchant");
+    const after = await prisma.merchant.count();
+    assert(after === before, "Reject created a merchant");
+    await prisma.merchantApplication.delete({ where: { id: application.id } });
   });
 }
 
@@ -1048,6 +1081,25 @@ async function phaseHttp(prisma) {
     });
     const ok = await getWithCookie(`/orders/${own.id}`, merchantCookie);
     assert(ok.status === 200, `Own order returned ${ok.status}`);
+  });
+  await check(4, "Staff merchant/application/plan pages load with seeded sellers", async () => {
+    const list = await pageText("/merchants", adminCookie);
+    assert(list.res.status === 200, `/merchants ${list.res.status}`);
+    assert(list.text.includes("Northline Outfitters"), "Merchant list missing Northline");
+    assert(list.text.includes("BrightByte") || list.text.includes("Suspended"), "Suspended merchant missing");
+    const apps = await pageText("/merchants/applications", adminCookie);
+    assert(apps.res.status === 200, `/merchants/applications ${apps.res.status}`);
+    assert(apps.text.includes("Solstice") || apps.text.includes("Greenfield"), "Pending applications missing");
+    assert(apps.text.includes("Log inbound seller"), "Inbound intake missing");
+    const plans = await pageText("/merchants/plans", adminCookie);
+    assert(plans.res.status === 200, `/merchants/plans ${plans.res.status}`);
+    assert(plans.text.includes("Starter") && plans.text.includes("Growth") && plans.text.includes("Scale"), "Plans missing");
+    const sample = await prisma.merchant.findFirst({ where: { slug: "northline-outfitters" } });
+    const detail = await getWithCookie(`/merchants/${sample.id}`, adminCookie);
+    assert(detail.status === 200, `Merchant detail ${detail.status}`);
+    const blocked = await getWithCookie(`/merchants/${sample.id}`, merchantCookie);
+    assert([301, 302, 303, 307, 308].includes(blocked.status), `Merchant opened store admin page (${blocked.status})`);
+    assert(locationPath(blocked) === "/", "Merchant was not sent home from store admin");
   });
   await check(5, "Merchant /products HTML is store-scoped", async () => {
     const { text } = await pageText("/products", merchantCookie);

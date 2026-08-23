@@ -15,6 +15,9 @@ function slugify(value: string) {
 export async function setMerchantStatus(merchantId: string, status: MerchantStatus) {
   const session = await requireSession();
   if (!isStaff(session.role)) throw new Error("Forbidden");
+  if (status !== "ACTIVE" && status !== "SUSPENDED" && status !== "PENDING") {
+    throw new Error("Invalid merchant status");
+  }
   await prisma.merchant.update({ where: { id: merchantId }, data: { status } });
   await prisma.auditLog.create({
     data: {
@@ -33,8 +36,46 @@ export async function assignPlan(formData: FormData) {
   if (!isStaff(session.role)) throw new Error("Forbidden");
   const merchantId = String(formData.get("merchantId") ?? "");
   const planId = String(formData.get("planId") ?? "");
-  await prisma.merchant.update({ where: { id: merchantId }, data: { planId } });
+  const plan = await prisma.plan.findUnique({ where: { id: planId } });
+  if (!merchantId || !plan) return;
+  await prisma.merchant.update({ where: { id: merchantId }, data: { planId: plan.id } });
+  await prisma.auditLog.create({
+    data: {
+      userId: session.userId,
+      action: "merchant:plan",
+      entity: "Merchant",
+      entityId: merchantId,
+      detail: `Assigned plan ${plan.name}`,
+    },
+  });
   revalidatePath(`/merchants/${merchantId}`);
+}
+
+export async function createApplication(formData: FormData) {
+  const session = await requireSession();
+  if (!isStaff(session.role)) throw new Error("Forbidden");
+  const businessName = String(formData.get("businessName") ?? "").trim();
+  const contactName = String(formData.get("contactName") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const country = String(formData.get("country") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  if (!businessName || !contactName || !email || !country || !category) return;
+
+  await prisma.merchantApplication.create({
+    data: { businessName, contactName, email, phone, country, category, notes },
+  });
+  await prisma.auditLog.create({
+    data: {
+      userId: session.userId,
+      action: "application:create",
+      entity: "MerchantApplication",
+      entityId: email,
+      detail: `Logged inbound application for ${businessName}`,
+    },
+  });
+  revalidatePath("/merchants/applications");
 }
 
 export async function reviewApplication(formData: FormData) {
@@ -56,9 +97,20 @@ export async function reviewApplication(formData: FormData) {
         reviewedAt: new Date(),
       },
     });
+    await prisma.auditLog.create({
+      data: {
+        userId: session.userId,
+        action: "application:REJECTED",
+        entity: "MerchantApplication",
+        entityId: id,
+        detail: `Rejected ${application.businessName}`,
+      },
+    });
     revalidatePath("/", "layout");
     return;
   }
+
+  if (decision !== "APPROVED") return;
 
   const starter = await prisma.plan.findFirst({ orderBy: { monthlyFee: "asc" } });
   if (!starter) throw new Error("No seller plan configured");
@@ -71,8 +123,8 @@ export async function reviewApplication(formData: FormData) {
       email: application.email,
       phone: application.phone,
       country: application.country,
-      city: "",
-      address: "",
+      city: application.country,
+      address: "Onboarding — address pending",
       status: "ACTIVE",
       planId: starter.id,
     },
@@ -86,6 +138,15 @@ export async function reviewApplication(formData: FormData) {
       reviewerId: session.userId,
       reviewedAt: new Date(),
       merchantId: merchant.id,
+    },
+  });
+  await prisma.auditLog.create({
+    data: {
+      userId: session.userId,
+      action: "application:APPROVED",
+      entity: "MerchantApplication",
+      entityId: id,
+      detail: `Approved ${application.businessName} on ${starter.name}`,
     },
   });
   revalidatePath("/", "layout");

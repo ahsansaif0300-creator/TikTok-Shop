@@ -69,8 +69,11 @@ export default async function MerchantsPage({
                     <StatusBadge value={merchant.status} labels={MERCHANT_STATUS} />
                   </Td>
                   <Td>
-                    {merchant._count.products} products
+                    {merchant._count.products} / {merchant.plan.maxProducts} products
                     <p className="text-xs text-muted">{merchant._count.orders} orders</p>
+                    {merchant._count.products > merchant.plan.maxProducts ? (
+                      <p className="text-xs font-medium text-amber-800">Over plan cap</p>
+                    ) : null}
                   </Td>
                   <Td>{money(merchant.availableBalance)}</Td>
                   <Td>{money(merchant.pendingBalance)}</Td>

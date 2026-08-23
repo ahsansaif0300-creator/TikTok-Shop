@@ -128,10 +128,10 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Deliverables
 
-- `/merchants` list + `/merchants/[id]`
-- `/merchants/applications` approve (creates merchant on Starter) / reject
-- `/merchants/plans` monthly fee + sales commission + product cap
-- Staff-only pages and actions
+- `/merchants` list + `/merchants/[id]` (activate/suspend, plan, catalog cap, ledger)
+- `/merchants/applications` staff intake + approve (creates merchant on Starter) / reject
+- `/merchants/plans` monthly fee + sales commission + product cap + stores on each plan
+- Staff-only pages and actions (audited)
 
 ### Checklist
 
