@@ -41,7 +41,13 @@ export default async function LoginPage({
         <div className="w-full max-w-md rounded-3xl border border-line bg-card p-8 shadow-[0_20px_50px_rgba(28,25,21,0.06)]">
           <h2 className="text-2xl font-semibold text-ink">Sign in</h2>
           <p className="mt-1 text-sm text-muted">Use a demo workspace account to explore Harbor.</p>
-          {error ? (
+          {error === "setup" ? (
+            <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
+              Harbor could not open the workspace database. In Hostinger, set{" "}
+              <code>DATABASE_URL=file:./dev.db</code> and a real <code>AUTH_SECRET</code>, then
+              Redeploy. Check Runtime logs if it still fails.
+            </p>
+          ) : error ? (
             <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
               Email or password is incorrect.
             </p>
