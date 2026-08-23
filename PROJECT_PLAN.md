@@ -163,10 +163,12 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Checklist
 
-- [ ] Seed has products, categories, reviews, customers
-- [ ] Merchant product saves cannot target another store
-- [ ] Categories and customers routes redirect merchants home
-- [ ] Low-stock products appear on the dashboard
+- [x] Seed has products, categories, reviews, customers
+- [x] Merchant product saves cannot target another store
+- [x] Categories and customers routes redirect merchants home
+- [x] Low-stock products appear on the dashboard
+- [x] Plan product cap is enforced on create
+- [x] Merchant cannot open another store’s product
 
 ### Verify
 
