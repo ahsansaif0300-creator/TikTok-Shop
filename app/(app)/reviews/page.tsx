@@ -15,7 +15,7 @@ export default async function ReviewsPage() {
 
   return (
     <div>
-      <PageHeader title="Reviews" subtitle="Customer product reviews from real shoppers in the seed data." />
+      <PageHeader title="Reviews" subtitle="Product reviews from real shoppers, scoped to your catalog." />
       <Card>
         {reviews.length === 0 ? (
           <Empty title="No reviews" body="Reviews appear after completed purchases." />

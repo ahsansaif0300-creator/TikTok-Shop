@@ -714,9 +714,13 @@ async function phase5Static() {
       assert(exists(file), `Missing ${file}`);
     }
     const save = read("lib/actions/catalog.ts");
-    assert(save.includes('session.role === "MERCHANT" ? session.merchantId'), "Merchant product scope missing");
+    assert(save.includes("catalogMerchantId"), "Merchant product scope missing");
+    assert(save.includes("maxProducts"), "Plan catalog cap is not enforced");
+    assert(save.includes("sku"), "SKU uniqueness missing");
+    assert(read("lib/scope.ts").includes("catalogMerchantId"), "catalogMerchantId helper missing");
     assert(read("app/(app)/categories/page.tsx").includes("isStaff"), "Categories not staff-gated");
     assert(read("app/(app)/customers/page.tsx").includes("isStaff"), "Customers not staff-gated");
+    assert(read("app/(app)/products/page.tsx").includes("LOW_STOCK"), "Low-stock catalog filter missing");
   });
 }
 
@@ -735,6 +739,57 @@ async function phase5Database(prisma) {
     const scope = read("lib/scope.ts");
     assert(scope.includes("merchantId: session.merchantId"), "merchantScope does not pin store id");
     assert(scope.includes("canAccessMerchant"), "canAccessMerchant missing");
+    assert(scope.includes("catalogMerchantId"), "catalogMerchantId missing");
+  });
+  await check(5, "Plan product cap blocks extra SKUs", async () => {
+    const plan = await prisma.plan.create({
+      data: {
+        name: "VERIFY Cap",
+        description: "One SKU only",
+        monthlyFee: 1,
+        commissionRate: 0.1,
+        maxProducts: 1,
+        features: "[]",
+      },
+    });
+    const merchant = await prisma.merchant.create({
+      data: {
+        name: "VERIFY Cap Store",
+        slug: `verify-cap-${Date.now()}`,
+        legalName: "VERIFY Cap LLC",
+        email: "verify-cap@example.test",
+        phone: "+1-555-0010",
+        country: "US",
+        city: "Test",
+        address: "10 Verify Way",
+        status: "ACTIVE",
+        planId: plan.id,
+      },
+    });
+    const category = await prisma.category.findFirst();
+    await prisma.product.create({
+      data: {
+        merchantId: merchant.id,
+        categoryId: category.id,
+        title: "VERIFY Only SKU",
+        sku: `VERIFY-CAP-${Date.now()}`,
+        description: "Cap fixture",
+        price: 10,
+        cost: 2,
+        stock: 3,
+        status: "ACTIVE",
+      },
+    });
+    const counted = await prisma.product.count({ where: { merchantId: merchant.id } });
+    const loaded = await prisma.merchant.findUnique({
+      where: { id: merchant.id },
+      include: { plan: true, _count: { select: { products: true } } },
+    });
+    assert(counted >= loaded.plan.maxProducts, "Cap fixture should be at max");
+    assert(loaded._count.products >= loaded.plan.maxProducts, "Count under cap");
+    await prisma.product.deleteMany({ where: { merchantId: merchant.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+    await prisma.plan.delete({ where: { id: plan.id } });
   });
 }
 
@@ -1105,6 +1160,35 @@ async function phaseHttp(prisma) {
     const { text } = await pageText("/products", merchantCookie);
     assert(text.includes("Trail Fleece") || text.includes("Alpine Daypack") || text.includes("Merino"), "Northline products missing");
     assert(!text.includes("Vitamin C Serum"), "Merchant products leaked Lumen catalog");
+  });
+  await check(5, "Merchant cannot open another store's product; staff catalog pages load", async () => {
+    const foreign = await prisma.product.findFirst({
+      where: { merchant: { slug: { not: "northline-outfitters" } } },
+    });
+    assert(foreign, "Need a non-Northline product");
+    const denied = await getWithCookie(`/products/${foreign.id}`, merchantCookie);
+    assert(denied.status === 404, `Foreign product returned ${denied.status}`);
+    const own = await prisma.product.findFirst({
+      where: { merchant: { slug: "northline-outfitters" } },
+    });
+    const allowed = await getWithCookie(`/products/${own.id}`, merchantCookie);
+    assert(allowed.status === 200, `Own product returned ${allowed.status}`);
+    const createPage = await getWithCookie("/products/new", merchantCookie);
+    assert(createPage.status === 200, `/products/new ${createPage.status}`);
+    const reviews = await pageText("/reviews", merchantCookie);
+    assert(reviews.res.status === 200, `/reviews ${reviews.res.status}`);
+    assert(!reviews.text.includes("Vitamin C Serum"), "Merchant reviews leaked Lumen");
+    const categories = await pageText("/categories", adminCookie);
+    assert(categories.res.status === 200, `/categories ${categories.res.status}`);
+    assert(categories.text.includes("Apparel"), "Categories missing Apparel");
+    const customers = await pageText("/customers", adminCookie);
+    assert(customers.res.status === 200, `/customers ${customers.res.status}`);
+    assert(customers.text.includes("Elena") || customers.text.includes("@shopper.example"), "Customers missing seed shoppers");
+    const shopper = await prisma.customer.findFirst();
+    const customerPage = await getWithCookie(`/customers/${shopper.id}`, adminCookie);
+    assert(customerPage.status === 200, `Customer detail ${customerPage.status}`);
+    const merchantCustomer = await getWithCookie(`/customers/${shopper.id}`, merchantCookie);
+    assert([301, 302, 303, 307, 308].includes(merchantCustomer.status), "Merchant opened a customer record");
   });
 }
 

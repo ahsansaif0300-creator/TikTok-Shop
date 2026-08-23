@@ -5,15 +5,24 @@ import { revalidatePath } from "next/cache";
 import type { ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
-import { canAccessMerchant } from "@/lib/scope";
+import { canAccessMerchant, catalogMerchantId } from "@/lib/scope";
+
+const PRODUCT_STATUSES: ProductStatus[] = ["ACTIVE", "DRAFT", "ARCHIVED"];
+
+function fail(path: string, code: string): never {
+  redirect(`${path}?error=${code}`);
+}
 
 export async function saveProduct(formData: FormData) {
   const session = await requireSession();
   const id = String(formData.get("id") ?? "");
-  const merchantId =
-    session.role === "MERCHANT" ? session.merchantId : String(formData.get("merchantId") ?? "");
-  if (!merchantId || !canAccessMerchant(session, merchantId)) return;
+  const merchantId = catalogMerchantId(session, String(formData.get("merchantId") ?? ""));
+  const returnPath = id ? `/products/${id}` : "/products/new";
+  if (!merchantId || !canAccessMerchant(session, merchantId)) {
+    fail(returnPath, "forbidden");
+  }
 
+  const statusRaw = String(formData.get("status") ?? "ACTIVE") as ProductStatus;
   const data = {
     merchantId,
     categoryId: String(formData.get("categoryId") ?? ""),
@@ -23,15 +32,28 @@ export async function saveProduct(formData: FormData) {
     price: Number(formData.get("price") ?? 0),
     cost: Number(formData.get("cost") ?? 0),
     stock: Number(formData.get("stock") ?? 0),
-    status: (String(formData.get("status") ?? "ACTIVE") as ProductStatus) || "ACTIVE",
+    status: PRODUCT_STATUSES.includes(statusRaw) ? statusRaw : "DRAFT",
   };
-  if (!data.title || !data.sku || !data.categoryId) return;
+  if (!data.title || !data.sku || !data.categoryId) fail(returnPath, "invalid");
+  if (!Number.isFinite(data.price) || data.price < 0) fail(returnPath, "invalid");
+  if (!Number.isFinite(data.cost) || data.cost < 0) fail(returnPath, "invalid");
+  if (!Number.isFinite(data.stock) || data.stock < 0) fail(returnPath, "invalid");
+  data.stock = Math.floor(data.stock);
+
+  const skuOwner = await prisma.product.findUnique({ where: { sku: data.sku } });
+  if (skuOwner && skuOwner.id !== id) fail(returnPath, "sku");
 
   if (id) {
     const existing = await prisma.product.findUnique({ where: { id } });
-    if (!existing || !canAccessMerchant(session, existing.merchantId)) return;
+    if (!existing || !canAccessMerchant(session, existing.merchantId)) fail(returnPath, "forbidden");
     await prisma.product.update({ where: { id }, data });
   } else {
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      include: { plan: true, _count: { select: { products: true } } },
+    });
+    if (!merchant) fail(returnPath, "forbidden");
+    if (merchant._count.products >= merchant.plan.maxProducts) fail(returnPath, "cap");
     await prisma.product.create({ data });
   }
   revalidatePath("/products");

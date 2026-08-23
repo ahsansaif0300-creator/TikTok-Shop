@@ -26,13 +26,21 @@ export default async function CategoriesPage() {
               </tr>
             </thead>
             <tbody>
-              {categories.map((category) => (
+              {categories.length === 0 ? (
+                <tr>
+                  <Td className="text-muted">No categories yet.</Td>
+                  <Td></Td>
+                  <Td></Td>
+                </tr>
+              ) : (
+                categories.map((category) => (
                 <tr key={category.id}>
                   <Td className="font-medium">{category.name}</Td>
                   <Td className="font-mono text-xs">{category.slug}</Td>
                   <Td>{category._count.products}</Td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </TableWrap>
         </Card>

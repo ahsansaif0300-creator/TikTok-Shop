@@ -12,6 +12,7 @@ const TABS = [
   { value: "ACTIVE", label: "Active" },
   { value: "DRAFT", label: "Draft" },
   { value: "ARCHIVED", label: "Archived" },
+  { value: "LOW_STOCK", label: "Low stock" },
 ];
 
 export default async function ProductsPage({
@@ -21,10 +22,15 @@ export default async function ProductsPage({
 }) {
   const session = await requireSession();
   const { status = "", q = "" } = await searchParams;
+  const merchantView = session.role === "MERCHANT";
   const products = await prisma.product.findMany({
     where: {
       ...merchantScope(session),
-      ...(status ? { status: status as ProductStatus } : {}),
+      ...(status === "LOW_STOCK"
+        ? { stock: { lte: 20 }, status: "ACTIVE" }
+        : status
+          ? { status: status as ProductStatus }
+          : {}),
       ...(q ? { OR: [{ title: { contains: q } }, { sku: { contains: q } }] } : {}),
     },
     include: { merchant: true, category: true },
@@ -54,7 +60,7 @@ export default async function ProductsPage({
             <thead>
               <tr>
                 <Th>Product</Th>
-                <Th>Merchant</Th>
+                {merchantView ? null : <Th>Merchant</Th>}
                 <Th>Category</Th>
                 <Th>Price</Th>
                 <Th>Stock</Th>
@@ -70,7 +76,7 @@ export default async function ProductsPage({
                     </Link>
                     <p className="font-mono text-xs text-muted">{product.sku}</p>
                   </Td>
-                  <Td>{product.merchant.name}</Td>
+                  {merchantView ? null : <Td>{product.merchant.name}</Td>}
                   <Td>{product.category.name}</Td>
                   <Td>{money(product.price)}</Td>
                   <Td className={product.stock <= 20 ? "font-semibold text-amber-800" : ""}>{product.stock}</Td>

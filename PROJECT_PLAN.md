@@ -155,11 +155,11 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Deliverables
 
-- `/products` and `/products/[id]` (including `new`)
+- `/products` and `/products/[id]` (including `new`), with low-stock filter
+- Plan product cap and unique SKU enforced on save; merchantId cannot be spoofed
 - `/categories` staff-only
-- `/reviews`
+- `/reviews` store-scoped
 - `/customers` and `/customers/[id]` staff-only
-- `saveProduct` forces merchantId for `MERCHANT` sessions
 
 ### Checklist
 
