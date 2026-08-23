@@ -15,6 +15,10 @@ const previewHosts = [
 ];
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@prisma/client", "prisma"],
+  outputFileTracingIncludes: {
+    "/**": ["./prisma/demo.sqlite", "./scripts/copy-demo-db.mjs", "./scripts/bootstrap.mjs"],
+  },
   allowedDevOrigins: previewHosts,
   experimental: {
     serverActions: {

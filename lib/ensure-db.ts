@@ -1,49 +1,33 @@
-import { existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-import path from "node:path";
-import { applyRuntimeEnv, sqliteFilePath } from "./runtime-env";
-
-function runBootstrap(force = false) {
-  applyRuntimeEnv();
-  const script = path.join(process.cwd(), "scripts", "bootstrap.mjs");
-  console.log("[harbor] Creating schema and demo accounts…");
-  const result = spawnSync(process.execPath, [script], {
-    stdio: "inherit",
-    env: { ...process.env, ...(force ? { HARBOR_FORCE_DB: "1" } : {}) },
-    shell: false,
-    cwd: process.cwd(),
-  });
-  if (result.status !== 0) {
-    throw new Error("Database bootstrap failed. Check Hostinger Runtime logs.");
-  }
-}
-
-export function pushAndSeed() {
-  runBootstrap();
-}
+import { installDemoDb } from "../scripts/copy-demo-db.mjs";
+import { applyRuntimeEnv } from "./runtime-env";
+import { getPrisma, resetPrisma } from "./db";
 
 export async function ensureDatabase() {
   applyRuntimeEnv();
-  const dbFile = sqliteFilePath();
-  if (!existsSync(dbFile)) {
-    runBootstrap();
+  const root = process.cwd();
+  const dest = installDemoDb(root);
+  process.env.DATABASE_URL = `file:${dest}`;
+  resetPrisma();
+
+  try {
+    const user = await getPrisma().user.findFirst({
+      where: { email: "oscar.d@example.net" },
+      select: { id: true },
+    });
+    if (user) return;
+    console.warn("[harbor] Demo admin missing; restoring packed SQLite.");
+  } catch (error) {
+    console.error("[harbor] SQLite not readable; restoring packed database.", error);
   }
 
-  const { prisma } = await import("./db");
-  try {
-    const user = await prisma.user.findFirst({ select: { id: true } });
-    if (!user) {
-      await prisma.$disconnect();
-      console.log("[harbor] Database has no users; seeding demo accounts…");
-      runBootstrap(true);
-    }
-  } catch (error) {
-    console.error("[harbor] Database is not ready; rebuilding SQLite.", error);
-    try {
-      await prisma.$disconnect();
-    } catch {
-      /* ignore */
-    }
-    runBootstrap(true);
+  const restored = installDemoDb(root, { overwrite: true });
+  process.env.DATABASE_URL = `file:${restored}`;
+  resetPrisma();
+  const admin = await getPrisma().user.findFirst({
+    where: { email: "oscar.d@example.net" },
+    select: { id: true },
+  });
+  if (!admin) {
+    throw new Error("Demo database installed but admin user is missing.");
   }
 }

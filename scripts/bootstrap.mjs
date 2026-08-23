@@ -3,23 +3,12 @@ import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { demoSqlitePath, installDemoDb } from "./copy-demo-db.mjs";
 
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.chdir(root);
 
-function sqlitePath() {
-  const raw = (process.env.DATABASE_URL || "file:./dev.db").trim();
-  if (!raw.startsWith("file:")) return path.join(root, "prisma", "dev.db");
-  const rest = raw.slice("file:".length);
-  if (path.isAbsolute(rest)) return rest;
-  const normalized = rest.replace(/^\.\//, "");
-  if (normalized === "dev.db") return path.join(root, "prisma", "dev.db");
-  return path.resolve(root, normalized);
-}
-
-const dbFile = sqlitePath();
-process.env.DATABASE_URL = `file:${dbFile}`;
 const force = process.env.HARBOR_FORCE_DB === "1";
 
 function run(bin, args) {
@@ -34,8 +23,17 @@ function run(bin, args) {
   }
 }
 
-if (!existsSync(dbFile) || force) {
-  console.log(force ? "Rebuilding SQLite database…" : "No database found. Creating schema and demo data…");
+try {
+  const dest = installDemoDb(root, { overwrite: force });
+  process.env.DATABASE_URL = `file:${dest}`;
+  console.log(`SQLite ready at ${dest}`);
+} catch (error) {
+  if (existsSync(demoSqlitePath(root))) {
+    console.error(error);
+    process.exit(1);
+  }
+  console.log("No packed demo database. Creating schema and demo data with Prisma…");
+  process.env.DATABASE_URL = process.env.DATABASE_URL || `file:${path.join(root, "prisma", "dev.db")}`;
   const prismaBin = require.resolve("prisma/build/index.js");
   const tsxBin = require.resolve("tsx/dist/cli.mjs");
   run(prismaBin, ["db", "push", "--skip-generate", "--accept-data-loss"]);

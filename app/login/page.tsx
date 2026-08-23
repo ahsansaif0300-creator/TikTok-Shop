@@ -43,9 +43,9 @@ export default async function LoginPage({
           <p className="mt-1 text-sm text-muted">Use a demo workspace account to explore Harbor.</p>
           {error === "setup" ? (
             <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
-              Harbor could not open the workspace database. In Hostinger, set{" "}
-              <code>DATABASE_URL=file:./dev.db</code> and a real <code>AUTH_SECRET</code>, then
-              Redeploy. Check Runtime logs if it still fails.
+              Harbor could not open the packed demo database. Redeploy the latest{" "}
+              <code>main</code> branch, click Restart, then try again. Keep{" "}
+              <code>AUTH_SECRET</code> set in Hostinger Environment variables.
             </p>
           ) : error ? (
             <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
