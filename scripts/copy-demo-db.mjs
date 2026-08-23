@@ -28,7 +28,7 @@ export function demoSqlitePath(root = process.cwd()) {
   return path.join(root, "prisma", "demo.sqlite");
 }
 
-export function installDemoDb(root = process.cwd(), { overwrite = false } = {}) {
+export function installDemoDb(_root = process.cwd(), { overwrite = false } = {}) {
   const demo = path.join(process.cwd(), "prisma", "demo.sqlite");
   if (!existsSync(/*turbopackIgnore: true*/ demo)) {
     throw new Error(`Missing ${demo}. Redeploy the latest main branch.`);

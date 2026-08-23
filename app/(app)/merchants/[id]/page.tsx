@@ -6,16 +6,20 @@ import { isStaff, requireSession } from "@/lib/auth";
 import { money } from "@/lib/utils";
 import { LEDGER_TYPE, MERCHANT_STATUS, ORDER_STATUS } from "@/lib/labels";
 import { assignPlan, setMerchantStatus } from "@/lib/actions/merchants";
-import { Button, Card, Empty, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
+import { createStoreUser } from "@/lib/actions/users";
+import { Button, Card, Empty, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 
 export default async function MerchantDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ created?: string; error?: string }>;
 }) {
   const session = await requireSession();
   if (!isStaff(session.role)) redirect("/");
   const { id } = await params;
+  const { created, error } = await searchParams;
   const merchant = await prisma.merchant.findUnique({
     where: { id },
     include: {
@@ -105,6 +109,17 @@ export default async function MerchantDetailPage({
               Update plan
             </Button>
           </form>
+          {created ? (
+            <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              Store login created. Give that email and password to the seller.
+            </p>
+          ) : null}
+          {error === "email" ? (
+            <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">That email is already in use.</p>
+          ) : null}
+          {error === "password" ? (
+            <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Password must be at least 8 characters.</p>
+          ) : null}
           {merchant.users.length > 0 ? (
             <div className="mt-5">
               <h3 className="font-medium">Store users</h3>
@@ -120,6 +135,17 @@ export default async function MerchantDetailPage({
           ) : (
             <p className="mt-5 text-sm text-muted">No login is linked to this store yet.</p>
           )}
+          <form action={createStoreUser} className="mt-5 space-y-3 border-t border-line pt-4">
+            <h3 className="font-medium">Create store login</h3>
+            <p className="text-xs text-muted">The seller uses the same /login page and only sees this shop.</p>
+            <input type="hidden" name="merchantId" value={merchant.id} />
+            <Field name="name" label="Name" required defaultValue={merchant.name} />
+            <Field name="email" label="Email" type="email" required defaultValue={merchant.email} />
+            <Field name="password" label="Temporary password" type="password" required />
+            <Button type="submit" variant="secondary">
+              Create login
+            </Button>
+          </form>
         </Card>
         <Card className="xl:col-span-2">
           <div className="px-5 py-4 font-medium">Recent orders</div>
