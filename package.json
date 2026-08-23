@@ -13,6 +13,7 @@
     "db:reset": "prisma db push --force-reset --skip-generate && tsx prisma/seed.ts",
     "verify": "node scripts/verify-phases.mjs",
     "verify:http": "node scripts/verify-phases.mjs --http",
+    "pack:hostinger": "node scripts/pack-hostinger.mjs",
     "postinstall": "prisma generate"
   },
   "engines": {
@@ -29,10 +30,12 @@
     "jose": "^6.2.8",
     "lucide-react": "^1.31.0",
     "next": "16.3.1",
+    "prisma": "^6.16.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0",
+    "tsx": "^4.23.12",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -43,9 +46,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
-    "prisma": "^6.16.2",
     "tailwindcss": "^4",
-    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }

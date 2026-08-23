@@ -920,6 +920,7 @@ async function phase7Static() {
     assert(start.includes("bootstrap.mjs"), "start does not bootstrap");
     assert(start.includes("0.0.0.0"), "start does not bind all interfaces");
     assert(start.includes("PORT"), "start ignores PORT");
+    assert(start.includes("-p") && start.includes("resolvePort"), "start must accept Hostinger -p PORT");
     const boot = read("scripts/bootstrap.mjs");
     assert(
       boot.includes("prisma") && boot.includes("dev.db"),
@@ -939,6 +940,7 @@ async function phase7Static() {
     assert(config.includes("allowedDevOrigins"), "allowedDevOrigins missing");
     assert(config.includes("*.agent.cvm.dev"), "agent.cvm.dev origin missing");
     assert(config.includes("*.cursorvm.com"), "cursorvm.com origin missing");
+    assert(config.includes("*.hostingersite.com"), "hostingersite.com origin missing");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
     assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.ts");
     assert(!/\.agent\.cvm\.dev/.test(config.replaceAll("*.agent.cvm.dev", "")), "stale agent.cvm.dev hostname");
@@ -950,9 +952,13 @@ async function phase7Static() {
     assert(readme.includes("AUTH_SECRET"), "AUTH_SECRET warning missing");
     assert(readme.includes("SSL") || readme.includes("Let’s Encrypt") || readme.includes("Let's Encrypt"), "SSL note missing");
     assert(readme.includes("npm run start"), "Hostinger start command should be npm run start");
-    assert(!readme.includes("npm run start -- -p"), "Hostinger start must not pass a second -p");
     assert(exists("PROJECT_PLAN.md"), "PROJECT_PLAN.md missing");
     assert(exists("USAGE.md"), "USAGE.md missing");
+    assert(exists("HOSTINGER.md"), "HOSTINGER.md missing");
+    assert(exists("hostinger.env.example"), "hostinger.env.example missing");
+    const hostinger = read("HOSTINGER.md");
+    assert(/Free subdomain|temporary domain/i.test(hostinger), "HOSTINGER.md missing temporary domain steps");
+    assert(hostinger.includes("hostingersite.com"), "HOSTINGER.md missing hostingersite.com");
     const usage = read("USAGE.md");
     assert(usage.includes("localhost:3000/login"), "USAGE.md missing local login URL");
     assert(usage.includes("Hostinger"), "USAGE.md missing Hostinger steps");

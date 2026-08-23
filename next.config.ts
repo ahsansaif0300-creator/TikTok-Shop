@@ -4,6 +4,8 @@ import { extraAllowedOrigins, lanIPv4s } from "./scripts/lan-urls.mjs";
 const previewHosts = [
   "*.agent.cvm.dev",
   "*.cursorvm.com",
+  "*.hostingersite.com",
+  "*.hostinger-site.com",
   "*.local",
   ...lanIPv4s(),
   ...extraAllowedOrigins(),

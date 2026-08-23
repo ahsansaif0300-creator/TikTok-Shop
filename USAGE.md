@@ -143,31 +143,19 @@ Sign in as the Northline account (or any `MERCHANT` user).
 
 You cannot open other stores, Team, Settings, global customers, or categories.
 
-## 5. Put it on a Hostinger domain
+## 5. Put it on Hostinger (temporary domain, no custom domain)
 
-This is a **Node.js / Next.js** app. It will **not** run as PHP inside `public_html`.
+Follow **[`HOSTINGER.md`](./HOSTINGER.md)**. Paste **[`hostinger.env.example`](./hostinger.env.example)** into hPanel Environment variables.
 
-### Business / Cloud Node app
+Short version:
 
-1. Point the domain at Hostinger (nameservers or A record) and turn on **SSL**.  
-2. In hPanel add a **Node.js web app** (remove an existing PHP/WordPress slot on that domain first if Hostinger requires it).  
-3. Import this GitHub repo. Suggested commands:
+1. Plan must be **Business** or **Cloud** (Node.js web app).
+2. **Websites** → **Add Website** → **Node.js web app** → **Free subdomain**.
+3. Import GitHub branch `cursor/harbor-commerce-os-7442`, or upload `npm run pack:hostinger`’s zip.
+4. Start command `npm run start`. Env: `DATABASE_URL=file:./dev.db` and a new `AUTH_SECRET`.
+5. Open `https://YOUR-TEMP.hostingersite.com/login`.
 
-   - Node **20** or **22**
-   - Install: `npm ci`
-   - Build: `npm run build`
-   - Start: `npm run start`  (do not add `-p $PORT`; the start script already reads `PORT`)
-
-4. Environment variables:
-
-   ```
-   DATABASE_URL=file:./dev.db
-   AUTH_SECRET=a-long-random-string-you-generate
-   ```
-
-5. Deploy, then open `https://your-domain.com/login`.
-
-SQLite lives in the app folder. **Redeploys can wipe it.** For live orders use a VPS disk or hosted Postgres.
+Do not copy the project into `public_html`.
 
 ### VPS (better for real data)
 

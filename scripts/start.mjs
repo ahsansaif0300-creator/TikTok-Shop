@@ -20,9 +20,23 @@ function run(command, args) {
   }
 }
 
+function resolvePort() {
+  const argv = process.argv.slice(2);
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === "-p" || arg === "--port") {
+      return argv[i + 1] || process.env.PORT || "3000";
+    }
+    if (arg.startsWith("--port=")) {
+      return arg.slice("--port=".length) || process.env.PORT || "3000";
+    }
+  }
+  return process.env.PORT || "3000";
+}
+
 run(process.execPath, [path.join(root, "scripts", "bootstrap.mjs")]);
 
-const port = process.env.PORT || "3000";
+const port = resolvePort();
 printAccessUrls(port);
 const nextBin = require.resolve("next/dist/bin/next");
 run(process.execPath, [nextBin, "start", "--hostname", "0.0.0.0", "--port", String(port)]);
