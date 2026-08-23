@@ -143,6 +143,19 @@ Sign in as the Northline account (or any `MERCHANT` user).
 
 You cannot open other stores, Team, Settings, global customers, or categories.
 
+## Make a shop from the admin panel
+
+Sign in as **oscar.d@example.net**. Shops in Harbor are **Merchants**.
+
+1. **Applications** → fill **Log inbound seller** (business name, contact, email, country, category) → **Save application**.
+2. On that row click **Approve**. Harbor creates an ACTIVE store on the Starter plan.
+3. Open **Merchants** → click the store → **Activate** if needed, assign a **Seller plan**.
+4. On the same page, **Create store login** (email + password 8+ characters). Give those credentials to the seller.
+5. The seller signs in at `/login` and only sees that shop (products, orders, shipping, payouts).
+6. You manage everyone from **Orders**, **Refunds**, **Shipping**, **Ledger**, and **Payouts**.
+
+Demo shop already there: Northline Outfitters (`iris.p@example.org` / `HarborMerchant!2026`).
+
 ## 5. Put it on Hostinger (temporary domain, no custom domain)
 
 Follow **[`HOSTINGER.md`](./HOSTINGER.md)**. Paste **[`hostinger.env.example`](./hostinger.env.example)** into hPanel Environment variables.

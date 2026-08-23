@@ -823,6 +823,8 @@ async function phase6Static() {
       assert(exists(file), `Missing ${file}`);
     }
     assert(read("app/(app)/users/page.tsx").includes("canManageTeam"), "Users not admin-gated");
+    assert(read("lib/actions/users.ts").includes("createStoreUser"), "Store login helper missing");
+    assert(read("app/(app)/merchants/[id]/page.tsx").includes("createStoreUser"), "Merchant detail cannot create a store login");
     assert(read("app/(app)/settings/page.tsx").includes("SUPER_ADMIN"), "Settings not admin-gated");
     const payouts = read("lib/actions/payouts.ts");
     assert(payouts.includes("availableBalance"), "Payout does not touch available balance");
