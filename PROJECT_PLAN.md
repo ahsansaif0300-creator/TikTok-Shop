@@ -105,14 +105,16 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Checklist
 
-- [ ] Seed includes every order status
-- [ ] Seed includes carriers (UPS, FedEx, USPS) and shipments
-- [ ] Seed includes pending and resolved refunds
-- [ ] Illegal status jumps are rejected
-- [ ] Shipping an order writes tracking and sets `SHIPPED`
-- [ ] Completing an order moves pending → available
-- [ ] Approving a restock refund increases product stock
-- [ ] Merchant can only see/change their own orders
+- [x] Seed includes every order status
+- [x] Seed includes carriers (UPS, FedEx, USPS) and shipments
+- [x] Seed includes pending and resolved refunds
+- [x] Illegal status jumps are rejected
+- [x] Shipping an order writes tracking and sets `SHIPPED`
+- [x] Completing an order moves pending → available
+- [x] Approving a restock refund increases product stock
+- [x] Merchant can only see/change their own orders
+- [x] Cancel after payment reverses pending profit
+- [x] Ready-to-ship queue lists paid/processing orders without tracking
 
 ### Verify
 
