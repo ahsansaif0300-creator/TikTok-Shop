@@ -5,14 +5,7 @@ import type { OrderStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { canAccessMerchant } from "@/lib/scope";
-
-const NEXT: Partial<Record<OrderStatus, OrderStatus[]>> = {
-  PENDING_PAYMENT: ["PAID", "CANCELLED"],
-  PAID: ["PROCESSING", "CANCELLED"],
-  PROCESSING: ["SHIPPED", "CANCELLED"],
-  SHIPPED: ["DELIVERED"],
-  DELIVERED: ["COMPLETED"],
-};
+import { canChangeOrderStatus } from "@/lib/order-flow";
 
 async function audit(userId: string, action: string, entityId: string, detail: string) {
   await prisma.auditLog.create({
@@ -26,8 +19,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   if (!order || !canAccessMerchant(session, order.merchantId)) {
     throw new Error("Order not found");
   }
-  const allowed = NEXT[order.status] ?? [];
-  if (!allowed.includes(status)) {
+  if (!canChangeOrderStatus(order.status, status, "button")) {
     throw new Error("That status change is not allowed");
   }
 
@@ -61,6 +53,29 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       });
     }
 
+    if (status === "CANCELLED" && (order.status === "PAID" || order.status === "PROCESSING")) {
+      await tx.merchant.update({
+        where: { id: order.merchantId },
+        data: { pendingBalance: { decrement: order.profit } },
+      });
+      await tx.ledgerEntry.create({
+        data: {
+          merchantId: order.merchantId,
+          type: "ADJUSTMENT",
+          amount: -order.profit,
+          reference: order.orderNumber,
+          note: "Cancelled after payment — pending profit reversed",
+        },
+      });
+    }
+
+    if (status === "DELIVERED") {
+      await tx.shipment.updateMany({
+        where: { orderId },
+        data: { status: "DELIVERED", deliveredAt: now },
+      });
+    }
+
     if (status === "COMPLETED") {
       await tx.merchant.update({
         where: { id: order.merchantId },
@@ -81,11 +96,14 @@ export async function shipOrder(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "");
   const carrierId = String(formData.get("carrierId") ?? "");
   const trackingNumber = String(formData.get("trackingNumber") ?? "").trim();
-  if (!orderId || !carrierId || !trackingNumber) return;
+  if (!orderId || !carrierId || trackingNumber.length < 4) return;
 
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order || !canAccessMerchant(session, order.merchantId)) return;
-  if (order.status !== "PROCESSING" && order.status !== "PAID") return;
+  if (!canChangeOrderStatus(order.status, "SHIPPED", "ship")) return;
+
+  const carrier = await prisma.carrier.findFirst({ where: { id: carrierId, active: true } });
+  if (!carrier) return;
 
   const now = new Date();
   await prisma.$transaction([
@@ -103,7 +121,7 @@ export async function shipOrder(formData: FormData) {
       data: { status: "SHIPPED", shippedAt: now },
     }),
   ]);
-  await audit(session.userId, "ship", orderId, `Shipped ${order.orderNumber} via ${trackingNumber}`);
+  await audit(session.userId, "ship", orderId, `Shipped ${order.orderNumber} via ${carrier.name} ${trackingNumber}`);
   revalidatePath("/", "layout");
 }
 

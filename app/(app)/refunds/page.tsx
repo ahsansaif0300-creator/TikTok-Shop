@@ -60,12 +60,16 @@ export default async function RefundsPage({
                   <Td>
                     <p className="font-medium">{refund.refundNumber}</p>
                     <p className="text-xs text-muted">{refund.reason}</p>
+                    {refund.restock ? <p className="text-xs text-muted">Restock on approve</p> : null}
                   </Td>
                   <Td>
                     <Link href={`/orders/${refund.orderId}`} className="text-accent hover:underline">
                       {refund.order.orderNumber}
                     </Link>
-                    <p className="text-xs text-muted">{refund.order.customer.name}</p>
+                    <p className="text-xs text-muted">
+                      {refund.order.customer.name}
+                      {staff ? ` · ${refund.order.merchant.name}` : ""}
+                    </p>
                   </Td>
                   <Td>{REFUND_TYPE[refund.type]}</Td>
                   <Td>{money(refund.amount)}</Td>
@@ -85,6 +89,8 @@ export default async function RefundsPage({
                           </Button>
                         </form>
                       </div>
+                    ) : !staff && refund.status === "PENDING" ? (
+                      <p className="text-xs text-muted">Waiting on ops</p>
                     ) : null}
                   </Td>
                 </tr>

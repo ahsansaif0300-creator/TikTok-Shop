@@ -20,6 +20,10 @@ export function compactNumber(value: number) {
   }).format(value);
 }
 
+export function trackingHref(template: string, trackingNumber: string) {
+  return template.replaceAll("{tracking}", encodeURIComponent(trackingNumber));
+}
+
 export function initials(name: string) {
   return name
     .split(" ")

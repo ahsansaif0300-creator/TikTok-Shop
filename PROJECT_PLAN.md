@@ -95,12 +95,13 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Deliverables
 
-- `/orders` list + `/orders/[id]` detail
-- Status changes in `lib/actions/orders.ts` with audit log
+- `/orders` list + `/orders/[id]` detail with lifecycle timestamps and audit
+- Shared transitions in `lib/order-flow.ts` (shipped only via carrier + tracking)
+- Cancel after payment reverses pending profit
 - Ship form: carrier + tracking number → `SHIPPED` + `Shipment`
-- `/shipping` shipment board
-- Refund types: refund only, return & refund, exchange
-- Staff approve/reject; optional restock; ledger `REFUND`
+- `/shipping` ready-to-ship queue + tracking links
+- Refund types: refund only, return & refund, exchange; amount + optional restock
+- Staff approve/reject; restock; ledger `REFUND`
 
 ### Checklist
 

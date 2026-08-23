@@ -5,6 +5,7 @@ import type { RefundStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { canAccessMerchant } from "@/lib/scope";
+import { canOpenRefund } from "@/lib/order-flow";
 
 export async function decideRefund(refundId: string, status: RefundStatus, note?: string) {
   const session = await requireSession();
@@ -85,7 +86,11 @@ export async function createRefund(formData: FormData) {
     | "EXCHANGE";
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order || !canAccessMerchant(session, order.merchantId) || !reason) return;
-  if (order.status === "PENDING_PAYMENT" || order.status === "CANCELLED") return;
+  if (!canOpenRefund(order.status)) return;
+
+  const amount = Number(formData.get("amount") ?? order.total);
+  if (!Number.isFinite(amount) || amount <= 0 || amount > order.total) return;
+  const restock = String(formData.get("restock") ?? "") === "on";
 
   const count = await prisma.refund.count();
   await prisma.refund.create({
@@ -94,8 +99,8 @@ export async function createRefund(formData: FormData) {
       orderId,
       type,
       reason,
-      amount: order.total,
-      restock: type !== "REFUND_ONLY",
+      amount,
+      restock,
     },
   });
   revalidatePath("/", "layout");

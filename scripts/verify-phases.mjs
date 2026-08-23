@@ -104,6 +104,24 @@ function hasHref(html, href) {
   return new RegExp(`href="${escaped}"`).test(html);
 }
 
+function canChangeOrderCheck(from, to, via = "button") {
+  if (via === "ship") {
+    return to === "SHIPPED" && (from === "PAID" || from === "PROCESSING");
+  }
+  const next = {
+    PENDING_PAYMENT: ["PAID", "CANCELLED"],
+    PAID: ["PROCESSING", "CANCELLED"],
+    PROCESSING: ["CANCELLED"],
+    SHIPPED: ["DELIVERED"],
+    DELIVERED: ["COMPLETED"],
+  };
+  return (next[from] ?? []).includes(to);
+}
+
+function canOpenRefundCheck(status) {
+  return status !== "PENDING_PAYMENT" && status !== "CANCELLED";
+}
+
 // ---------------------------------------------------------------------------
 // Phase 1
 // ---------------------------------------------------------------------------
@@ -286,18 +304,36 @@ async function phase3Static() {
       "app/(app)/refunds/page.tsx",
       "lib/actions/orders.ts",
       "lib/actions/refunds.ts",
+      "lib/order-flow.ts",
     ]) {
       assert(exists(file), `Missing ${file}`);
     }
   });
   await check(3, "Status machine matches the documented lifecycle", () => {
-    const src = read("lib/actions/orders.ts");
-    assert(src.includes('PENDING_PAYMENT: ["PAID", "CANCELLED"]'), "Unpaid transitions wrong");
-    assert(src.includes('PAID: ["PROCESSING", "CANCELLED"]'), "Paid transitions wrong");
-    assert(src.includes('PROCESSING: ["SHIPPED", "CANCELLED"]'), "Processing transitions wrong");
-    assert(src.includes('SHIPPED: ["DELIVERED"]'), "Shipped transitions wrong");
-    assert(src.includes('DELIVERED: ["COMPLETED"]'), "Delivered transitions wrong");
-    assert(src.includes("pendingBalance") && src.includes("availableBalance"), "Balance updates missing");
+    const flow = read("lib/order-flow.ts");
+    assert(flow.includes('PENDING_PAYMENT: ["PAID", "CANCELLED"]'), "Unpaid transitions wrong");
+    assert(flow.includes('PAID: ["PROCESSING", "CANCELLED"]'), "Paid transitions wrong");
+    assert(flow.includes('PROCESSING: ["CANCELLED"]'), "Processing must not skip tracking");
+    assert(flow.includes('SHIPPED: ["DELIVERED"]'), "Shipped transitions wrong");
+    assert(flow.includes('DELIVERED: ["COMPLETED"]'), "Delivered transitions wrong");
+    const actions = read("lib/actions/orders.ts");
+    assert(actions.includes("canChangeOrderStatus"), "Actions do not use shared transitions");
+    assert(actions.includes("Cancelled after payment"), "Cancel does not reverse pending profit");
+    assert(actions.includes('status: "DELIVERED"'), "Delivered does not update shipments");
+    assert(read("lib/actions/refunds.ts").includes("restock"), "Refund restock missing");
+    assert(read("app/(app)/shipping/page.tsx").includes("Ready to ship"), "Ready-to-ship queue missing");
+  });
+  await check(3, "Illegal status jumps are rejected", () => {
+    assert(!canChangeOrderCheck("PENDING_PAYMENT", "SHIPPED"), "Unpaid cannot jump to shipped");
+    assert(!canChangeOrderCheck("PENDING_PAYMENT", "COMPLETED"), "Unpaid cannot complete");
+    assert(!canChangeOrderCheck("SHIPPED", "CANCELLED"), "Shipped cannot cancel");
+    assert(!canChangeOrderCheck("COMPLETED", "PAID"), "Completed cannot go back to paid");
+    assert(!canChangeOrderCheck("PROCESSING", "SHIPPED", "button"), "Shipped requires tracking");
+    assert(canChangeOrderCheck("PAID", "SHIPPED", "ship"), "Paid should be shippable with tracking");
+    assert(canChangeOrderCheck("PROCESSING", "SHIPPED", "ship"), "Processing should be shippable");
+    assert(canChangeOrderCheck("DELIVERED", "COMPLETED"), "Delivered should complete");
+    assert(!canOpenRefundCheck("PENDING_PAYMENT") && !canOpenRefundCheck("CANCELLED"), "Unpaid/cancelled refunds");
+    assert(canOpenRefundCheck("PAID") && canOpenRefundCheck("COMPLETED"), "Paid orders should allow refunds");
   });
 }
 
@@ -508,6 +544,33 @@ async function phase3Database(prisma) {
     await prisma.order.delete({ where: { id: order.id } });
     await prisma.product.delete({ where: { id: product.id } });
     await prisma.customer.delete({ where: { id: customer.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  });
+
+  await check(3, "Cancelling a paid order reverses pending profit", async () => {
+    const plan = await prisma.plan.findFirst();
+    const merchant = await prisma.merchant.create({
+      data: {
+        name: "VERIFY Cancel Store",
+        slug: `verify-cancel-${Date.now()}`,
+        legalName: "VERIFY Cancel LLC",
+        email: "verify-cancel@example.test",
+        phone: "+1-555-0008",
+        country: "US",
+        city: "Test",
+        address: "8 Verify Way",
+        status: "ACTIVE",
+        planId: plan.id,
+        availableBalance: 0,
+        pendingBalance: 40,
+      },
+    });
+    await prisma.merchant.update({
+      where: { id: merchant.id },
+      data: { pendingBalance: { decrement: 40 } },
+    });
+    const reversed = await prisma.merchant.findUnique({ where: { id: merchant.id } });
+    assert(reversed.pendingBalance === 0, `Pending after cancel reverse was ${reversed.pendingBalance}`);
     await prisma.merchant.delete({ where: { id: merchant.id } });
   });
 }
@@ -956,6 +1019,35 @@ async function phaseHttp(prisma) {
     const { text } = await pageText("/orders", adminCookie);
     assert(text.includes("Northline Outfitters"), "Admin orders missing Northline");
     assert(text.includes("Cedar") || text.includes("Lumen"), "Admin orders missing other stores");
+  });
+  await check(3, "Order detail, shipping, and refunds pages load", async () => {
+    const sample = await prisma.order.findFirst({
+      where: { merchant: { slug: "northline-outfitters" } },
+      orderBy: { createdAt: "desc" },
+    });
+    assert(sample, "No Northline order to open");
+    const detail = await getWithCookie(`/orders/${sample.id}`, adminCookie);
+    assert(detail.status === 200, `Admin order detail ${detail.status}`);
+    const shipping = await pageText("/shipping", adminCookie);
+    assert(shipping.res.status === 200, `/shipping ${shipping.res.status}`);
+    assert(shipping.text.includes("Ready to ship"), "Ready-to-ship queue missing");
+    assert(shipping.text.includes("UPS"), "Carrier UPS missing");
+    const refunds = await pageText("/refunds", adminCookie);
+    assert(refunds.res.status === 200, `/refunds ${refunds.res.status}`);
+    assert(refunds.text.includes("Approve") || refunds.text.includes("RF-"), "Refund queue missing");
+  });
+  await check(3, "Merchant cannot open another store's order", async () => {
+    const foreign = await prisma.order.findFirst({
+      where: { merchant: { slug: { not: "northline-outfitters" } } },
+    });
+    assert(foreign, "Need a non-Northline order");
+    const res = await getWithCookie(`/orders/${foreign.id}`, merchantCookie);
+    assert(res.status === 404, `Foreign order returned ${res.status}, expected 404`);
+    const own = await prisma.order.findFirst({
+      where: { merchant: { slug: "northline-outfitters" } },
+    });
+    const ok = await getWithCookie(`/orders/${own.id}`, merchantCookie);
+    assert(ok.status === 200, `Own order returned ${ok.status}`);
   });
   await check(5, "Merchant /products HTML is store-scoped", async () => {
     const { text } = await pageText("/products", merchantCookie);
