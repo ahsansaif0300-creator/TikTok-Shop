@@ -7,6 +7,7 @@ export async function getDashboardData(session: SessionUser) {
   const scope = merchantScope(session);
   const now = new Date();
   const since = subDays(now, 14);
+  const isMerchant = session.role === "MERCHANT";
 
   const [
     orderCount,
@@ -14,6 +15,9 @@ export async function getDashboardData(session: SessionUser) {
     pendingRefunds,
     pendingPayouts,
     activeMerchants,
+    pendingApplications,
+    awaitingFulfillment,
+    store,
     recentOrders,
     chartOrders,
     lowStock,
@@ -26,8 +30,20 @@ export async function getDashboardData(session: SessionUser) {
     prisma.refund.count({ where: { status: "PENDING", order: scope } }),
     prisma.payout.count({ where: { status: { in: ["PENDING", "APPROVED"] }, ...scope } }),
     prisma.merchant.count({
-      where: session.role === "MERCHANT" ? { id: session.merchantId ?? "__none__" } : { status: "ACTIVE" },
+      where: isMerchant ? { id: session.merchantId ?? "__none__" } : { status: "ACTIVE" },
     }),
+    isMerchant
+      ? Promise.resolve(0)
+      : prisma.merchantApplication.count({ where: { status: "PENDING" } }),
+    prisma.order.count({
+      where: { ...scope, status: { in: ["PAID", "PROCESSING"] } },
+    }),
+    isMerchant && session.merchantId
+      ? prisma.merchant.findUnique({
+          where: { id: session.merchantId },
+          select: { name: true, availableBalance: true, pendingBalance: true },
+        })
+      : Promise.resolve(null),
     prisma.order.findMany({
       where: scope,
       include: { merchant: true, customer: true },
@@ -66,6 +82,9 @@ export async function getDashboardData(session: SessionUser) {
     pendingRefunds,
     pendingPayouts,
     activeMerchants,
+    pendingApplications,
+    awaitingFulfillment,
+    store,
     recentOrders,
     chart: [...byDay.entries()].map(([day, value]) => ({ day, ...value })),
     lowStock,

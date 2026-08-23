@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { visibleNav } from "@/lib/nav";
+import { isNavActive, visibleNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import type { Role } from "@prisma/client";
 
 export function SidebarNav({ role, unread }: { role: Role; unread: number }) {
   const pathname = usePathname();
   const groups = visibleNav(role);
+  const allHrefs = groups.flatMap((group) => group.items.map((item) => item.href));
 
   return (
     <nav className="space-y-6 px-3 pb-8 pt-2">
@@ -19,10 +20,7 @@ export function SidebarNav({ role, unread }: { role: Role; unread: number }) {
           </p>
           <div className="space-y-1">
             {group.items.map((item) => {
-              const active =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active = isNavActive(pathname, item.href, allHrefs);
               const Icon = item.icon;
               return (
                 <Link

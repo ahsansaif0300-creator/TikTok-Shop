@@ -1,8 +1,9 @@
 import {
   Bell,
-  Boxes,
+  BadgePercent,
   CircleDollarSign,
   ClipboardList,
+  FileCheck2,
   LayoutDashboard,
   Package,
   Settings,
@@ -48,8 +49,8 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     title: "Partners",
     items: [
       { href: "/merchants", label: "Merchants", icon: Store, staffOnly: true },
-      { href: "/merchants/applications", label: "Applications", icon: Store, staffOnly: true },
-      { href: "/merchants/plans", label: "Seller plans", icon: Boxes, staffOnly: true },
+      { href: "/merchants/applications", label: "Applications", icon: FileCheck2, staffOnly: true },
+      { href: "/merchants/plans", label: "Seller plans", icon: BadgePercent, staffOnly: true },
       { href: "/customers", label: "Customers", icon: Users, staffOnly: true },
     ],
   },
@@ -79,4 +80,21 @@ export function visibleNav(role: Role) {
       return true;
     }),
   })).filter((group) => group.items.length > 0);
+}
+
+export function navHrefs(role: Role) {
+  return visibleNav(role).flatMap((group) => group.items.map((item) => item.href));
+}
+
+/** Prefer the longest matching item so /merchants does not stay active on /merchants/applications. */
+export function isNavActive(pathname: string, href: string, allHrefs: string[]) {
+  if (href === "/") return pathname === "/";
+  const matches = pathname === href || pathname.startsWith(`${href}/`);
+  if (!matches) return false;
+  return !allHrefs.some(
+    (other) =>
+      other !== href &&
+      other.length > href.length &&
+      (pathname === other || pathname.startsWith(`${other}/`)),
+  );
 }

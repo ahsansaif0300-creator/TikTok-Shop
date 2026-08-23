@@ -87,6 +87,23 @@ function sourceFiles() {
   });
 }
 
+function isNavActiveCheck(pathname, href, allHrefs) {
+  if (href === "/") return pathname === "/";
+  const matches = pathname === href || pathname.startsWith(`${href}/`);
+  if (!matches) return false;
+  return !allHrefs.some(
+    (other) =>
+      other !== href &&
+      other.length > href.length &&
+      (pathname === other || pathname.startsWith(`${other}/`)),
+  );
+}
+
+function hasHref(html, href) {
+  const escaped = href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`href="${escaped}"`).test(html);
+}
+
 // ---------------------------------------------------------------------------
 // Phase 1
 // ---------------------------------------------------------------------------
@@ -196,6 +213,7 @@ async function phase2Static() {
   await check(2, "Shell, nav, dashboard, and charts exist", () => {
     for (const file of [
       "components/shell.tsx",
+      "components/workspace-chrome.tsx",
       "components/sidebar-nav.tsx",
       "lib/nav.ts",
       "lib/dashboard.ts",
@@ -204,9 +222,12 @@ async function phase2Static() {
     ]) {
       assert(exists(file), `Missing ${file}`);
     }
-    const shell = read("components/shell.tsx");
-    assert(shell.includes("Harbor") && shell.includes("Commerce OS"), "Harbor mark missing from shell");
-    assert(shell.includes("logoutAction"), "Logout control missing");
+    const chrome = read("components/workspace-chrome.tsx");
+    assert(chrome.includes("Harbor") && chrome.includes("Commerce OS"), "Harbor mark missing from shell");
+    assert(chrome.includes("logoutAction"), "Logout control missing");
+    assert(chrome.includes("Open menu"), "Mobile menu control missing");
+    const nav = read("lib/nav.ts");
+    assert(nav.includes("isNavActive"), "Longest-prefix nav matching missing");
   });
   await check(2, "Nav hides staff/admin items by role", () => {
     const nav = read("lib/nav.ts");
@@ -215,6 +236,14 @@ async function phase2Static() {
     assert(nav.includes("/users") && nav.includes("adminOnly"), "Team is not admin-only");
     assert(nav.includes("/settings") && nav.includes("adminOnly"), "Settings is not admin-only");
     assert(nav.includes("/merchants") && nav.includes("staffOnly"), "Merchants is not staff-only");
+  });
+  await check(2, "Dashboard is role-aware", () => {
+    const page = read("app/(app)/page.tsx");
+    assert(page.includes("Store overview") && page.includes("Operations overview"), "Role titles missing");
+    assert(page.includes("Available balance"), "Merchant wallet stats missing");
+    assert(page.includes("Needs attention"), "Attention queue missing");
+    const dash = read("lib/dashboard.ts");
+    assert(dash.includes("availableBalance") && dash.includes("pendingApplications"), "Scoped dashboard queries missing");
   });
   await check(2, "Login screen is Harbor-branded", () => {
     const login = read("app/login/page.tsx");
@@ -225,9 +254,22 @@ async function phase2Static() {
 }
 
 async function phase2Database(prisma) {
-  await check(2, "Notifications exist for staff", async () => {
-    const count = await prisma.notification.count();
-    assert(count >= 3, `Expected notifications, found ${count}`);
+  await check(2, "Notifications exist for staff and the demo merchant", async () => {
+    const admin = await prisma.user.findUnique({ where: { email: "oscar.d@example.net" } });
+    const merchant = await prisma.user.findUnique({ where: { email: "iris.p@example.org" } });
+    const staffCount = await prisma.notification.count({ where: { userId: admin.id } });
+    const merchantCount = await prisma.notification.count({ where: { userId: merchant.id } });
+    assert(staffCount >= 2, `Admin notifications: ${staffCount}`);
+    assert(merchantCount >= 1, "Merchant has no notifications");
+  });
+  await check(2, "Nav active matching prefers the longest href", () => {
+    const hrefs = ["/", "/merchants", "/merchants/applications", "/finance", "/finance/payouts"];
+    assert(isNavActiveCheck("/merchants/applications", "/merchants/applications", hrefs), "child not active");
+    assert(!isNavActiveCheck("/merchants/applications", "/merchants", hrefs), "parent stayed active on nested route");
+    assert(isNavActiveCheck("/merchants/abc", "/merchants", hrefs), "merchant detail should activate Merchants");
+    assert(!isNavActiveCheck("/finance/payouts", "/finance", hrefs), "Ledger stayed active on Payouts");
+    assert(isNavActiveCheck("/", "/", hrefs), "dashboard not active");
+    assert(!isNavActiveCheck("/orders", "/", hrefs), "dashboard active on orders");
   });
 }
 
@@ -842,6 +884,21 @@ async function phaseHttp(prisma) {
       assert(locationPath(res) === "/", `${pathname} redirected ops to ${locationPath(res)}`);
     }
   });
+  await check(2, "Admin dashboard HTML includes Team, Settings, and operations overview", async () => {
+    const { text } = await pageText("/", adminCookie);
+    assert(text.includes("Operations overview"), "Admin dashboard title missing");
+    assert(hasHref(text, "/users"), "Admin nav missing Team");
+    assert(hasHref(text, "/settings"), "Admin nav missing Settings");
+    assert(hasHref(text, "/merchants"), "Admin nav missing Merchants");
+    assert(text.includes("Needs attention"), "Admin attention queue missing");
+  });
+  await check(2, "Ops dashboard HTML omits Team and Settings", async () => {
+    const { text } = await pageText("/", opsCookie);
+    assert(text.includes("Operations overview"), "Ops dashboard title missing");
+    assert(hasHref(text, "/merchants"), "Ops nav missing Merchants");
+    assert(!hasHref(text, "/users"), "Ops nav leaked Team");
+    assert(!hasHref(text, "/settings"), "Ops nav leaked Settings");
+  });
 
   const merchantAllowed = [
     "/",
@@ -874,6 +931,18 @@ async function phaseHttp(prisma) {
       assert([301, 302, 303, 307, 308].includes(res.status), `${pathname} was ${res.status} for merchant`);
       assert(locationPath(res) === "/", `${pathname} redirected merchant to ${locationPath(res)}`);
     }
+  });
+  await check(2, "Merchant dashboard HTML is store-scoped and hides staff nav", async () => {
+    const { text } = await pageText("/", merchantCookie);
+    assert(text.includes("Store overview"), "Merchant dashboard title missing");
+    assert(text.includes("Northline Outfitters"), "Store name missing from merchant workspace");
+    assert(text.includes("Available balance"), "Merchant wallet missing");
+    assert(!hasHref(text, "/merchants"), "Merchant nav leaked Merchants");
+    assert(!hasHref(text, "/merchants/applications"), "Merchant nav leaked Applications");
+    assert(!hasHref(text, "/customers"), "Merchant nav leaked Customers");
+    assert(!hasHref(text, "/categories"), "Merchant nav leaked Categories");
+    assert(!hasHref(text, "/users"), "Merchant nav leaked Team");
+    assert(!hasHref(text, "/settings"), "Merchant nav leaked Settings");
   });
 
   await check(3, "Merchant /orders HTML is scoped to Northline Outfitters", async () => {

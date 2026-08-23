@@ -186,7 +186,7 @@ async function main() {
       role: "OPS",
     },
   });
-  await prisma.user.create({
+  const merchantUser = await prisma.user.create({
     data: {
       email: "iris.p@example.org",
       name: "Maya Chen",
@@ -569,6 +569,12 @@ async function main() {
         body: "Woven Throw Blanket is down to 15 units.",
         href: "/products",
         read: true,
+      },
+      {
+        userId: merchantUser.id,
+        title: "Payout settled",
+        body: "Your last bank payout of $420.00 to Chase •4412 is marked paid.",
+        href: "/finance/payouts",
       },
     ],
   });

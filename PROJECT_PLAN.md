@@ -37,14 +37,14 @@ If a phase checklist would require any of the above, the phase is wrong — do n
 
 ### Checklist
 
-- [ ] `cp .env.example .env` then `npm install` and `npm run setup` succeed
-- [ ] SQLite file exists at `prisma/dev.db`
-- [ ] Three users exist with roles `SUPER_ADMIN`, `OPS`, `MERCHANT`
-- [ ] Merchant user is linked to Northline Outfitters
-- [ ] Passwords verify with bcrypt
-- [ ] `GET /` without a cookie redirects to `/login`
-- [ ] Valid login lands on the dashboard
-- [ ] Source does not contain TikTok branding or MLM/crypto models
+- [x] `cp .env.example .env` then `npm install` and `npm run setup` succeed
+- [x] SQLite file exists at `prisma/dev.db`
+- [x] Three users exist with roles `SUPER_ADMIN`, `OPS`, `MERCHANT`
+- [x] Merchant user is linked to Northline Outfitters
+- [x] Passwords verify with bcrypt
+- [x] `GET /` without a cookie redirects to `/login`
+- [x] Valid login lands on the dashboard
+- [x] Source does not contain TikTok branding or MLM/crypto models
 
 ### Verify
 
@@ -61,9 +61,10 @@ npm run verify
 
 ### Deliverables
 
-- `components/shell.tsx` — Harbor mark (anchor), role, logout
-- `lib/nav.ts` — nav groups; `staffOnly` / `adminOnly` filters
-- Dashboard `/` with GMV, orders, refunds/payouts, 14-day chart, low stock
+- `components/shell.tsx` + `components/workspace-chrome.tsx` — Harbor mark, role, store context, mobile menu, logout
+- `lib/nav.ts` — nav groups; `staffOnly` / `adminOnly` filters; longest-prefix active item
+- Dashboard `/` with GMV, orders, 14-day chart, low stock, needs-attention queue
+- Merchant dashboard shows available/pending balances; staff sees active merchants and payouts
 - Login screen with Harbor copy (not a marketplace clone)
 
 ### Checklist
