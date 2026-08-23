@@ -34,7 +34,9 @@ npm run setup
 npm run dev
 ```
 
-Open [http://localhost:3000/login](http://localhost:3000/login).
+Open [http://localhost:3000/login](http://localhost:3000/login) **on this computer**.
+
+Phones and other PCs cannot use `localhost` — they must use this computer’s Wi‑Fi IP (`npm run urls`) or a Hostinger domain. Details: [`USAGE.md`](./USAGE.md#open-from-your-phone-or-another-device).
 
 `npm run setup` generates the Prisma client, creates the SQLite database, and loads demo merchants, products, orders, refunds, and payouts.
 

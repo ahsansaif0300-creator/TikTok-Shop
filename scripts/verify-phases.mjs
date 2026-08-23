@@ -956,6 +956,12 @@ async function phase7Static() {
     const usage = read("USAGE.md");
     assert(usage.includes("localhost:3000/login"), "USAGE.md missing local login URL");
     assert(usage.includes("Hostinger"), "USAGE.md missing Hostinger steps");
+    assert(/phone|Wi-Fi|Wi‑Fi|other device/i.test(usage), "USAGE.md missing other-device access steps");
+    assert(exists("scripts/lan-urls.mjs"), "scripts/lan-urls.mjs missing");
+    assert(exists("scripts/dev.mjs"), "scripts/dev.mjs missing");
+    const pkg = JSON.parse(read("package.json"));
+    assert(pkg.scripts.urls?.includes("lan-urls"), "npm run urls missing");
+    assert(pkg.scripts.dev.includes("scripts/dev.mjs"), "dev must bind via scripts/dev.mjs");
   });
 }
 

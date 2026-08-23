@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0 --port 3000",
+    "dev": "node scripts/dev.mjs",
+    "urls": "node scripts/lan-urls.mjs",
     "build": "prisma generate && next build",
     "start": "node scripts/start.mjs",
     "lint": "eslint",

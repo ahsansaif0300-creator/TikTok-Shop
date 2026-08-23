@@ -20,9 +20,8 @@ function run(command, args) {
   }
 }
 
-run(process.execPath, [path.join(root, "scripts", "bootstrap.mjs")]);
-
 const port = process.env.PORT || "3000";
 printAccessUrls(port);
+
 const nextBin = require.resolve("next/dist/bin/next");
-run(process.execPath, [nextBin, "start", "--hostname", "0.0.0.0", "--port", String(port)]);
+run(process.execPath, [nextBin, "dev", "--hostname", "0.0.0.0", "--port", String(port)]);

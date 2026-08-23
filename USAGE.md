@@ -25,7 +25,7 @@ This is the day-to-day guide after the app is installed. It is an **operations d
    npm run dev
    ```
 
-   Open [http://localhost:3000/login](http://localhost:3000/login).
+   Open **http://localhost:3000/login** on this computer. That address does **not** work on a phone or another PC — see [Open from your phone or another device](#open-from-your-phone-or-another-device) below.
 
 4. Or run the production build (same process Hostinger uses):
 
@@ -43,6 +43,46 @@ This is the day-to-day guide after the app is installed. It is an **operations d
    ```
 
    Leave that unset when the site is served as **HTTPS**.
+
+## Open from your phone or another device
+
+`http://localhost:3000` means “this device.” On a phone or another computer it tries to open a server **on that phone/computer**, which is why you see **connection refused** / **site not reachable**.
+
+### Same Wi‑Fi as your computer (home/office)
+
+1. Keep the app running on your computer (`npm run dev` or `npm run start`). Leave that window open.
+2. On the computer, run:
+
+   ```bash
+   npm run urls
+   ```
+
+   It prints a line like `On your phone/Wi-Fi: http://192.168.1.23:3000/login`.
+   Or look it up yourself:
+   - **Windows:** Command Prompt → `ipconfig` → **IPv4 Address** (often `192.168.x.x` or `10.x.x.x`)
+   - **Mac:** Terminal → `ipconfig getifaddr en0`
+   - **Linux:** `hostname -I`
+3. On the phone, join the **same Wi‑Fi** (not mobile data).
+4. In the phone browser open `http://YOUR-COMPUTER-IP:3000/login` — for example `http://192.168.1.23:3000/login`. Do not type `localhost`.
+5. If login does not stick, add `AUTH_COOKIE_SECURE=false` to `.env` and restart.
+6. If it still refuses to connect:
+   - Windows Firewall: allow **Node.js** (or port **3000**) on a **Private** network
+   - Confirm both devices are on the same Wi‑Fi, not guest/AP isolation
+   - Confirm the computer did not sleep and the terminal is still running the app
+
+### Cursor Cloud / a localhost link from the agent
+
+A Cloud Agent `localhost` link is only forwarded to **your** Cursor session. Other phones and PCs cannot open it.
+
+Use one of these instead:
+
+- Run the app **on your own computer** and use the Wi‑Fi IP steps above
+- In the agent **Ports** panel, expose port **3000** and copy the **public preview URL** (that URL needs the Ports network token; the app cannot create it)
+- Deploy to Hostinger and use `https://your-domain.com/login`
+
+### Anyone on the internet
+
+Use your Hostinger / VPS domain (section 5). Do not try to share `localhost`.
 
 ## 2. Sign in
 
