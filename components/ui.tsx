@@ -112,15 +112,17 @@ export function Tabs({
   items,
   active,
   basePath,
+  paramName = "status",
 }: {
   items: { value: string; label: string }[];
   active: string;
   basePath: string;
+  paramName?: string;
 }) {
   return (
     <div className="flex flex-wrap gap-1 rounded-2xl bg-[#efe8db] p-1">
       {items.map((item) => {
-        const href = item.value ? `${basePath}?status=${item.value}` : basePath;
+        const href = item.value ? `${basePath}?${paramName}=${item.value}` : basePath;
         const isActive = active === item.value;
         return (
           <Link

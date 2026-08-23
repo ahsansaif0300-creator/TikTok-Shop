@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { canManageTeam, requireSession } from "@/lib/auth";
 
@@ -12,7 +13,10 @@ export async function createTeamUser(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("role") ?? "OPS");
-  if (!name || !email || !password) return;
+  if (!name || !email || !password) redirect("/users?error=invalid");
+  if (password.length < 8) redirect("/users?error=password");
+  const exists = await prisma.user.findUnique({ where: { email } });
+  if (exists) redirect("/users?error=email");
   await prisma.user.create({
     data: {
       name,
@@ -22,4 +26,5 @@ export async function createTeamUser(formData: FormData) {
     },
   });
   revalidatePath("/users");
+  redirect("/users?created=1");
 }

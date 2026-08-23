@@ -19,11 +19,17 @@ const TABS = [
 export default async function PayoutsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; error?: string; requested?: string }>;
 }) {
   const session = await requireSession();
-  const { status = "" } = await searchParams;
+  const { status = "", error, requested } = await searchParams;
   const staff = isStaff(session.role);
+  const errors: Record<string, string> = {
+    balance: "Amount exceeds available balance. Payouts only move money already earned from sales.",
+    invalid: "Enter a payout amount greater than zero.",
+    forbidden: "You cannot request a payout for that store.",
+    status: "That payout can no longer change status.",
+  };
   const [payouts, merchants] = await Promise.all([
     prisma.payout.findMany({
       where: {
@@ -41,6 +47,14 @@ export default async function PayoutsPage({
   return (
     <div>
       <PageHeader title="Payouts" subtitle="Bank transfers of earned sales balances. Review, approve, then mark paid when the transfer is sent." />
+      {error && errors[error] ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">{errors[error]}</p>
+      ) : null}
+      {requested ? (
+        <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          Payout request submitted. Operations will approve it before the bank transfer.
+        </p>
+      ) : null}
       <div className="mb-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div>
           <div className="mb-4">
@@ -94,6 +108,9 @@ export default async function PayoutsPage({
                             <Button type="submit">Mark paid</Button>
                           </form>
                         ) : null}
+                        {!staff && payout.status === "PENDING" ? (
+                          <p className="text-xs text-muted">Waiting on ops</p>
+                        ) : null}
                       </Td>
                     </tr>
                   ))}
@@ -104,6 +121,14 @@ export default async function PayoutsPage({
         </div>
         <Card className="h-fit p-5">
           <h2 className="font-medium">Request payout</h2>
+          {!staff && merchants[0] ? (
+            <p className="mt-1 text-sm text-muted">
+              Available: {money(merchants[0].availableBalance)} · {merchants[0].bankName ?? "Bank"} •
+              {merchants[0].bankAccountLast4 ?? "0000"}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-muted">Only available sales balance can be paid out to the store’s bank.</p>
+          )}
           <form action={requestPayout} className="mt-4 space-y-3">
             {staff ? (
               <label className="block space-y-1.5 text-sm">

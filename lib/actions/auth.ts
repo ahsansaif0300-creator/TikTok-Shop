@@ -35,7 +35,8 @@ export async function updateProfileAction(formData: FormData) {
   const session = await requireSession();
   const name = String(formData.get("name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  if (!name) return;
+  if (!name) redirect("/profile?error=invalid");
+  if (password && password.length < 8) redirect("/profile?error=password");
 
   await prisma.user.update({
     where: { id: session.userId },

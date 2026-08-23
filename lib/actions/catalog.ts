@@ -96,4 +96,5 @@ export async function saveSettings(formData: FormData) {
     });
   }
   revalidatePath("/settings");
+  redirect("/settings?saved=1");
 }

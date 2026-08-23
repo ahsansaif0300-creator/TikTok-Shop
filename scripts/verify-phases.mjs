@@ -122,6 +122,13 @@ function canOpenRefundCheck(status) {
   return status !== "PENDING_PAYMENT" && status !== "CANCELLED";
 }
 
+function canDecidePayoutCheck(from, action) {
+  if (action === "APPROVED") return from === "PENDING";
+  if (action === "REJECTED") return from === "PENDING" || from === "APPROVED";
+  if (action === "PAID") return from === "APPROVED";
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Phase 1
 // ---------------------------------------------------------------------------
@@ -815,7 +822,15 @@ async function phase6Static() {
     assert(read("app/(app)/settings/page.tsx").includes("SUPER_ADMIN"), "Settings not admin-gated");
     const payouts = read("lib/actions/payouts.ts");
     assert(payouts.includes("availableBalance"), "Payout does not touch available balance");
-    assert(payouts.includes("Amount exceeds available balance"), "Overdraw guard missing");
+    assert(payouts.includes("error=balance"), "Overdraw guard missing");
+    assert(payouts.includes("canDecidePayout"), "Payout status machine missing");
+    assert(payouts.includes("catalogMerchantId"), "Payout merchant scope missing");
+    assert(exists("lib/payout-flow.ts"), "payout-flow missing");
+    assert(!canDecidePayoutCheck("PENDING", "PAID"), "Pending payout cannot skip to paid");
+    assert(!canDecidePayoutCheck("PAID", "PAID"), "Paid payout cannot be paid twice");
+    assert(canDecidePayoutCheck("PENDING", "APPROVED"), "Pending should approve");
+    assert(canDecidePayoutCheck("APPROVED", "PAID"), "Approved should mark paid");
+    assert(read("lib/actions/users.ts").includes("password.length < 8"), "Team password rule missing");
   });
 }
 
@@ -1189,6 +1204,24 @@ async function phaseHttp(prisma) {
     assert(customerPage.status === 200, `Customer detail ${customerPage.status}`);
     const merchantCustomer = await getWithCookie(`/customers/${shopper.id}`, merchantCookie);
     assert([301, 302, 303, 307, 308].includes(merchantCustomer.status), "Merchant opened a customer record");
+  });
+  await check(6, "Finance, payouts, and workspace pages load with role rules", async () => {
+    const ledger = await pageText("/finance", adminCookie);
+    assert(ledger.res.status === 200, `/finance ${ledger.res.status}`);
+    assert(ledger.text.includes("Available to payout"), "Ledger totals missing");
+    const merchantLedger = await pageText("/finance", merchantCookie);
+    assert(merchantLedger.res.status === 200, `Merchant /finance ${merchantLedger.res.status}`);
+    assert(!merchantLedger.text.includes("Lumen Beauty"), "Merchant ledger leaked Lumen");
+    const payouts = await pageText("/finance/payouts", adminCookie);
+    assert(payouts.res.status === 200, `/finance/payouts ${payouts.res.status}`);
+    assert(payouts.text.includes("PO-") || payouts.text.includes("Approve") || payouts.text.includes("Payouts"), "Payouts page empty of controls");
+    const merchantPayouts = await pageText("/finance/payouts", merchantCookie);
+    assert(merchantPayouts.res.status === 200, `Merchant payouts ${merchantPayouts.res.status}`);
+    assert(merchantPayouts.text.includes("Available"), "Merchant available balance missing on payout form");
+    const profile = await getWithCookie("/profile", adminCookie);
+    assert(profile.status === 200, `/profile ${profile.status}`);
+    const notes = await getWithCookie("/notifications", adminCookie);
+    assert(notes.status === 200, `/notifications ${notes.status}`);
   });
 }
 

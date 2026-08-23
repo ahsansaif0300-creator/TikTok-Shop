@@ -1,21 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
-import { canAccessMerchant } from "@/lib/scope";
+import { canAccessMerchant, catalogMerchantId } from "@/lib/scope";
+import { canDecidePayout, type PayoutDecision } from "@/lib/payout-flow";
 
 export async function requestPayout(formData: FormData) {
   const session = await requireSession();
-  const merchantId =
-    session.role === "MERCHANT" ? session.merchantId : String(formData.get("merchantId") ?? "");
+  const merchantId = catalogMerchantId(session, String(formData.get("merchantId") ?? ""));
   const amount = Number(formData.get("amount") ?? 0);
-  if (!merchantId || !Number.isFinite(amount) || amount <= 0) return;
+  if (!merchantId || !Number.isFinite(amount) || amount <= 0) {
+    redirect("/finance/payouts?error=invalid");
+  }
 
   const merchant = await prisma.merchant.findUnique({ where: { id: merchantId } });
-  if (!merchant || !canAccessMerchant(session, merchant.id)) return;
+  if (!merchant || !canAccessMerchant(session, merchant.id)) {
+    redirect("/finance/payouts?error=forbidden");
+  }
   if (amount > merchant.availableBalance) {
-    throw new Error("Amount exceeds available balance");
+    redirect("/finance/payouts?error=balance");
   }
 
   const count = await prisma.payout.count();
@@ -30,13 +35,17 @@ export async function requestPayout(formData: FormData) {
     },
   });
   revalidatePath("/", "layout");
+  redirect("/finance/payouts?requested=1");
 }
 
-export async function decidePayout(payoutId: string, action: "APPROVED" | "REJECTED" | "PAID") {
+export async function decidePayout(payoutId: string, action: PayoutDecision) {
   const session = await requireSession();
   if (!isStaff(session.role)) throw new Error("Forbidden");
   const payout = await prisma.payout.findUnique({ where: { id: payoutId } });
   if (!payout) return;
+  if (!canDecidePayout(payout.status, action)) {
+    redirect("/finance/payouts?error=status");
+  }
 
   if (action === "REJECTED") {
     await prisma.payout.update({
@@ -46,6 +55,10 @@ export async function decidePayout(payoutId: string, action: "APPROVED" | "REJEC
   } else if (action === "APPROVED") {
     await prisma.payout.update({ where: { id: payoutId }, data: { status: "APPROVED" } });
   } else if (action === "PAID") {
+    const merchant = await prisma.merchant.findUnique({ where: { id: payout.merchantId } });
+    if (!merchant || merchant.availableBalance < payout.amount) {
+      redirect("/finance/payouts?error=balance");
+    }
     await prisma.$transaction([
       prisma.payout.update({
         where: { id: payoutId },

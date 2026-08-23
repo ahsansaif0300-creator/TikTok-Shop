@@ -1,15 +1,31 @@
 import { format } from "date-fns";
+import type { LedgerType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { merchantScope } from "@/lib/scope";
 import { money } from "@/lib/utils";
 import { LEDGER_TYPE } from "@/lib/labels";
-import { Card, Empty, PageHeader, StatCard, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
+import { Card, Empty, PageHeader, StatCard, StatusBadge, TableWrap, Tabs, Td, Th } from "@/components/ui";
 
-export default async function FinancePage() {
+const TABS = [
+  { value: "", label: "All" },
+  { value: "SALE", label: "Sales" },
+  { value: "REFUND", label: "Refunds" },
+  { value: "PAYOUT", label: "Payouts" },
+  { value: "FEE", label: "Fees" },
+  { value: "ADJUSTMENT", label: "Adjustments" },
+];
+
+export default async function FinancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>;
+}) {
   const session = await requireSession();
+  const { type = "" } = await searchParams;
   const scope = merchantScope(session);
-  const merchantFilter = session.role === "MERCHANT" && session.merchantId ? { id: session.merchantId } : {};
+  const merchantView = session.role === "MERCHANT";
+  const merchantFilter = merchantView && session.merchantId ? { id: session.merchantId } : {};
 
   const [merchants, entries] = await Promise.all([
     prisma.merchant.findMany({
@@ -18,7 +34,10 @@ export default async function FinancePage() {
       orderBy: { name: "asc" },
     }),
     prisma.ledgerEntry.findMany({
-      where: scope,
+      where: {
+        ...scope,
+        ...(type ? { type: type as LedgerType } : {}),
+      },
       include: { merchant: true },
       orderBy: { createdAt: "desc" },
       take: 80,
@@ -38,6 +57,9 @@ export default async function FinancePage() {
         <StatCard label="Available to payout" value={money(available)} />
         <StatCard label="Pending settlement" value={money(pending)} hint="Held until orders complete" />
       </div>
+      <div className="mb-4">
+        <Tabs items={TABS} active={type} basePath="/finance" paramName="type" />
+      </div>
       <Card>
         {entries.length === 0 ? (
           <Empty title="No ledger activity" body="Settlements appear when orders are paid and completed." />
@@ -46,7 +68,7 @@ export default async function FinancePage() {
             <thead>
               <tr>
                 <Th>When</Th>
-                <Th>Merchant</Th>
+                {merchantView ? null : <Th>Merchant</Th>}
                 <Th>Type</Th>
                 <Th>Reference</Th>
                 <Th>Amount</Th>
@@ -56,7 +78,7 @@ export default async function FinancePage() {
               {entries.map((entry) => (
                 <tr key={entry.id}>
                   <Td>{format(entry.createdAt, "MMM d, yyyy HH:mm")}</Td>
-                  <Td>{entry.merchant.name}</Td>
+                  {merchantView ? null : <Td>{entry.merchant.name}</Td>}
                   <Td>
                     <StatusBadge value={entry.type} labels={LEDGER_TYPE} />
                   </Td>

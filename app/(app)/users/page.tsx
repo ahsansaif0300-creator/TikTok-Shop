@@ -6,9 +6,14 @@ import { ROLE_LABEL } from "@/lib/labels";
 import { createTeamUser } from "@/lib/actions/users";
 import { Button, Card, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 
-export default async function UsersPage() {
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; created?: string }>;
+}) {
   const session = await requireSession();
   if (!canManageTeam(session.role)) redirect("/");
+  const { error, created } = await searchParams;
   const users = await prisma.user.findMany({
     include: { merchant: true },
     orderBy: { createdAt: "asc" },
@@ -18,6 +23,15 @@ export default async function UsersPage() {
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div>
         <PageHeader title="Team" subtitle="Staff accounts for the operations workspace. Merchants log in with a linked store." />
+        {created ? (
+          <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Staff account created.</p>
+        ) : null}
+        {error === "email" ? (
+          <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">That email is already in use.</p>
+        ) : null}
+        {error === "password" ? (
+          <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Password must be at least 8 characters.</p>
+        ) : null}
         <Card>
           <TableWrap>
             <thead>

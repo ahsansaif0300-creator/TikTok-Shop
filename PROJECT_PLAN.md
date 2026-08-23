@@ -182,11 +182,11 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Deliverables
 
-- `/finance` ledger (`SALE`, `REFUND`, `FEE`, `PAYOUT`, `ADJUSTMENT`)
-- `/finance/payouts` request → approve/reject → mark paid (decrements available)
+- `/finance` ledger (`SALE`, `REFUND`, `FEE`, `PAYOUT`, `ADJUSTMENT`) with type filters
+- `/finance/payouts` request → approve/reject → mark paid (decrements available; no double-pay or overdraw)
 - `/notifications`
-- `/users` super-admin only (invite OPS / SUPER_ADMIN)
-- `/profile` name + password
+- `/users` super-admin only (invite OPS / SUPER_ADMIN; unique email, password length)
+- `/profile` name + password (min 8 chars)
 - `/settings` super-admin only (store name, support, currency)
 
 ### Checklist
