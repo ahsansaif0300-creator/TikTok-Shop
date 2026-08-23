@@ -12,7 +12,7 @@ This app is **Node.js / Next.js**. It will **not** run if you copy files into `p
 
 | What | Where | What you do with it |
 | --- | --- | --- |
-| **GitHub repo** (best) | `ahsansaif0300-creator/TikTok-Shop` | Import in hPanel. Pick branch **`cursor/harbor-commerce-os-7442`** (not `main`) |
+| **GitHub repo** (best) | `ahsansaif0300-creator/TikTok-Shop` | Import in hPanel. Branch **`main`** (this is where `package.json` lives) |
 | **`hostinger.env.example`** | repo root | Copy these two lines into hPanel **Environment variables**. Change `AUTH_SECRET` |
 | **`harbor-hostinger.zip`** (optional) | created by `npm run pack:hostinger` | Only if you skip GitHub and upload an archive |
 | **`package.json`** | repo root | Hostinger reads `build` / `start` from this. You do not upload it alone |
@@ -44,7 +44,7 @@ If that domain already has a PHP/WordPress site, Hostinger needs that website sl
 1. Choose **Import Git repository**.
 2. Connect GitHub and allow the Hostinger GitHub App.
 3. Repository: **`TikTok-Shop`** (`ahsansaif0300-creator/TikTok-Shop`).
-4. Branch: **`cursor/harbor-commerce-os-7442`**. Do not use `main` until this Harbor work is merged there.
+4. Branch: **`main`**. Hostinger looks for `package.json` on this branch at the repo root.
 5. Root directory: `.` (repo root, where `package.json` is).
 
 **Option B — ZIP upload**
@@ -129,4 +129,13 @@ In the site dashboard → **Domains** → **Add domain** → set it as primary. 
 
 ---
 
-Hostinger’s own Node.js docs: [Creating a Node.js App](https://docs.hostinger.com/node.js/creating-an-app) and [Free subdomains](https://docs.hostinger.com/domains/subdomains).
+## Hostinger says “This repository is missing a package.json file”
+
+Hostinger scans the **default branch** (`main`) at the **repo root**. This project’s `package.json` is on `main` next to `README.md`, `next.config.ts`, and `app/`.
+
+If you still see that message:
+
+1. In hPanel, pick branch **`main`**, not an old/empty copy of the repo.
+2. Root directory must be empty or `.` — not a subfolder.
+3. Do not choose **Continue as a static website**.
+4. If GitHub still shows only a README on `main`, refresh repositories in hPanel after this merge has been pushed.

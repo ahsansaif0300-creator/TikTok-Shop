@@ -151,7 +151,7 @@ Short version:
 
 1. Plan must be **Business** or **Cloud** (Node.js web app).
 2. **Websites** → **Add Website** → **Node.js web app** → **Free subdomain**.
-3. Import GitHub branch `cursor/harbor-commerce-os-7442`, or upload `npm run pack:hostinger`’s zip.
+3. Import GitHub branch `main` (repo root has `package.json`), or upload `npm run pack:hostinger`’s zip.
 4. Start command `npm run start`. Env: `DATABASE_URL=file:./dev.db` and a new `AUTH_SECRET`.
 5. Open `https://YOUR-TEMP.hostingersite.com/login`.
 

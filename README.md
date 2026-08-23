@@ -88,7 +88,7 @@ If you later buy a domain: **Domains** → **Add domain** → set it primary. Yo
 1. Push this repo to GitHub (the Harbor branch is fine).
 2. In hPanel: **Websites** → **Add Website** → **Node.js web app**.
 3. If that domain already has a PHP/WordPress site, Hostinger wants you to **remove that website slot first** (download a backup). Then add the Node app on the same domain.
-4. Choose **Import Git repository**, connect GitHub, pick this repo and branch **`cursor/harbor-commerce-os-7442`** (not `main` until Harbor is merged there).
+4. Choose **Import Git repository**, connect GitHub, pick this repo and branch **`main`** (that branch has `package.json` at the root).
 5. Suggested settings:
    - Framework: **Next.js**
    - Node.js: **20** or **22**
