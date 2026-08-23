@@ -135,11 +135,13 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Checklist
 
-- [ ] Seed has ACTIVE, PENDING, and SUSPENDED merchants
-- [ ] At least one pending application
-- [ ] Plans Starter / Growth / Scale exist
-- [ ] Merchant role is redirected away from these routes
-- [ ] Approving an application creates an `ACTIVE` merchant
+- [x] Seed has ACTIVE, PENDING, and SUSPENDED merchants
+- [x] At least one pending application
+- [x] Plans Starter / Growth / Scale exist
+- [x] Merchant role is redirected away from these routes
+- [x] Approving an application creates an `ACTIVE` merchant
+- [x] Rejecting an application does not create a merchant
+- [x] Staff can log an inbound application
 
 ### Verify
 
