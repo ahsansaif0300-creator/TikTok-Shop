@@ -6,7 +6,15 @@ import { isNavActive, visibleNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import type { Role } from "@prisma/client";
 
-export function SidebarNav({ role, unread }: { role: Role; unread: number }) {
+export function SidebarNav({
+  role,
+  unread,
+  onNavigate,
+}: {
+  role: Role;
+  unread: number;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const groups = visibleNav(role);
   const allHrefs = groups.flatMap((group) => group.items.map((item) => item.href));
@@ -26,6 +34,7 @@ export function SidebarNav({ role, unread }: { role: Role; unread: number }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
                     active ? "bg-[#2a241e] text-white" : "text-[#d8ccba] hover:bg-[#211c18] hover:text-white",

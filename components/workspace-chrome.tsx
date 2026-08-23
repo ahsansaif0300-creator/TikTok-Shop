@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useState, type ReactNode } from "react";
 import { Anchor, LogOut, Menu, X } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
 import { initials } from "@/lib/utils";
@@ -24,13 +23,9 @@ export function WorkspaceChrome({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
+  const close = () => setOpen(false);
   const contextLabel = storeName ?? "All merchants";
+  const nav = <SidebarNav role={role} unread={unread} onNavigate={close} />;
 
   const brand = (
     <div className="flex h-16 items-center gap-3 px-5">
@@ -44,18 +39,19 @@ export function WorkspaceChrome({
     </div>
   );
 
-  const nav = <SidebarNav role={role} unread={unread} />;
-
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
-      <aside className="hidden min-h-screen bg-sidebar text-[#efe8db] lg:block">{brand}{nav}</aside>
+      <aside className="hidden min-h-screen bg-sidebar text-[#efe8db] lg:block">
+        {brand}
+        {nav}
+      </aside>
       {open ? (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
             type="button"
             className="absolute inset-0 bg-black/45"
             aria-label="Close menu"
-            onClick={() => setOpen(false)}
+            onClick={close}
           />
           <aside className="relative h-full w-[min(280px,86vw)] overflow-y-auto bg-sidebar text-[#efe8db] shadow-xl">
             <div className="flex items-center justify-between pr-2">
@@ -64,7 +60,7 @@ export function WorkspaceChrome({
                 type="button"
                 className="mr-3 grid size-9 place-items-center rounded-xl text-[#efe8db] hover:bg-[#2a241e]"
                 aria-label="Close menu"
-                onClick={() => setOpen(false)}
+                onClick={close}
               >
                 <X className="size-4" />
               </button>
