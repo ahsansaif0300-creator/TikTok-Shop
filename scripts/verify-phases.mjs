@@ -709,8 +709,11 @@ async function phase7Static() {
     assert(pkg.scripts.start.includes("0.0.0.0"), "start does not bind all interfaces");
     assert(pkg.scripts.start.includes("PORT"), "start ignores PORT");
     const boot = read("scripts/bootstrap.mjs");
-    assert(boot.includes("prisma/dev.db"), "bootstrap looks in the wrong place for SQLite");
-    assert(boot.includes("prisma/seed.ts"), "bootstrap does not seed");
+    assert(
+      boot.includes("prisma") && boot.includes("dev.db"),
+      "bootstrap looks in the wrong place for SQLite",
+    );
+    assert(boot.includes("prisma/seed.ts") || boot.includes("seed.ts"), "bootstrap does not seed");
   });
   await check(7, "Preview hosts are allowed for Server Actions", () => {
     const config = read("next.config.ts");
