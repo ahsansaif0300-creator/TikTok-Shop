@@ -220,12 +220,12 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 
 ### Checklist
 
-- [ ] Production server returns `/login` over HTTP
-- [ ] Authenticated roles can load their allowed pages
-- [ ] Merchant HTML for `/orders` does not list other stores’ names as sellers
-- [ ] Cursor preview: `allowedDevOrigins` / `serverActions.allowedOrigins` include `*.agent.cvm.dev` and `*.cursorvm.com`
-- [ ] README states Node hosting, SSL, and `AUTH_SECRET` rotation
-- [ ] No impersonation branding in the UI
+- [x] Production server returns `/login` over HTTP
+- [x] Authenticated roles can load their allowed pages
+- [x] Merchant HTML for `/orders` does not list other stores’ names as sellers
+- [x] Cursor preview: `allowedDevOrigins` / `serverActions.allowedOrigins` include `*.agent.cvm.dev` and `*.cursorvm.com`
+- [x] README states Node hosting, SSL, and `AUTH_SECRET` rotation
+- [x] No impersonation branding in the UI
 
 ### Verify
 
