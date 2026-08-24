@@ -4,13 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { MerchantStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { uniqueMerchantSlug } from "@/lib/slug";
 
 export async function setMerchantStatus(merchantId: string, status: MerchantStatus) {
   const session = await requireSession();
@@ -118,7 +112,10 @@ export async function reviewApplication(formData: FormData) {
   const merchant = await prisma.merchant.create({
     data: {
       name: application.businessName,
-      slug: `${slugify(application.businessName)}-${Date.now().toString(36)}`,
+      slug: await uniqueMerchantSlug(application.businessName, async (candidate) => {
+        const hit = await prisma.merchant.findUnique({ where: { slug: candidate }, select: { id: true } });
+        return Boolean(hit);
+      }),
       legalName: application.businessName,
       email: application.email,
       phone: application.phone,

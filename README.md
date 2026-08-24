@@ -9,7 +9,7 @@ A professional multi-merchant commerce operations dashboard. It covers the legit
 - **Roles:** Super admin, operations staff, and merchant (store-scoped)
 - **Orders:** Payment → processing → shipment (carrier + tracking) → delivery → settlement
 - **Refunds:** Refund only, return & refund, or exchange, with optional restock
-- **Merchants:** Applications, activate/suspend, SaaS-style seller plans (monthly fee + sales commission)
+- **Merchants:** Public signup, unique shop links (`/s/{slug}`), applications, activate/suspend, seller plans
 - **Catalog:** Products, categories, stock, reviews
 - **Customers:** Profiles and order history
 - **Finance:** Ledger from real sales, available vs pending balance, bank payouts

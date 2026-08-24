@@ -42,7 +42,7 @@ export default async function CustomersPage({
             </thead>
             <tbody>
               {customers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-[#faf6ef]">
+                <tr key={customer.id} className="hover:bg-soft">
                   <Td>
                     <Link href={`/customers/${customer.id}`} className="font-medium text-accent hover:underline">
                       {customer.name}

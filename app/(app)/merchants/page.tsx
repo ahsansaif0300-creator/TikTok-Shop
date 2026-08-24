@@ -46,6 +46,7 @@ export default async function MerchantsPage({
             <thead>
               <tr>
                 <Th>Merchant</Th>
+                <Th>Shop link</Th>
                 <Th>Plan</Th>
                 <Th>Status</Th>
                 <Th>Catalog</Th>
@@ -55,7 +56,7 @@ export default async function MerchantsPage({
             </thead>
             <tbody>
               {merchants.map((merchant) => (
-                <tr key={merchant.id} className="hover:bg-[#faf6ef]">
+                <tr key={merchant.id} className="hover:bg-soft">
                   <Td>
                     <Link href={`/merchants/${merchant.id}`} className="font-medium text-accent hover:underline">
                       {merchant.name}
@@ -63,6 +64,11 @@ export default async function MerchantsPage({
                     <p className="text-xs text-muted">
                       {merchant.city}, {merchant.country}
                     </p>
+                  </Td>
+                  <Td>
+                    <Link href={`/s/${merchant.slug}`} className="font-mono text-xs text-accent hover:underline">
+                      /s/{merchant.slug}
+                    </Link>
                   </Td>
                   <Td>{merchant.plan.name}</Td>
                   <Td>

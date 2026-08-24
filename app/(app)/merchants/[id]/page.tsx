@@ -5,9 +5,11 @@ import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { money } from "@/lib/utils";
 import { LEDGER_TYPE, MERCHANT_STATUS, ORDER_STATUS } from "@/lib/labels";
+import { shopAbsoluteUrl, shopPath } from "@/lib/shop-url";
 import { assignPlan, setMerchantStatus } from "@/lib/actions/merchants";
 import { createStoreUser } from "@/lib/actions/users";
 import { Button, Card, Empty, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
+import { CopyShopLink } from "@/components/copy-shop-link";
 
 export default async function MerchantDetailPage({
   params,
@@ -34,6 +36,7 @@ export default async function MerchantDetailPage({
   if (!merchant) notFound();
   const plans = await prisma.plan.findMany({ orderBy: { monthlyFee: "asc" } });
   const overCap = merchant._count.products > merchant.plan.maxProducts;
+  const shopUrl = await shopAbsoluteUrl(merchant.slug);
 
   return (
     <div>
@@ -67,6 +70,17 @@ export default async function MerchantDetailPage({
             <div className="flex justify-between gap-3">
               <dt className="text-muted">Phone</dt>
               <dd>{merchant.phone || "—"}</dd>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted">Shop link</dt>
+                <CopyShopLink url={shopUrl} />
+              </div>
+              <dd className="break-all font-mono text-xs">
+                <Link href={shopPath(merchant.slug)} className="text-accent hover:underline">
+                  {shopUrl}
+                </Link>
+              </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-muted">Catalog</dt>
@@ -137,7 +151,9 @@ export default async function MerchantDetailPage({
           )}
           <form action={createStoreUser} className="mt-5 space-y-3 border-t border-line pt-4">
             <h3 className="font-medium">Create store login</h3>
-            <p className="text-xs text-muted">The seller uses the same /login page and only sees this shop.</p>
+            <p className="text-xs text-muted">
+              The seller signs in at /login or this shop link, then only sees this store.
+            </p>
             <input type="hidden" name="merchantId" value={merchant.id} />
             <Field name="name" label="Name" required defaultValue={merchant.name} />
             <Field name="email" label="Email" type="email" required defaultValue={merchant.email} />

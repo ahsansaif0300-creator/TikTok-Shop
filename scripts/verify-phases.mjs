@@ -244,6 +244,7 @@ async function phase2Static() {
       "components/shell.tsx",
       "components/workspace-chrome.tsx",
       "components/sidebar-nav.tsx",
+      "components/brand.tsx",
       "lib/nav.ts",
       "lib/dashboard.ts",
       "app/(app)/page.tsx",
@@ -251,7 +252,7 @@ async function phase2Static() {
     ]) {
       assert(exists(file), `Missing ${file}`);
     }
-    const chrome = read("components/workspace-chrome.tsx");
+    const chrome = read("components/workspace-chrome.tsx") + read("components/brand.tsx");
     assert(chrome.includes("Harbor") && chrome.includes("Commerce OS"), "Harbor mark missing from shell");
     assert(chrome.includes("logoutAction"), "Logout control missing");
     assert(chrome.includes("Open menu"), "Mobile menu control missing");
@@ -267,12 +268,30 @@ async function phase2Static() {
     assert(nav.includes("/merchants") && nav.includes("staffOnly"), "Merchants is not staff-only");
   });
   await check(2, "Dashboard is role-aware", () => {
-    const page = read("app/(app)/page.tsx");
+    const page = read("app/(app)/page.tsx") + read("components/merchant-home.tsx");
     assert(page.includes("Store overview") && page.includes("Operations overview"), "Role titles missing");
     assert(page.includes("Available balance"), "Merchant wallet stats missing");
     assert(page.includes("Needs attention"), "Attention queue missing");
     const dash = read("lib/dashboard.ts");
     assert(dash.includes("availableBalance") && dash.includes("pendingApplications"), "Scoped dashboard queries missing");
+  });
+  await check(2, "Public signup and unique shop links exist", () => {
+    for (const file of [
+      "app/signup/page.tsx",
+      "app/s/[slug]/page.tsx",
+      "lib/shop-url.ts",
+      "lib/shop-host.ts",
+      "lib/slug.ts",
+      "lib/actions/signup.ts",
+    ]) {
+      assert(exists(file), `Missing ${file}`);
+    }
+    const login = read("app/login/page.tsx");
+    assert(login.includes("/signup"), "Login is missing a Sign up path");
+    const proxy = read("proxy.ts");
+    assert(proxy.includes("/signup") && proxy.includes("/s/"), "proxy.ts must allow signup and shop cards");
+    assert(read("lib/actions/signup.ts").includes("MERCHANT"), "Public signup must create a merchant user");
+    assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screen is Harbor-branded", () => {
     const login = read("app/login/page.tsx");
@@ -1046,6 +1065,16 @@ async function phaseHttp(prisma) {
     assert(res.status === 200, `/login ${res.status}`);
     assert(/Harbor/.test(text), "Login HTML missing Harbor");
     assert(!/tiktok/i.test(text), "Login HTML mentions TikTok");
+    assert(/signup/i.test(text), "Login HTML missing Sign up");
+  });
+  await check(2, "Anonymous signup and shop card are public", async () => {
+    const signup = await fetchManual(`${baseUrl}/signup`);
+    assert(signup.status === 200, `/signup returned ${signup.status}`);
+    const { res, text } = await pageText("/s/northline-outfitters");
+    assert(res.status === 200, `/s/northline-outfitters ${res.status}`);
+    assert(/Harbor/.test(text), "Shop card missing Harbor");
+    assert(/Seller login|Sign in/.test(text), "Shop card missing seller login");
+    assert(/northline-outfitters/.test(text), "Shop card missing slug");
   });
 
   const admin = await prisma.user.findUnique({ where: { email: "oscar.d@example.net" } });

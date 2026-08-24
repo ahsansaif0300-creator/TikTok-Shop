@@ -7,11 +7,15 @@ export async function getDashboardData(session: SessionUser) {
   const scope = merchantScope(session);
   const now = new Date();
   const since = subDays(now, 14);
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
   const isMerchant = session.role === "MERCHANT";
 
   const [
     orderCount,
     paidOrders,
+    todayOrders,
+    todaySales,
     pendingRefunds,
     pendingPayouts,
     activeMerchants,
@@ -25,6 +29,17 @@ export async function getDashboardData(session: SessionUser) {
     prisma.order.count({ where: scope }),
     prisma.order.aggregate({
       where: { ...scope, status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] } },
+      _sum: { total: true },
+    }),
+    prisma.order.count({
+      where: { ...scope, createdAt: { gte: startOfDay }, status: { not: "CANCELLED" } },
+    }),
+    prisma.order.aggregate({
+      where: {
+        ...scope,
+        createdAt: { gte: startOfDay },
+        status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] },
+      },
       _sum: { total: true },
     }),
     prisma.refund.count({ where: { status: "PENDING", order: scope } }),
@@ -41,7 +56,7 @@ export async function getDashboardData(session: SessionUser) {
     isMerchant && session.merchantId
       ? prisma.merchant.findUnique({
           where: { id: session.merchantId },
-          select: { name: true, availableBalance: true, pendingBalance: true },
+          select: { name: true, slug: true, availableBalance: true, pendingBalance: true },
         })
       : Promise.resolve(null),
     prisma.order.findMany({
@@ -79,6 +94,8 @@ export async function getDashboardData(session: SessionUser) {
   return {
     orderCount,
     gmv: paidOrders._sum.total ?? 0,
+    todayOrderCount: todayOrders,
+    todaySales: todaySales._sum.total ?? 0,
     pendingRefunds,
     pendingPayouts,
     activeMerchants,

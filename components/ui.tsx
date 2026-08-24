@@ -31,7 +31,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl border border-line bg-card shadow-[0_1px_2px_rgba(28,25,21,0.04)]", className)}>
+    <div className={cn("rounded-2xl border border-line bg-card shadow-[0_1px_2px_rgba(22,24,35,0.04)]", className)}>
       {children}
     </div>
   );
@@ -45,7 +45,7 @@ export function Badge({
   tone?: "neutral" | "success" | "warning" | "danger" | "info";
 }) {
   const map = {
-    neutral: "bg-[#f3eee4] text-[#5c5348]",
+    neutral: "bg-soft text-[#5c5d63]",
     success: "bg-emerald-50 text-emerald-800",
     warning: "bg-amber-50 text-amber-800",
     danger: "bg-rose-50 text-rose-800",
@@ -89,9 +89,9 @@ export function Button({
   variant?: "primary" | "secondary" | "ghost" | "danger";
 }) {
   const styles = {
-    primary: "bg-accent text-white hover:bg-[#0c6a5e]",
-    secondary: "bg-white text-ink border border-line hover:bg-[#faf6ef]",
-    ghost: "text-ink hover:bg-[#f3eee4]",
+    primary: "bg-accent text-white hover:bg-[#e11d48]",
+    secondary: "bg-white text-ink border border-line hover:bg-soft",
+    ghost: "text-ink hover:bg-soft",
     danger: "bg-rose-600 text-white hover:bg-rose-700",
   };
   return (
@@ -120,7 +120,7 @@ export function Tabs({
   paramName?: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-1 rounded-2xl bg-[#efe8db] p-1">
+    <div className="flex flex-wrap gap-1 rounded-2xl bg-soft p-1">
       {items.map((item) => {
         const href = item.value ? `${basePath}?${paramName}=${item.value}` : basePath;
         const isActive = active === item.value;
@@ -219,7 +219,7 @@ export function Field({
         required={required}
         disabled={disabled}
         defaultValue={defaultValue}
-        className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm outline-none ring-accent/30 focus:ring-2 disabled:bg-[#f6f1e8]"
+        className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm outline-none ring-accent/30 focus:ring-2 disabled:bg-soft"
       />
     </label>
   );

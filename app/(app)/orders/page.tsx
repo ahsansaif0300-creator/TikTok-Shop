@@ -69,7 +69,7 @@ export default async function OrdersPage({
             </thead>
             <tbody>
               {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-[#faf6ef]">
+                <tr key={order.id} className="hover:bg-soft">
                   <Td>
                     <Link href={`/orders/${order.id}`} className="font-medium text-accent hover:underline">
                       {order.orderNumber}

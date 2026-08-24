@@ -80,6 +80,7 @@ Open **`hostinger.env.example`**. In hPanel → your app → **Environment varia
 ```
 DATABASE_URL=file:./dev.db
 AUTH_SECRET=paste-a-long-random-string-here
+APP_BASE_URL=https://YOUR-TEMP-DOMAIN.hostingersite.com
 ```
 
 Create a secret on your computer:
@@ -91,6 +92,10 @@ openssl rand -base64 32
 Paste that output as `AUTH_SECRET`. Do not use the example value from `.env.example`.
 
 Do **not** set `AUTH_COOKIE_SECURE=false`. The temporary domain is HTTPS, so the login cookie should stay Secure.
+
+Set `APP_BASE_URL` to the same URL people type in the browser (no trailing slash). Harbor uses it when it prints a shop link such as `https://YOUR-TEMP-DOMAIN.hostingersite.com/s/northline-outfitters`.
+
+After you attach a **custom domain**, change `APP_BASE_URL` to `https://yourdomain.com`. If you also add a wildcard DNS record (`*.yourdomain.com`) pointing at the same app, set `SHOP_BASE_DOMAIN=yourdomain.com` so each shop can be opened as `https://shop-slug.yourdomain.com`. Without wildcard DNS, keep using `/s/shop-slug` on the main domain.
 
 ### 6. Deploy
 
@@ -105,6 +110,8 @@ First start creates SQLite and the demo accounts if `prisma/dev.db` is missing.
 3. Visit:
 
    `https://YOUR-TEMP-DOMAIN.hostingersite.com/login`
+
+   Merchants can also open **Sign up** on that page, or a shop card at `/s/their-shop-slug`.
 
 4. Sign in:
 
