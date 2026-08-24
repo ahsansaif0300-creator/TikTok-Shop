@@ -244,6 +244,7 @@ async function phase2Static() {
       "components/shell.tsx",
       "components/workspace-chrome.tsx",
       "components/sidebar-nav.tsx",
+      "components/brand.tsx",
       "lib/nav.ts",
       "lib/dashboard.ts",
       "app/(app)/page.tsx",
@@ -251,7 +252,7 @@ async function phase2Static() {
     ]) {
       assert(exists(file), `Missing ${file}`);
     }
-    const chrome = read("components/workspace-chrome.tsx");
+    const chrome = read("components/workspace-chrome.tsx") + read("components/brand.tsx");
     assert(chrome.includes("Harbor") && chrome.includes("Commerce OS"), "Harbor mark missing from shell");
     assert(chrome.includes("logoutAction"), "Logout control missing");
     assert(chrome.includes("Open menu"), "Mobile menu control missing");
