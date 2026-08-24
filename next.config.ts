@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import { extraAllowedOrigins, lanIPv4s } from "./scripts/lan-urls.mjs";
 
+const shopBase = process.env.SHOP_BASE_DOMAIN?.replace(/^https?:\/\//, "").replace(/\/$/, "");
+
 const previewHosts = [
   "*.agent.cvm.dev",
   "*.cursorvm.com",
@@ -10,6 +12,7 @@ const previewHosts = [
   "*.hstgr.cloud",
   "*.hostinger.com",
   "*.local",
+  ...(shopBase ? [shopBase, `*.${shopBase}`] : []),
   ...lanIPv4s(),
   ...extraAllowedOrigins(),
 ];

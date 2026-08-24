@@ -72,7 +72,7 @@ export default async function OrderDetailPage({
             <h2 className="font-medium">Lifecycle</h2>
             <ol className="mt-4 grid gap-3 sm:grid-cols-5">
               {timeline.map((step) => (
-                <li key={step.label} className="rounded-xl bg-[#f6f1e8] px-3 py-2">
+                <li key={step.label} className="rounded-xl bg-soft px-3 py-2">
                   <p className="text-xs uppercase tracking-wide text-muted">{step.label}</p>
                   <p className="mt-1 text-sm font-medium text-ink">
                     {step.at ? format(step.at, "MMM d, HH:mm") : "—"}
@@ -176,7 +176,7 @@ export default async function OrderDetailPage({
             <div className="mt-3 space-y-3">
               {order.shipments.length === 0 ? <p className="text-muted">No shipment yet.</p> : null}
               {order.shipments.map((shipment) => (
-                <div key={shipment.id} className="rounded-xl bg-[#f6f1e8] p-3">
+                <div key={shipment.id} className="rounded-xl bg-soft p-3">
                   <p className="font-medium">{shipment.carrier.name}</p>
                   <a
                     href={trackingHref(shipment.carrier.trackingUrl, shipment.trackingNumber)}
@@ -244,7 +244,7 @@ export default async function OrderDetailPage({
               <h2 className="font-medium">Audit</h2>
               <ul className="mt-3 space-y-2">
                 {logs.map((log) => (
-                  <li key={log.id} className="rounded-xl bg-[#f6f1e8] px-3 py-2">
+                  <li key={log.id} className="rounded-xl bg-soft px-3 py-2">
                     <p>{log.detail}</p>
                     <p className="text-xs text-muted">{format(log.createdAt, "MMM d, HH:mm")}</p>
                   </li>

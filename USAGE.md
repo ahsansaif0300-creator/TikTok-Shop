@@ -94,7 +94,11 @@ Demo passwords are for local/preview only. Change them under **Profile** before 
 | Operations | `sarah.b@example.net` | `HarborOps!2026` | Every store, no Team/Settings |
 | Merchant | `iris.p@example.org` | `HarborMerchant!2026` | Northline Outfitters only |
 
-After login you land on the dashboard. Use the sidebar (or **Open menu** on a phone).
+After login you land on the dashboard. Use the sidebar (or **Open menu** on a phone). Merchants also get a bottom bar: Home, Products, Orders, Payouts, Profile.
+
+New sellers can open **`/signup`** (linked from Sign in) and create a shop without staff first. Staff can still log inbound applications.
+
+Each shop has a unique public link: **`/s/{shop-slug}`** (for example `/s/northline-outfitters`). After you set `APP_BASE_URL`, Harbor prints the full URL. With a custom domain and wildcard DNS (`SHOP_BASE_DOMAIN`), that same slug can also be `https://{slug}.yourdomain.com`.
 
 ## 3. Daily loop for operations staff
 
@@ -147,14 +151,18 @@ You cannot open other stores, Team, Settings, global customers, or categories.
 
 Sign in as **oscar.d@example.net**. Shops in Harbor are **Merchants**.
 
+Sellers can also self-serve: open `/signup`, pick a shop name, and Harbor creates an ACTIVE store plus a merchant login and a unique `/s/{slug}` link.
+
+Staff path:
+
 1. **Applications** → fill **Log inbound seller** (business name, contact, email, country, category) → **Save application**.
-2. On that row click **Approve**. Harbor creates an ACTIVE store on the Starter plan.
-3. Open **Merchants** → click the store → **Activate** if needed, assign a **Seller plan**.
-4. On the same page, **Create store login** (email + password 8+ characters). Give those credentials to the seller.
-5. The seller signs in at `/login` and only sees that shop (products, orders, shipping, payouts).
+2. On that row click **Approve**. Harbor creates an ACTIVE store on the Starter plan with a unique slug.
+3. Open **Merchants** → click the store → **Activate** if needed, assign a **Seller plan**. Copy the **Shop link**.
+4. On the same page, **Create store login** (email + password 8+ characters) if the seller did not sign up themselves.
+5. The seller signs in at `/login` or the shop card’s **Seller login**, and only sees that shop (products, orders, shipping, payouts).
 6. You manage everyone from **Orders**, **Refunds**, **Shipping**, **Ledger**, and **Payouts**.
 
-Demo shop already there: Northline Outfitters (`iris.p@example.org` / `HarborMerchant!2026`).
+Demo shop already there: Northline Outfitters (`iris.p@example.org` / `HarborMerchant!2026`), public card `/s/northline-outfitters`.
 
 ## 5. Put it on Hostinger (temporary domain, no custom domain)
 
@@ -165,8 +173,8 @@ Short version:
 1. Plan must be **Business** or **Cloud** (Node.js web app).
 2. **Websites** → **Add Website** → **Node.js web app** → **Free subdomain**.
 3. Import GitHub branch `main` (repo root has `package.json`), or upload `npm run pack:hostinger`’s zip.
-4. Start command `npm run start`. Env: `DATABASE_URL=file:./dev.db` and a new `AUTH_SECRET`.
-5. Open `https://YOUR-TEMP.hostingersite.com/login`.
+4. Start command `npm run start`. Env: `DATABASE_URL=file:./dev.db`, a new `AUTH_SECRET`, and `APP_BASE_URL=https://YOUR-TEMP.hostingersite.com`.
+5. Open `https://YOUR-TEMP.hostingersite.com/login` (Sign up is on that screen). Shop cards live at `/s/{slug}`.
 
 Do not copy the project into `public_html`.
 

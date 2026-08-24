@@ -39,7 +39,7 @@ export default async function PlansPage() {
             <p className="mt-1 text-sm text-muted">Up to {plan.maxProducts} products</p>
             <ul className="mt-4 space-y-2 text-sm">
               {(JSON.parse(plan.features) as string[]).map((feature) => (
-                <li key={feature} className="rounded-xl bg-[#f6f1e8] px-3 py-2">
+                <li key={feature} className="rounded-xl bg-soft px-3 py-2">
                   {feature}
                 </li>
               ))}

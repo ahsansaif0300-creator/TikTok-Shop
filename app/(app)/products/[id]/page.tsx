@@ -139,7 +139,7 @@ export default async function ProductFormPage({
           <h2 className="font-medium">Reviews</h2>
           <ul className="mt-3 space-y-3 text-sm">
             {product.reviews.map((review) => (
-              <li key={review.id} className="rounded-xl bg-[#f6f1e8] px-3 py-2">
+              <li key={review.id} className="rounded-xl bg-soft px-3 py-2">
                 <p className="font-medium">
                   {review.author} · {"★".repeat(review.rating)}
                 </p>
