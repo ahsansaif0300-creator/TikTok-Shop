@@ -2,6 +2,17 @@ import { installDemoDb } from "../scripts/copy-demo-db.mjs";
 import { applyRuntimeEnv } from "./runtime-env";
 import { getPrisma, resetPrisma } from "./db";
 
+async function backfill() {
+  const prisma = getPrisma();
+  try {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "Order" SET walletReleased = 1 WHERE status = 'COMPLETED' AND walletReleased = 0`,
+    );
+  } catch (error) {
+    console.warn("[harbor] walletReleased backfill skipped", error);
+  }
+}
+
 export async function ensureDatabase() {
   applyRuntimeEnv();
   const root = process.cwd();
@@ -14,7 +25,10 @@ export async function ensureDatabase() {
       where: { email: "oscar.d@example.net" },
       select: { id: true },
     });
-    if (user) return;
+    if (user) {
+      await backfill();
+      return;
+    }
     console.warn("[harbor] Demo admin missing; restoring packed SQLite.");
   } catch (error) {
     console.error("[harbor] SQLite not readable; restoring packed database.", error);
@@ -30,4 +44,5 @@ export async function ensureDatabase() {
   if (!admin) {
     throw new Error("Demo database installed but admin user is missing.");
   }
+  await backfill();
 }

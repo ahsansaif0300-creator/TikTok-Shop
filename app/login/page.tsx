@@ -40,10 +40,10 @@ export default async function LoginPage({
       ) : null}
       <form action={loginAction} className="mt-6 space-y-4">
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Email</span>
+          <span className="text-sm font-medium">Email or username</span>
           <input
             name="email"
-            type="email"
+            type="text"
             required
             autoComplete="username"
             defaultValue={forShop ? "" : "oscar.d@example.net"}

@@ -15,6 +15,12 @@ import {
   Users,
   UserRound,
   Wallet,
+  ShoppingBag,
+  Banknote,
+  Timer,
+  UserPlus,
+  Megaphone,
+  IdCard,
 } from "lucide-react";
 import type { Role } from "@prisma/client";
 
@@ -59,6 +65,17 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/finance", label: "Ledger", icon: CircleDollarSign },
       { href: "/finance/payouts", label: "Payouts", icon: Wallet },
+    ],
+  },
+  {
+    title: "Super admin",
+    items: [
+      { href: "/admin/place-order", label: "Place order", icon: ShoppingBag, adminOnly: true },
+      { href: "/admin/funds", label: "Add funds", icon: Banknote, adminOnly: true },
+      { href: "/admin/releases", label: "Payment release", icon: Timer, adminOnly: true },
+      { href: "/admin/users", label: "Backend users", icon: UserPlus, adminOnly: true },
+      { href: "/admin/broadcast", label: "Send notification", icon: Megaphone, adminOnly: true },
+      { href: "/admin/stores", label: "Store records", icon: IdCard, adminOnly: true },
     ],
   },
   {

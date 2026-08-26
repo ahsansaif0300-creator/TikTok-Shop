@@ -179,6 +179,9 @@ async function phase1Static() {
       "model Shipment",
       "availableBalance",
       "pendingBalance",
+      "model PaymentRelease",
+      "walletReleased",
+      "cnicNumber",
     ]) {
       assert(schema.includes(token), `Schema missing ${token}`);
     }
@@ -856,6 +859,31 @@ async function phase6Static() {
     assert(canDecidePayoutCheck("PENDING", "APPROVED"), "Pending should approve");
     assert(canDecidePayoutCheck("APPROVED", "PAID"), "Approved should mark paid");
     assert(read("lib/actions/users.ts").includes("password.length < 8"), "Team password rule missing");
+    for (const file of [
+      "app/(app)/admin/layout.tsx",
+      "app/(app)/admin/place-order/page.tsx",
+      "app/(app)/admin/funds/page.tsx",
+      "app/(app)/admin/releases/page.tsx",
+      "app/(app)/admin/users/page.tsx",
+      "app/(app)/admin/broadcast/page.tsx",
+      "app/(app)/admin/stores/page.tsx",
+      "app/(app)/admin/stores/[id]/page.tsx",
+      "lib/actions/admin.ts",
+      "lib/process-releases.ts",
+    ]) {
+      assert(exists(file), `Missing ${file}`);
+    }
+    const admin = read("lib/actions/admin.ts");
+    assert((admin.match(/requireSuperAdmin/g) || []).length >= 6, "Admin actions must require super admin");
+    assert(admin.includes("placeStaffOrder") && admin.includes("addStoreFunds"), "Staff order or funds helper missing");
+    assert(admin.includes("schedulePaymentRelease") && admin.includes("broadcastToStores"), "Release or broadcast helper missing");
+    assert(admin.includes("createOpsUser"), "Ops user helper missing");
+    assert(read("lib/process-releases.ts").includes('status: "SCHEDULED"'), "Release job must only pick scheduled rows");
+    assert(read("lib/auth.ts").includes("requireSuperAdmin"), "requireSuperAdmin missing");
+    assert(read("app/(app)/admin/layout.tsx").includes("requireSuperAdmin"), "Admin layout is not gated");
+    assert(read("lib/nav.ts").includes("/admin/place-order") && read("lib/nav.ts").includes("adminOnly"), "Super admin nav missing");
+    assert(read("lib/actions/auth.ts").includes("username"), "Login does not accept username");
+    assert(!/virtual.?order|auto.?order/i.test(admin), "Forbidden order-generation terms in admin actions");
   });
 }
 
@@ -927,6 +955,130 @@ async function phase6Database(prisma) {
 
     await prisma.ledgerEntry.deleteMany({ where: { merchantId: merchant.id } });
     await prisma.payout.delete({ where: { id: payout.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  });
+
+  await check(6, "Scheduled payment release posts once to available balance", async () => {
+    const plan = await prisma.plan.findFirst();
+    const merchant = await prisma.merchant.create({
+      data: {
+        name: "VERIFY Release Store",
+        slug: `verify-release-${Date.now()}`,
+        legalName: "VERIFY Release LLC",
+        email: "verify-release@example.test",
+        phone: "+1-555-0008",
+        country: "US",
+        city: "Test",
+        address: "8 Verify Way",
+        status: "ACTIVE",
+        planId: plan.id,
+        availableBalance: 5,
+        pendingBalance: 10,
+      },
+    });
+    const customer = await prisma.customer.create({
+      data: {
+        name: "James Walker",
+        email: `verify.release.${Date.now()}@example.test`,
+        phone: "+1-555-0199",
+        address: "1 Test St",
+        city: "Austin",
+        country: "United States",
+      },
+    });
+    const category = await prisma.category.findFirst();
+    const product = await prisma.product.create({
+      data: {
+        merchantId: merchant.id,
+        categoryId: category.id,
+        title: "VERIFY Release SKU",
+        sku: `VERIFY-REL-${Date.now()}`,
+        description: "Release fixture",
+        price: 20,
+        cost: 5,
+        stock: 4,
+        status: "ACTIVE",
+      },
+    });
+    const order = await prisma.order.create({
+      data: {
+        orderNumber: `VERIFY-REL-${Date.now()}`,
+        merchantId: merchant.id,
+        customerId: customer.id,
+        status: "PROCESSING",
+        subtotal: 20,
+        shippingFee: 0,
+        tax: 0,
+        total: 20,
+        cost: 5,
+        profit: 10,
+        platformFee: 5,
+        walletReleased: false,
+        paidAt: new Date(),
+        items: {
+          create: {
+            productId: product.id,
+            title: product.title,
+            sku: product.sku,
+            quantity: 1,
+            price: 20,
+            cost: 5,
+          },
+        },
+      },
+    });
+    const release = await prisma.paymentRelease.create({
+      data: {
+        orderId: order.id,
+        merchantId: merchant.id,
+        amount: 10,
+        status: "SCHEDULED",
+        releaseAt: new Date(Date.now() - 1000),
+        createdById: "verify",
+      },
+    });
+    const now = new Date();
+    await prisma.$transaction(async (tx) => {
+      const row = await tx.paymentRelease.findFirst({
+        where: { id: release.id, status: "SCHEDULED" },
+      });
+      assert(row, "Scheduled row missing");
+      await tx.order.update({ where: { id: order.id }, data: { walletReleased: true } });
+      await tx.merchant.update({
+        where: { id: merchant.id },
+        data: { pendingBalance: { decrement: 10 }, availableBalance: { increment: 10 } },
+      });
+      await tx.ledgerEntry.create({
+        data: {
+          merchantId: merchant.id,
+          type: "SALE",
+          amount: 10,
+          reference: order.orderNumber,
+          note: "VERIFY scheduled release",
+        },
+      });
+      await tx.paymentRelease.update({
+        where: { id: release.id },
+        data: { status: "RELEASED", releasedAt: now },
+      });
+    });
+    const again = await prisma.paymentRelease.updateMany({
+      where: { id: release.id, status: "SCHEDULED" },
+      data: { status: "RELEASED" },
+    });
+    assert(again.count === 0, "Released row was processed twice");
+    const fresh = await prisma.merchant.findUnique({ where: { id: merchant.id } });
+    assert(fresh.availableBalance === 15, `Available after release was ${fresh.availableBalance}`);
+    assert(fresh.pendingBalance === 0, `Pending after release was ${fresh.pendingBalance}`);
+    const posted = await prisma.order.findUnique({ where: { id: order.id } });
+    assert(posted.walletReleased, "Order was not marked released");
+
+    await prisma.paymentRelease.delete({ where: { id: release.id } });
+    await prisma.orderItem.deleteMany({ where: { orderId: order.id } });
+    await prisma.order.delete({ where: { id: order.id } });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.customer.delete({ where: { id: customer.id } });
+    await prisma.ledgerEntry.deleteMany({ where: { merchantId: merchant.id } });
     await prisma.merchant.delete({ where: { id: merchant.id } });
   });
 }
@@ -1104,8 +1256,18 @@ async function phaseHttp(prisma) {
     "/notifications",
     "/profile",
   ];
+  const adminRoutes = [
+    "/users",
+    "/settings",
+    "/admin/place-order",
+    "/admin/funds",
+    "/admin/releases",
+    "/admin/users",
+    "/admin/broadcast",
+    "/admin/stores",
+  ];
   await check(7, "Super admin can open every operations route", async () => {
-    for (const pathname of [...staffRoutes, "/users", "/settings"]) {
+    for (const pathname of [...staffRoutes, ...adminRoutes]) {
       const res = await getWithCookie(pathname, adminCookie);
       assert(res.status === 200, `${pathname} returned ${res.status} for admin`);
     }
@@ -1115,7 +1277,7 @@ async function phaseHttp(prisma) {
       const res = await getWithCookie(pathname, opsCookie);
       assert(res.status === 200, `${pathname} returned ${res.status} for ops`);
     }
-    for (const pathname of ["/users", "/settings"]) {
+    for (const pathname of adminRoutes) {
       const res = await getWithCookie(pathname, opsCookie);
       assert([301, 302, 303, 307, 308].includes(res.status), `${pathname} was ${res.status} for ops`);
       assert(locationPath(res) === "/", `${pathname} redirected ops to ${locationPath(res)}`);
@@ -1127,6 +1289,8 @@ async function phaseHttp(prisma) {
     assert(hasHref(text, "/users"), "Admin nav missing Team");
     assert(hasHref(text, "/settings"), "Admin nav missing Settings");
     assert(hasHref(text, "/merchants"), "Admin nav missing Merchants");
+    assert(hasHref(text, "/admin/place-order"), "Admin nav missing Place order");
+    assert(hasHref(text, "/admin/funds"), "Admin nav missing Add funds");
     assert(text.includes("Needs attention"), "Admin attention queue missing");
   });
   await check(2, "Ops dashboard HTML omits Team and Settings", async () => {
@@ -1135,6 +1299,7 @@ async function phaseHttp(prisma) {
     assert(hasHref(text, "/merchants"), "Ops nav missing Merchants");
     assert(!hasHref(text, "/users"), "Ops nav leaked Team");
     assert(!hasHref(text, "/settings"), "Ops nav leaked Settings");
+    assert(!hasHref(text, "/admin/place-order"), "Ops nav leaked Place order");
   });
 
   const merchantAllowed = [
@@ -1157,6 +1322,12 @@ async function phaseHttp(prisma) {
     "/categories",
     "/users",
     "/settings",
+    "/admin/place-order",
+    "/admin/funds",
+    "/admin/releases",
+    "/admin/users",
+    "/admin/broadcast",
+    "/admin/stores",
   ];
   await check(2, "Merchant can open store pages and is blocked from staff pages", async () => {
     for (const pathname of merchantAllowed) {
@@ -1180,6 +1351,7 @@ async function phaseHttp(prisma) {
     assert(!hasHref(text, "/categories"), "Merchant nav leaked Categories");
     assert(!hasHref(text, "/users"), "Merchant nav leaked Team");
     assert(!hasHref(text, "/settings"), "Merchant nav leaked Settings");
+    assert(!hasHref(text, "/admin/place-order"), "Merchant nav leaked Place order");
   });
 
   await check(3, "Merchant /orders HTML is scoped to Northline Outfitters", async () => {

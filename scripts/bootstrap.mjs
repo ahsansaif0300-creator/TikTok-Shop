@@ -39,3 +39,9 @@ try {
   run(prismaBin, ["db", "push", "--skip-generate", "--accept-data-loss"]);
   run(tsxBin, [path.join(root, "prisma", "seed.ts")]);
 }
+
+{
+  const prismaBin = require.resolve("prisma/build/index.js");
+  run(prismaBin, ["db", "push", "--skip-generate", "--accept-data-loss"]);
+  console.log("SQLite schema is current.");
+}

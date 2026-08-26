@@ -3,10 +3,12 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ROLE_LABEL } from "@/lib/labels";
 import { shopAbsoluteUrl } from "@/lib/shop-url";
+import { processDueReleases } from "@/lib/process-releases";
 import { WorkspaceChrome } from "@/components/workspace-chrome";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const session = await requireSession();
+  await processDueReleases();
   const [unread, store] = await Promise.all([
     prisma.notification.count({
       where: { userId: session.userId, read: false },

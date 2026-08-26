@@ -7,7 +7,7 @@ import { ensureDatabase } from "@/lib/ensure-db";
 import { clearSession, createSession, requireSession } from "@/lib/auth";
 
 export async function loginAction(formData: FormData) {
-  const email = String(formData.get("email") ?? "")
+  const identifier = String(formData.get("email") ?? formData.get("identifier") ?? "")
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -19,9 +19,11 @@ export async function loginAction(formData: FormData) {
     redirect("/login?error=setup");
   }
 
-  let user: Awaited<ReturnType<typeof prisma.user.findUnique>> | null = null;
+  let user: Awaited<ReturnType<typeof prisma.user.findFirst>> | null = null;
   try {
-    user = await prisma.user.findUnique({ where: { email } });
+    user = await prisma.user.findFirst({
+      where: identifier ? { OR: [{ email: identifier }, { username: identifier }] } : { id: "__none__" },
+    });
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       user = null;
     }
