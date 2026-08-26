@@ -184,6 +184,7 @@ async function main() {
       name: "Jonah Reed",
       passwordHash: opsHash,
       role: "OPS",
+      username: "harborops",
     },
   });
   const merchantUser = await prisma.user.create({
@@ -268,6 +269,16 @@ async function main() {
     ["Yusuf Rahman", "Houston"],
     ["Chloe Martin", "New York"],
     ["Diego Alvarez", "Phoenix"],
+    ["James Walker", "Dallas"],
+    ["Emma Thompson", "Atlanta"],
+    ["Benjamin Clark", "Minneapolis"],
+    ["Olivia Reed", "Charlotte"],
+    ["Henry Walsh", "Detroit"],
+    ["Grace Bennett", "Raleigh"],
+    ["Daniel Foster", "Columbus"],
+    ["Charlotte Hayes", "Tampa"],
+    ["Samuel Wright", "Kansas City"],
+    ["Victoria Lane", "Salt Lake City"],
   ];
   const customers = [];
   for (const [i, [name, city]] of customerDefs.entries()) {
@@ -358,6 +369,7 @@ async function main() {
         shippedAt: ["SHIPPED", "DELIVERED", "COMPLETED"].includes(status) ? daysAgo(12 - (i % 12)) : null,
         deliveredAt: ["DELIVERED", "COMPLETED"].includes(status) ? daysAgo(8 - (i % 8)) : null,
         completedAt: status === OrderStatus.COMPLETED ? daysAgo(5 - (i % 5)) : null,
+        walletReleased: status === OrderStatus.COMPLETED,
         createdAt,
         items: {
           create: {

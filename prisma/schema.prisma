@@ -77,9 +77,15 @@ enum LedgerType {
   ADJUSTMENT
 }
 
+enum PaymentReleaseStatus {
+  SCHEDULED
+  RELEASED
+}
+
 model User {
   id            String         @id @default(cuid())
   email         String         @unique
+  username      String?        @unique
   name          String
   passwordHash  String
   role          Role           @default(OPS)
@@ -90,6 +96,7 @@ model User {
   notifications Notification[]
   auditLogs     AuditLog[]
   reviews       MerchantApplication[] @relation("ApplicationReviewer")
+  placedOrders  Order[]        @relation("OrderPlacedBy")
 }
 
 model Plan {
@@ -122,6 +129,8 @@ model Merchant {
   reviewCount      Int                    @default(0)
   bankName         String?
   bankAccountLast4 String?
+  cnicNumber       String                 @default("")
+  cnicImage        String                 @default("")
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
   users            User[]
@@ -130,6 +139,7 @@ model Merchant {
   payouts          Payout[]
   ledger           LedgerEntry[]
   applications     MerchantApplication[]
+  paymentReleases  PaymentRelease[]
 }
 
 model MerchantApplication {
@@ -205,6 +215,9 @@ model Order {
   profit      Float
   platformFee Float
   notes       String      @default("")
+  walletReleased Boolean  @default(false)
+  placedByUserId String?
+  placedBy    User?       @relation("OrderPlacedBy", fields: [placedByUserId], references: [id])
   paidAt      DateTime?
   shippedAt   DateTime?
   deliveredAt DateTime?
@@ -214,6 +227,7 @@ model Order {
   items       OrderItem[]
   shipments   Shipment[]
   refunds     Refund[]
+  paymentRelease PaymentRelease?
 }
 
 model OrderItem {
@@ -289,6 +303,22 @@ model LedgerEntry {
   reference  String
   note       String
   createdAt  DateTime   @default(now())
+}
+
+model PaymentRelease {
+  id          String               @id @default(cuid())
+  orderId     String               @unique
+  order       Order                @relation(fields: [orderId], references: [id])
+  merchantId  String
+  merchant    Merchant             @relation(fields: [merchantId], references: [id])
+  amount      Float
+  status      PaymentReleaseStatus @default(SCHEDULED)
+  releaseAt   DateTime
+  releasedAt  DateTime?
+  createdById String
+  note        String               @default("")
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 }
 
 model Review {

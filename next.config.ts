@@ -23,9 +23,10 @@ const nextConfig: NextConfig = {
     "/**": ["./prisma/demo.sqlite", "./scripts/copy-demo-db.mjs", "./scripts/bootstrap.mjs"],
   },
   allowedDevOrigins: previewHosts,
-  experimental: {
+    experimental: {
     serverActions: {
       allowedOrigins: previewHosts,
+      bodySizeLimit: "2mb",
     },
   },
 };

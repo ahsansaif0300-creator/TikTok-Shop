@@ -5,6 +5,8 @@ export async function register() {
   const { ensureDatabase } = await import("./lib/ensure-db");
   try {
     await ensureDatabase();
+    const { startReleaseScheduler } = await import("./lib/process-releases");
+    startReleaseScheduler();
   } catch (error) {
     console.error("[harbor] Could not prepare the database on boot.", error);
   }

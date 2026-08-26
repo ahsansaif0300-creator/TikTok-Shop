@@ -39,6 +39,12 @@ export const REFUND_TYPE = {
   EXCHANGE: "Exchange",
 } as const;
 
+export const PAYMENT_RELEASE_STATUS = {
+  PENDING: "Pending",
+  SCHEDULED: "Scheduled",
+  RELEASED: "Released",
+} as const;
+
 export const PAYOUT_STATUS = {
   PENDING: "Pending",
   APPROVED: "Approved",
@@ -80,6 +86,8 @@ export const TONE: Record<string, "neutral" | "success" | "warning" | "danger" |
   ACTIVE: "success",
   SUSPENDED: "danger",
   APPROVED: "info",
+  SCHEDULED: "warning",
+  RELEASED: "success",
   REJECTED: "danger",
   DRAFT: "neutral",
   ARCHIVED: "neutral",
