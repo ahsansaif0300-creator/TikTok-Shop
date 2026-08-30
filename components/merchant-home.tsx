@@ -94,6 +94,20 @@ export function MerchantHome({
           <p className="mt-1 text-lg font-semibold text-ink">{money(pendingBalance)}</p>
         </Card>
       </div>
+      <Link
+        href="/service"
+        className="mt-4 flex items-center gap-3 rounded-2xl bg-accent px-4 py-4 text-white shadow-sm hover:bg-[#e11d48]"
+      >
+        <span className="grid size-12 place-items-center rounded-2xl bg-white/15">
+          <Headset className="size-6" />
+        </span>
+        <span>
+          <span className="block text-base font-semibold">Service</span>
+          <span className="block text-sm text-white/80">
+            Contact support — assistant asks a few basics, then a team member joins.
+          </span>
+        </span>
+      </Link>
       <div className="mt-5 grid grid-cols-4 gap-3">
         {SHORTCUTS.map((item) => {
           const Icon = item.icon;

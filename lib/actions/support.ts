@@ -5,34 +5,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { money } from "@/lib/utils";
-
-async function threadForMerchant(merchantId: string) {
-  return prisma.supportThread.upsert({
-    where: { merchantId },
-    update: {},
-    create: { merchantId },
-  });
-}
-
-async function notifyCounterpart(merchantId: string, senderId: string, staffSender: boolean, preview: string) {
-  const recipients = staffSender
-    ? await prisma.user.findMany({ where: { merchantId, role: "MERCHANT" }, select: { id: true } })
-    : await prisma.user.findMany({
-        where: { role: { in: ["SUPER_ADMIN", "OPS"] } },
-        select: { id: true },
-      });
-  if (recipients.length === 0) return;
-  await prisma.notification.createMany({
-    data: recipients
-      .filter((user) => user.id !== senderId)
-      .map((user) => ({
-        userId: user.id,
-        title: staffSender ? "Service reply" : "New store service message",
-        body: preview.slice(0, 160),
-        href: staffSender ? "/service" : `/service/${merchantId}`,
-      })),
-  });
-}
+import {
+  botAfterStoreMessage,
+  ensureServiceWelcome,
+  notifyServiceCounterpart,
+  postSupportMessage,
+  threadForMerchant,
+} from "@/lib/service-thread";
 
 export async function sendSupportMessage(formData: FormData) {
   const session = await requireSession();
@@ -49,14 +28,29 @@ export async function sendSupportMessage(formData: FormData) {
   }
 
   const thread = await threadForMerchant(merchantId);
-  await prisma.supportMessage.create({
-    data: { threadId: thread.id, userId: session.userId, body },
-  });
-  await prisma.supportThread.update({
-    where: { id: thread.id },
-    data: { updatedAt: new Date() },
-  });
-  await notifyCounterpart(merchantId, session.userId, isStaff(session.role), body);
+  const staff = isStaff(session.role);
+
+  await postSupportMessage(thread.id, staff ? "AGENT" : "STORE", body, session.userId);
+
+  if (staff) {
+    await prisma.supportThread.update({
+      where: { id: thread.id },
+      data: {
+        status: "WITH_AGENT",
+        agentId: session.userId,
+        agentJoinedAt: thread.agentJoinedAt ?? new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await notifyServiceCounterpart(merchantId, session.userId, true, body);
+  } else {
+    await prisma.supportThread.update({
+      where: { id: thread.id },
+      data: { updatedAt: new Date() },
+    });
+    await botAfterStoreMessage(thread, merchant, session.name, body);
+  }
+
   revalidatePath("/", "layout");
   redirect(next);
 }
@@ -68,18 +62,20 @@ export async function requestRecharge(formData: FormData) {
   const note = String(formData.get("note") ?? "").trim();
   if (!Number.isFinite(amount) || amount <= 0) redirect("/recharge?error=invalid");
 
+  const merchant = await prisma.merchant.findUnique({ where: { id: session.merchantId } });
+  if (!merchant) redirect("/");
+  await ensureServiceWelcome(merchant.id, merchant.name, merchant.id, session.name);
   const thread = await threadForMerchant(session.merchantId);
   const body = [`Recharge request: ${money(amount)}.`, "This does not add funds automatically.", note && `Note: ${note}`]
     .filter(Boolean)
     .join(" ");
-  await prisma.supportMessage.create({
-    data: { threadId: thread.id, userId: session.userId, body },
-  });
-  await prisma.supportThread.update({
-    where: { id: thread.id },
-    data: { updatedAt: new Date() },
-  });
-  await notifyCounterpart(session.merchantId, session.userId, false, body);
+  await postSupportMessage(thread.id, "STORE", body, session.userId);
+  await botAfterStoreMessage(
+    await prisma.supportThread.findUniqueOrThrow({ where: { id: thread.id } }),
+    merchant,
+    session.name,
+    body,
+  );
   revalidatePath("/", "layout");
   redirect("/recharge?sent=1");
 }

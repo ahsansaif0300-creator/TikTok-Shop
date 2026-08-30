@@ -94,3 +94,11 @@ export async function requireMerchant() {
   }
   return { ...session, merchantId: session.merchantId };
 }
+
+export async function requireSuperAdmin() {
+  const session = await requireSession();
+  if (session.role !== "SUPER_ADMIN") {
+    redirect("/");
+  }
+  return session;
+}

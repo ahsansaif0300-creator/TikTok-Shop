@@ -3,8 +3,20 @@ import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
-import { sendSupportMessage } from "@/lib/actions/support";
-import { Button, Card, PageHeader } from "@/components/ui";
+import { ServiceComposer } from "@/components/service-composer";
+import { Card, PageHeader } from "@/components/ui";
+
+const STATUS_LABEL = {
+  INTAKE: "Assistant intake",
+  WAITING_AGENT: "Waiting for support",
+  WITH_AGENT: "With support team",
+};
+
+function senderLabel(sender: string, name?: string | null) {
+  if (sender === "BOT") return "Harbor Service assistant";
+  if (sender === "AGENT") return `${name ?? "Support"} · team`;
+  return `${name ?? "Store"} · store`;
+}
 
 export default async function ServiceThreadPage({
   params,
@@ -36,7 +48,7 @@ export default async function ServiceThreadPage({
     <div className="max-w-3xl">
       <PageHeader
         title={store.name}
-        subtitle="Service thread. Store identity comes from the merchant record, not from the sender."
+        subtitle="Take over this Service chat. Store identity is already on the thread."
         actions={
           <Link href="/service" className="text-sm text-accent hover:underline">
             All conversations
@@ -57,41 +69,39 @@ export default async function ServiceThreadPage({
           <span className="text-muted">Store contact</span> {store.email} · {store.phone}
         </p>
         <p>
-          <span className="text-muted">Agent</span> {session.name} · {session.email}
+          <span className="text-muted">Status</span> {STATUS_LABEL[thread.status] ?? thread.status}
+          {thread.intakeTopic ? ` · ${thread.intakeTopic}` : ""}
+        </p>
+        {thread.intakeDetail ? (
+          <p>
+            <span className="text-muted">Assistant notes</span> {thread.intakeDetail}
+          </p>
+        ) : null}
+        <p>
+          <span className="text-muted">You</span> {session.name} · {session.email}
         </p>
       </Card>
       <Card className="p-5">
         <div className="space-y-3">
           {messages.length === 0 ? (
-            <p className="text-sm text-muted">No messages yet. Start the conversation with this store.</p>
+            <p className="text-sm text-muted">No messages yet. You can start the conversation with this store.</p>
           ) : (
             messages.map((message) => (
               <div
                 key={message.id}
                 className={`rounded-xl px-3 py-2 text-sm ${
-                  message.userId === session.userId ? "bg-accent-soft text-ink" : "bg-soft"
+                  message.sender === "AGENT" && message.userId === session.userId ? "bg-accent-soft text-ink" : "bg-soft"
                 }`}
               >
                 <p className="text-xs text-muted">
-                  {message.user.name} · {message.user.role === "MERCHANT" ? "Store" : "Agent"} ·{" "}
-                  {format(message.createdAt, "MMM d, HH:mm")}
+                  {senderLabel(message.sender, message.user?.name)} · {format(message.createdAt, "MMM d, HH:mm")}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
               </div>
             ))
           )}
         </div>
-        <form action={sendSupportMessage} className="mt-4 space-y-3">
-          <input type="hidden" name="merchantId" value={store.id} />
-          <textarea
-            name="body"
-            required
-            rows={3}
-            placeholder="Reply to this store"
-            className="w-full rounded-xl border border-line p-3 text-sm outline-none ring-accent/30 focus:ring-2"
-          />
-          <Button type="submit">Send reply</Button>
-        </form>
+        <ServiceComposer merchantId={store.id} status={thread.status} />
       </Card>
     </div>
   );

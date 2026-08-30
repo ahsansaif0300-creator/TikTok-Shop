@@ -90,13 +90,17 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       });
     }
 
-    if (status === "COMPLETED") {
+    if (status === "COMPLETED" && !order.walletReleased) {
       await tx.merchant.update({
         where: { id: order.merchantId },
         data: {
           pendingBalance: { decrement: order.profit },
           availableBalance: { increment: order.profit },
         },
+      });
+      await tx.order.update({
+        where: { id: orderId },
+        data: { walletReleased: true },
       });
     }
   });

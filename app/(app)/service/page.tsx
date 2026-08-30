@@ -2,8 +2,21 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
-import { sendSupportMessage } from "@/lib/actions/support";
-import { Button, Card, Empty, PageHeader } from "@/components/ui";
+import { ensureServiceWelcome } from "@/lib/service-thread";
+import { ServiceComposer } from "@/components/service-composer";
+import { Card, Empty, PageHeader } from "@/components/ui";
+
+const STATUS_LABEL = {
+  INTAKE: "Assistant intake",
+  WAITING_AGENT: "Waiting for support",
+  WITH_AGENT: "With support team",
+};
+
+function senderLabel(sender: string, name?: string | null) {
+  if (sender === "BOT") return "Harbor Service assistant";
+  if (sender === "AGENT") return `${name ?? "Support"} · team`;
+  return `${name ?? "Store"} · store`;
+}
 
 export default async function ServicePage({
   searchParams,
@@ -32,7 +45,7 @@ export default async function ServicePage({
       <div>
         <PageHeader
           title="Service inbox"
-          subtitle="Reply to store conversations. Each thread is tied to a merchant so agents know who they are talking to."
+          subtitle="Stores start with the Service assistant, then a team member takes over. Each thread is already tied to a store."
         />
         {error === "store" ? (
           <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Choose a store first.</p>
@@ -40,7 +53,7 @@ export default async function ServicePage({
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
           <Card>
             {threads.length === 0 ? (
-              <Empty title="No conversations yet" body="Open a store from the list to start a service thread." />
+              <Empty title="No conversations yet" body="Open a store from the list when a seller needs help." />
             ) : (
               <ul className="divide-y divide-line">
                 {threads.map((thread) => {
@@ -53,8 +66,14 @@ export default async function ServicePage({
                           <p className="text-xs text-muted">{format(thread.updatedAt, "MMM d, HH:mm")}</p>
                         </div>
                         <p className="mt-1 font-mono text-xs text-muted">Store ID {thread.merchant.id}</p>
+                        <p className="mt-1 text-xs font-medium text-accent">
+                          {STATUS_LABEL[thread.status] ?? thread.status}
+                          {thread.intakeTopic ? ` · ${thread.intakeTopic}` : ""}
+                        </p>
                         <p className="mt-2 line-clamp-2 text-sm text-muted">
-                          {last ? `${last.user.name}: ${last.body}` : "No messages yet."}
+                          {last
+                            ? `${senderLabel(last.sender, last.user?.name)}: ${last.body}`
+                            : "No messages yet."}
                         </p>
                       </Link>
                     </li>
@@ -65,7 +84,7 @@ export default async function ServicePage({
           </Card>
           <Card className="h-fit p-5">
             <h2 className="font-medium">Open a store thread</h2>
-            <p className="mt-1 text-sm text-muted">The store identity is attached automatically.</p>
+            <p className="mt-1 text-sm text-muted">Take over after the assistant has the basics.</p>
             <ul className="mt-4 space-y-2">
               {stores.map((store) => (
                 <li key={store.id}>
@@ -90,33 +109,39 @@ export default async function ServicePage({
   }
 
   const store = await prisma.merchant.findUnique({ where: { id: session.merchantId } });
-  const thread = await prisma.supportThread.upsert({
-    where: { merchantId: session.merchantId },
-    update: {},
-    create: { merchantId: session.merchantId },
-  });
-  const messages = await prisma.supportMessage.findMany({
-    where: { threadId: thread.id },
-    include: { user: true },
-    orderBy: { createdAt: "asc" },
-  });
+  if (!store) {
+    return (
+      <div>
+        <PageHeader title="Service" subtitle="Store record is missing." />
+      </div>
+    );
+  }
+
+  await ensureServiceWelcome(store.id, store.name, store.id, session.name);
+  const thread = await prisma.supportThread.findUnique({ where: { merchantId: store.id } });
+  const messages = thread
+    ? await prisma.supportMessage.findMany({
+        where: { threadId: thread.id },
+        include: { user: true },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
 
   return (
     <div className="max-w-3xl">
       <PageHeader
         title="Service"
-        subtitle="You are connected to Harbor support. Your store is identified from this login — do not enter a store name or ID."
+        subtitle="Harbor support. The assistant asks a few basics, then a team member joins. Your store is identified from this login."
       />
       {error === "empty" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Write a message first.</p>
       ) : null}
       <Card className="mb-4 space-y-1 p-5 text-sm">
         <p>
-          <span className="text-muted">Store ID</span>{" "}
-          <span className="font-mono text-ink">{store?.id}</span>
+          <span className="text-muted">Store ID</span> <span className="font-mono text-ink">{store.id}</span>
         </p>
         <p>
-          <span className="text-muted">Store name</span> <span className="font-medium text-ink">{store?.name}</span>
+          <span className="text-muted">Store name</span> <span className="font-medium text-ink">{store.name}</span>
         </p>
         <p>
           <span className="text-muted">Logged in as</span>{" "}
@@ -124,37 +149,27 @@ export default async function ServicePage({
             {session.name} · {session.email}
           </span>
         </p>
+        <p>
+          <span className="text-muted">Status</span> {STATUS_LABEL[thread?.status ?? "INTAKE"]}
+        </p>
       </Card>
       <Card className="p-5">
         <div className="space-y-3">
-          {messages.length === 0 ? (
-            <p className="text-sm text-muted">No messages yet. Ask operations anything about this store.</p>
-          ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`rounded-xl px-3 py-2 text-sm ${
-                  message.userId === session.userId ? "bg-accent-soft text-ink" : "bg-soft"
-                }`}
-              >
-                <p className="text-xs text-muted">
-                  {message.user.name} · {format(message.createdAt, "MMM d, HH:mm")}
-                </p>
-                <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
-              </div>
-            ))
-          )}
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`rounded-xl px-3 py-2 text-sm ${
+                message.sender === "STORE" ? "bg-accent-soft text-ink" : "bg-soft"
+              }`}
+            >
+              <p className="text-xs text-muted">
+                {senderLabel(message.sender, message.user?.name)} · {format(message.createdAt, "MMM d, HH:mm")}
+              </p>
+              <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
+            </div>
+          ))}
         </div>
-        <form action={sendSupportMessage} className="mt-4 space-y-3">
-          <textarea
-            name="body"
-            required
-            rows={3}
-            placeholder="Write a message"
-            className="w-full rounded-xl border border-line p-3 text-sm outline-none ring-accent/30 focus:ring-2"
-          />
-          <Button type="submit">Send message</Button>
-        </form>
+        <ServiceComposer intakeStep={thread?.intakeStep} status={thread?.status} />
       </Card>
     </div>
   );

@@ -77,9 +77,15 @@ enum LedgerType {
   ADJUSTMENT
 }
 
+enum PaymentReleaseStatus {
+  SCHEDULED
+  RELEASED
+}
+
 model User {
   id                  String            @id @default(cuid())
   email               String            @unique
+  username            String?           @unique
   name                String
   passwordHash        String
   paymentPasswordHash String?
@@ -92,6 +98,7 @@ model User {
   auditLogs           AuditLog[]
   reviews             MerchantApplication[] @relation("ApplicationReviewer")
   supportMessages     SupportMessage[]
+  placedOrders        Order[]           @relation("OrderPlacedBy")
 }
 
 model Plan {
@@ -125,6 +132,8 @@ model Merchant {
   bankName         String?
   bankAccountLast4 String?
   logo             String                 @default("")
+  cnicNumber       String                 @default("")
+  cnicImage        String                 @default("")
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
   users            User[]
@@ -134,6 +143,7 @@ model Merchant {
   ledger           LedgerEntry[]
   applications     MerchantApplication[]
   supportThread    SupportThread?
+  paymentReleases  PaymentRelease[]
 }
 
 model MerchantApplication {
@@ -209,6 +219,9 @@ model Order {
   profit      Float
   platformFee Float
   notes       String      @default("")
+  walletReleased Boolean  @default(false)
+  placedByUserId String?
+  placedBy    User?       @relation("OrderPlacedBy", fields: [placedByUserId], references: [id])
   paidAt      DateTime?
   pickedAt    DateTime?
   pickupHold  Float       @default(0)
@@ -220,6 +233,7 @@ model Order {
   items       OrderItem[]
   shipments   Shipment[]
   refunds     Refund[]
+  paymentRelease PaymentRelease?
 }
 
 model OrderItem {
@@ -299,6 +313,22 @@ model LedgerEntry {
   createdAt  DateTime   @default(now())
 }
 
+model PaymentRelease {
+  id          String               @id @default(cuid())
+  orderId     String               @unique
+  order       Order                @relation(fields: [orderId], references: [id])
+  merchantId  String
+  merchant    Merchant             @relation(fields: [merchantId], references: [id])
+  amount      Float
+  status      PaymentReleaseStatus @default(SCHEDULED)
+  releaseAt   DateTime
+  releasedAt  DateTime?
+  createdById String
+  note        String               @default("")
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
 model Review {
   id        String   @id @default(cuid())
   productId String
@@ -331,23 +361,42 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 
+enum SupportThreadStatus {
+  INTAKE
+  WAITING_AGENT
+  WITH_AGENT
+}
+
+enum SupportSender {
+  BOT
+  STORE
+  AGENT
+}
+
 model SupportThread {
-  id         String           @id @default(cuid())
-  merchantId String           @unique
-  merchant   Merchant         @relation(fields: [merchantId], references: [id])
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  messages   SupportMessage[]
+  id            String               @id @default(cuid())
+  merchantId    String               @unique
+  merchant      Merchant             @relation(fields: [merchantId], references: [id])
+  status        SupportThreadStatus  @default(INTAKE)
+  intakeStep    String               @default("welcome")
+  intakeTopic   String               @default("")
+  intakeDetail  String               @default("")
+  agentId       String?
+  agentJoinedAt DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  messages      SupportMessage[]
 }
 
 model SupportMessage {
-  id        String        @id @default(cuid())
+  id        String         @id @default(cuid())
   threadId  String
-  thread    SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User          @relation(fields: [userId], references: [id])
+  thread    SupportThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?          @relation(fields: [userId], references: [id])
+  sender    SupportSender
   body      String
-  createdAt DateTime      @default(now())
+  createdAt DateTime       @default(now())
 }
 
 model Setting {
