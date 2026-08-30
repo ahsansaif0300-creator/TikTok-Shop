@@ -179,6 +179,8 @@ async function phase1Static() {
       "model Shipment",
       "availableBalance",
       "pendingBalance",
+      "paymentPasswordHash",
+      "SupportThread",
     ]) {
       assert(schema.includes(token), `Schema missing ${token}`);
     }
@@ -266,6 +268,7 @@ async function phase2Static() {
     assert(nav.includes("/users") && nav.includes("adminOnly"), "Team is not admin-only");
     assert(nav.includes("/settings") && nav.includes("adminOnly"), "Settings is not admin-only");
     assert(nav.includes("/merchants") && nav.includes("staffOnly"), "Merchants is not staff-only");
+    assert(nav.includes("merchantOnly") && nav.includes("/distribution") && nav.includes("/withdraw"), "Store-only nav missing");
   });
   await check(2, "Dashboard is role-aware", () => {
     const page = read("app/(app)/page.tsx") + read("components/merchant-home.tsx");
@@ -835,9 +838,17 @@ async function phase6Static() {
       "app/(app)/notifications/page.tsx",
       "app/(app)/users/page.tsx",
       "app/(app)/profile/page.tsx",
+      "app/(app)/account/page.tsx",
+      "app/(app)/service/page.tsx",
+      "app/(app)/distribution/page.tsx",
+      "app/(app)/withdraw/page.tsx",
+      "app/(app)/recharge/page.tsx",
       "app/(app)/settings/page.tsx",
       "lib/actions/payouts.ts",
       "lib/actions/users.ts",
+      "lib/actions/pickup.ts",
+      "lib/actions/support.ts",
+      "lib/actions/account.ts",
     ]) {
       assert(exists(file), `Missing ${file}`);
     }
@@ -850,6 +861,14 @@ async function phase6Static() {
     assert(payouts.includes("error=balance"), "Overdraw guard missing");
     assert(payouts.includes("canDecidePayout"), "Payout status machine missing");
     assert(payouts.includes("catalogMerchantId"), "Payout merchant scope missing");
+    const pickup = read("lib/actions/pickup.ts");
+    assert(pickup.includes("paymentPassword"), "Pickup payment password missing");
+    assert(pickup.includes("Insufficient Balance"), "Pickup balance error missing");
+    assert(pickup.includes("updateMany"), "Pickup concurrency lock missing");
+    assert(pickup.includes("$transaction"), "Pickup is not atomic");
+    const account = read("lib/actions/account.ts");
+    assert(account.includes("paymentPasswordHash") && account.includes("bcrypt.hash"), "Payment password is not hashed");
+    assert(account.includes("passwordHash"), "Login password change missing");
     assert(exists("lib/payout-flow.ts"), "payout-flow missing");
     assert(!canDecidePayoutCheck("PENDING", "PAID"), "Pending payout cannot skip to paid");
     assert(!canDecidePayoutCheck("PAID", "PAID"), "Paid payout cannot be paid twice");
@@ -1103,6 +1122,7 @@ async function phaseHttp(prisma) {
     "/finance/payouts",
     "/notifications",
     "/profile",
+    "/service",
   ];
   await check(7, "Super admin can open every operations route", async () => {
     for (const pathname of [...staffRoutes, "/users", "/settings"]) {
@@ -1148,6 +1168,11 @@ async function phaseHttp(prisma) {
     "/finance/payouts",
     "/notifications",
     "/profile",
+    "/service",
+    "/distribution",
+    "/withdraw",
+    "/account",
+    "/recharge",
   ];
   const merchantBlocked = [
     "/merchants",
@@ -1174,6 +1199,7 @@ async function phaseHttp(prisma) {
     assert(text.includes("Store overview"), "Merchant dashboard title missing");
     assert(text.includes("Northline Outfitters"), "Store name missing from merchant workspace");
     assert(text.includes("Available balance"), "Merchant wallet missing");
+    assert(hasHref(text, "/service"), "Merchant dashboard missing Service");
     assert(!hasHref(text, "/merchants"), "Merchant nav leaked Merchants");
     assert(!hasHref(text, "/merchants/applications"), "Merchant nav leaked Applications");
     assert(!hasHref(text, "/customers"), "Merchant nav leaked Customers");
@@ -1188,6 +1214,7 @@ async function phaseHttp(prisma) {
     assert(text.includes("Northline Outfitters"), "Merchant orders missing own store");
     assert(!text.includes("Cedar &amp; Co") && !text.includes("Cedar & Co. Home"), "Merchant orders leaked Cedar & Co.");
     assert(!text.includes("Lumen Beauty"), "Merchant orders leaked Lumen Beauty");
+    assert(text.includes("Click to Pick Up"), "Merchant orders missing pickup control");
   });
   await check(3, "Admin /orders HTML includes multiple merchants", async () => {
     const { text } = await pageText("/orders", adminCookie);
@@ -1289,8 +1316,15 @@ async function phaseHttp(prisma) {
     const merchantPayouts = await pageText("/finance/payouts", merchantCookie);
     assert(merchantPayouts.res.status === 200, `Merchant payouts ${merchantPayouts.res.status}`);
     assert(merchantPayouts.text.includes("Available"), "Merchant available balance missing on payout form");
-    const profile = await getWithCookie("/profile", adminCookie);
-    assert(profile.status === 200, `/profile ${profile.status}`);
+    const service = await pageText("/service", merchantCookie);
+    assert(service.res.status === 200, `Merchant /service ${service.res.status}`);
+    assert(service.text.includes("Store ID"), "Service missing store identity");
+    assert(service.text.includes("Northline Outfitters"), "Service missing logged-in store name");
+    const profile = await pageText("/profile", merchantCookie);
+    assert(profile.res.status === 200, `Merchant /profile ${profile.res.status}`);
+    assert(profile.text.includes("Available balance"), "Store profile missing server balance");
+    const adminProfile = await getWithCookie("/profile", adminCookie);
+    assert(adminProfile.status === 200, `/profile ${adminProfile.status}`);
     const notes = await getWithCookie("/notifications", adminCookie);
     assert(notes.status === 200, `/notifications ${notes.status}`);
   });

@@ -43,7 +43,7 @@ export const PAYOUT_STATUS = {
   PENDING: "Pending",
   APPROVED: "Approved",
   PROCESSING: "Processing",
-  PAID: "Paid",
+  PAID: "Completed",
   REJECTED: "Rejected",
 } as const;
 

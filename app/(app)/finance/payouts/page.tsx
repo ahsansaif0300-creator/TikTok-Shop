@@ -84,7 +84,8 @@ export default async function PayoutsPage({
                       </Td>
                       <Td>{payout.merchant.name}</Td>
                       <Td>
-                        {payout.bankName} •{payout.accountLast4}
+                        {payout.accountHolder ? <p>{payout.accountHolder}</p> : null}
+                        {payout.bankName} · {payout.accountNumber || `••••${payout.accountLast4}`}
                       </Td>
                       <Td>{money(payout.amount)}</Td>
                       <Td>

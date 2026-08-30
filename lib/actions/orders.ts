@@ -56,7 +56,10 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     if (status === "CANCELLED" && (order.status === "PAID" || order.status === "PROCESSING")) {
       await tx.merchant.update({
         where: { id: order.merchantId },
-        data: { pendingBalance: { decrement: order.profit } },
+        data: {
+          pendingBalance: { decrement: order.profit },
+          ...(order.pickupHold > 0 ? { availableBalance: { increment: order.pickupHold } } : {}),
+        },
       });
       await tx.ledgerEntry.create({
         data: {
@@ -67,6 +70,17 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
           note: "Cancelled after payment — pending profit reversed",
         },
       });
+      if (order.pickupHold > 0) {
+        await tx.ledgerEntry.create({
+          data: {
+            merchantId: order.merchantId,
+            type: "ADJUSTMENT",
+            amount: order.pickupHold,
+            reference: order.orderNumber,
+            note: "Pickup reserve released after cancel",
+          },
+        });
+      }
     }
 
     if (status === "DELIVERED") {

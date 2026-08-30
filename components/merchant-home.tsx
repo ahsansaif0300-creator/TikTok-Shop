@@ -2,12 +2,14 @@ import Link from "next/link";
 import {
   Bell,
   ClipboardList,
+  Headset,
+  Landmark,
   Package,
   Settings,
   Star,
   Truck,
   Undo2,
-  Wallet,
+  Warehouse,
 } from "lucide-react";
 import { money } from "@/lib/utils";
 import { CopyShopLink } from "@/components/copy-shop-link";
@@ -21,14 +23,16 @@ type Shortcut = {
 };
 
 const SHORTCUTS: Shortcut[] = [
-  { href: "/products", label: "Products", icon: Package, tone: "accent" },
+  { href: "/service", label: "Service", icon: Headset, tone: "accent" },
   { href: "/orders", label: "Orders", icon: ClipboardList, tone: "cyan" },
+  { href: "/distribution", label: "Distribution", icon: Warehouse, tone: "ink" },
+  { href: "/withdraw", label: "Withdraw", icon: Landmark, tone: "accent" },
+  { href: "/products", label: "Products", icon: Package, tone: "cyan" },
   { href: "/shipping", label: "Shipping", icon: Truck, tone: "ink" },
   { href: "/refunds", label: "Refunds", icon: Undo2, tone: "accent" },
-  { href: "/finance/payouts", label: "Payouts", icon: Wallet, tone: "cyan" },
-  { href: "/reviews", label: "Reviews", icon: Star, tone: "ink" },
-  { href: "/notifications", label: "Inbox", icon: Bell, tone: "accent" },
-  { href: "/profile", label: "Profile", icon: Settings, tone: "cyan" },
+  { href: "/reviews", label: "Reviews", icon: Star, tone: "cyan" },
+  { href: "/notifications", label: "Inbox", icon: Bell, tone: "ink" },
+  { href: "/profile", label: "Profile", icon: Settings, tone: "accent" },
 ];
 
 const TONE = {

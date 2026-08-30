@@ -43,11 +43,13 @@ export async function createStoreUser(formData: FormData) {
   if (!merchant) redirect("/");
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) redirect(`/merchants/${merchantId}?error=email`);
+  const passwordHash = await bcrypt.hash(password, 10);
   await prisma.user.create({
     data: {
       name,
       email,
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash,
+      paymentPasswordHash: passwordHash,
       role: "MERCHANT",
       merchantId: merchant.id,
     },

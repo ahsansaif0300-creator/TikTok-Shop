@@ -58,11 +58,13 @@ export async function signupMerchantAction(formData: FormData) {
     },
   });
 
+  const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: {
       name: contactName,
       email,
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash,
+      paymentPasswordHash: passwordHash,
       role: "MERCHANT",
       merchantId: merchant.id,
     },

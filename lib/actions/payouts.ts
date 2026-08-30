@@ -7,20 +7,37 @@ import { isStaff, requireSession } from "@/lib/auth";
 import { canAccessMerchant, catalogMerchantId } from "@/lib/scope";
 import { canDecidePayout, type PayoutDecision } from "@/lib/payout-flow";
 
+function payoutReturnTo(formData: FormData) {
+  return String(formData.get("returnTo") ?? "") === "withdraw" ? "/withdraw" : "/finance/payouts";
+}
+
 export async function requestPayout(formData: FormData) {
   const session = await requireSession();
+  const dest = payoutReturnTo(formData);
   const merchantId = catalogMerchantId(session, String(formData.get("merchantId") ?? ""));
   const amount = Number(formData.get("amount") ?? 0);
+  const accountHolder = String(formData.get("accountHolder") ?? formData.get("fullName") ?? "").trim();
+  const bankName = String(formData.get("bankName") ?? "").trim();
+  const accountNumber = String(formData.get("accountNumber") ?? "").replace(/\s+/g, "");
   if (!merchantId || !Number.isFinite(amount) || amount <= 0) {
-    redirect("/finance/payouts?error=invalid");
+    redirect(`${dest}?error=invalid`);
   }
 
   const merchant = await prisma.merchant.findUnique({ where: { id: merchantId } });
   if (!merchant || !canAccessMerchant(session, merchant.id)) {
-    redirect("/finance/payouts?error=forbidden");
+    redirect(`${dest}?error=forbidden`);
   }
   if (amount > merchant.availableBalance) {
-    redirect("/finance/payouts?error=balance");
+    redirect(`${dest}?error=balance`);
+  }
+
+  const resolvedBank = bankName || merchant.bankName || "Unspecified bank";
+  const resolvedAccount = accountNumber || (merchant.bankAccountLast4 ? `••••${merchant.bankAccountLast4}` : "");
+  const last4 = resolvedAccount.slice(-4) || merchant.bankAccountLast4 || "0000";
+  if (session.role === "MERCHANT" && dest === "/withdraw") {
+    if (!accountHolder || !bankName || accountNumber.length < 4) {
+      redirect("/withdraw?error=details");
+    }
   }
 
   const count = await prisma.payout.count();
@@ -29,13 +46,15 @@ export async function requestPayout(formData: FormData) {
       payoutNumber: `PO-${String(count + 1).padStart(5, "0")}`,
       merchantId,
       amount,
-      bankName: merchant.bankName ?? "Unspecified bank",
-      accountLast4: merchant.bankAccountLast4 ?? "0000",
+      bankName: resolvedBank,
+      accountLast4: last4,
+      accountHolder,
+      accountNumber: resolvedAccount,
       note: String(formData.get("note") ?? ""),
     },
   });
   revalidatePath("/", "layout");
-  redirect("/finance/payouts?requested=1");
+  redirect(`${dest}?requested=1`);
 }
 
 export async function decidePayout(payoutId: string, action: PayoutDecision) {

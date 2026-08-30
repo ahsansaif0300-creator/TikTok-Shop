@@ -16,6 +16,9 @@ export default async function DashboardPage() {
   const attention = (
     merchant
       ? [
+          data.readyToPickUp
+            ? { href: "/orders?status=PAID", label: `${data.readyToPickUp} orders ready to pick up` }
+            : null,
           data.pendingRefunds
             ? { href: "/refunds", label: `${data.pendingRefunds} refunds waiting on ops` }
             : null,

@@ -23,6 +23,8 @@ function pick<T>(items: T[], index: number) {
 }
 
 async function main() {
+  await prisma.supportMessage.deleteMany();
+  await prisma.supportThread.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.review.deleteMany();
@@ -169,6 +171,7 @@ async function main() {
   const passwordHash = await bcrypt.hash("HarborAdmin!2026", 10);
   const opsHash = await bcrypt.hash("HarborOps!2026", 10);
   const merchantHash = await bcrypt.hash("HarborMerchant!2026", 10);
+  const paymentHash = await bcrypt.hash("HarborPay!2026", 10);
 
   const admin = await prisma.user.create({
     data: {
@@ -191,6 +194,7 @@ async function main() {
       email: "iris.p@example.org",
       name: "Maya Chen",
       passwordHash: merchantHash,
+      paymentPasswordHash: paymentHash,
       role: "MERCHANT",
       merchantId: merchants[0].id,
     },
@@ -406,6 +410,13 @@ async function main() {
       });
     }
 
+    if (status === OrderStatus.PROCESSING) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { pickedAt: daysAgo(14 - (i % 12)) },
+      });
+    }
+
     if (status === OrderStatus.COMPLETED) {
       await prisma.merchant.update({
         where: { id: merchant.id },
@@ -451,6 +462,58 @@ async function main() {
       },
     });
   }
+
+  const northlineProduct = products[0];
+  const extraQty = 2;
+  const extraSubtotal = northlineProduct.price * extraQty;
+  const extraShipping = 0;
+  const extraTax = Number((extraSubtotal * 0.07).toFixed(2));
+  const extraTotal = Number((extraSubtotal + extraShipping + extraTax).toFixed(2));
+  const extraCost = northlineProduct.cost * extraQty;
+  const extraFee = Number((extraSubtotal * growth.commissionRate).toFixed(2));
+  const extraProfit = Number((extraSubtotal - extraCost - extraFee).toFixed(2));
+  await prisma.order.create({
+    data: {
+      orderNumber: "HB-2026-PICKUP-01",
+      merchantId: merchants[0].id,
+      customerId: customers[0].id,
+      status: OrderStatus.PAID,
+      subtotal: extraSubtotal,
+      shippingFee: extraShipping,
+      tax: extraTax,
+      total: extraTotal,
+      cost: extraCost,
+      profit: extraProfit,
+      platformFee: extraFee,
+      paidAt: daysAgo(0, 2),
+      items: {
+        create: {
+          productId: northlineProduct.id,
+          title: northlineProduct.title,
+          sku: northlineProduct.sku,
+          quantity: extraQty,
+          price: northlineProduct.price,
+          cost: northlineProduct.cost,
+        },
+      },
+    },
+  });
+  await prisma.merchant.update({
+    where: { id: merchants[0].id },
+    data: {
+      pendingBalance: { increment: extraProfit },
+      availableBalance: { increment: 5000 },
+    },
+  });
+  await prisma.ledgerEntry.create({
+    data: {
+      merchantId: merchants[0].id,
+      type: LedgerType.SALE,
+      amount: extraProfit,
+      reference: "HB-2026-PICKUP-01",
+      note: "Pending settlement",
+    },
+  });
 
   await prisma.payout.createMany({
     data: [
@@ -583,6 +646,7 @@ async function main() {
   console.log("  oscar.d@example.net / HarborAdmin!2026");
   console.log("  sarah.b@example.net / HarborOps!2026");
   console.log("  iris.p@example.org / HarborMerchant!2026");
+  console.log("  Payment password (Northline): HarborPay!2026");
 }
 
 main()

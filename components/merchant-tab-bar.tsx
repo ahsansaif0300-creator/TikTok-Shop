@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, House, Package, UserRound, Wallet } from "lucide-react";
+import { ClipboardList, Headset, House, Landmark, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/", label: "Home", icon: House },
-  { href: "/products", label: "Products", icon: Package },
   { href: "/orders", label: "Orders", icon: ClipboardList },
-  { href: "/finance/payouts", label: "Payouts", icon: Wallet },
+  { href: "/service", label: "Service", icon: Headset },
+  { href: "/withdraw", label: "Withdraw", icon: Landmark },
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
 

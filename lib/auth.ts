@@ -86,3 +86,11 @@ export function isStaff(role: Role) {
 export function canManageTeam(role: Role) {
   return role === "SUPER_ADMIN";
 }
+
+export async function requireMerchant() {
+  const session = await requireSession();
+  if (session.role !== "MERCHANT" || !session.merchantId) {
+    redirect("/");
+  }
+  return { ...session, merchantId: session.merchantId };
+}

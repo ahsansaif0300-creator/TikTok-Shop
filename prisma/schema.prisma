@@ -78,18 +78,20 @@ enum LedgerType {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  name          String
-  passwordHash  String
-  role          Role           @default(OPS)
-  merchantId    String?
-  merchant      Merchant?      @relation(fields: [merchantId], references: [id])
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  notifications Notification[]
-  auditLogs     AuditLog[]
-  reviews       MerchantApplication[] @relation("ApplicationReviewer")
+  id                  String            @id @default(cuid())
+  email               String            @unique
+  name                String
+  passwordHash        String
+  paymentPasswordHash String?
+  role                Role              @default(OPS)
+  merchantId          String?
+  merchant            Merchant?         @relation(fields: [merchantId], references: [id])
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+  reviews             MerchantApplication[] @relation("ApplicationReviewer")
+  supportMessages     SupportMessage[]
 }
 
 model Plan {
@@ -122,6 +124,7 @@ model Merchant {
   reviewCount      Int                    @default(0)
   bankName         String?
   bankAccountLast4 String?
+  logo             String                 @default("")
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
   users            User[]
@@ -130,6 +133,7 @@ model Merchant {
   payouts          Payout[]
   ledger           LedgerEntry[]
   applications     MerchantApplication[]
+  supportThread    SupportThread?
 }
 
 model MerchantApplication {
@@ -206,6 +210,8 @@ model Order {
   platformFee Float
   notes       String      @default("")
   paidAt      DateTime?
+  pickedAt    DateTime?
+  pickupHold  Float       @default(0)
   shippedAt   DateTime?
   deliveredAt DateTime?
   completedAt DateTime?
@@ -273,9 +279,11 @@ model Payout {
   merchant     Merchant     @relation(fields: [merchantId], references: [id])
   amount       Float
   status       PayoutStatus @default(PENDING)
-  bankName     String
-  accountLast4 String
-  note         String?
+  bankName       String
+  accountLast4   String
+  accountHolder  String       @default("")
+  accountNumber  String       @default("")
+  note           String?
   createdAt    DateTime     @default(now())
   processedAt  DateTime?
 }
@@ -321,6 +329,25 @@ model AuditLog {
   entityId  String
   detail    String
   createdAt DateTime @default(now())
+}
+
+model SupportThread {
+  id         String           @id @default(cuid())
+  merchantId String           @unique
+  merchant   Merchant         @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  messages   SupportMessage[]
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  body      String
+  createdAt DateTime      @default(now())
 }
 
 model Setting {

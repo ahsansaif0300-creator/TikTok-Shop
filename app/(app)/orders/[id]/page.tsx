@@ -9,6 +9,7 @@ import { ORDER_STATUS, REFUND_STATUS, SHIPMENT_STATUS } from "@/lib/labels";
 import { ORDER_BUTTON_ACTIONS, canOpenRefund } from "@/lib/order-flow";
 import { addOrderNote, shipOrder, updateOrderStatus } from "@/lib/actions/orders";
 import { createRefund } from "@/lib/actions/refunds";
+import { PickupDialog } from "@/components/pickup-dialog";
 import { Button, Card, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 
 export default async function OrderDetailPage({
@@ -37,10 +38,14 @@ export default async function OrderDetailPage({
       take: 8,
     }),
   ]);
-  const actions = ORDER_BUTTON_ACTIONS[order.status] ?? [];
+  const staff = isStaff(session.role);
+  const actions = (ORDER_BUTTON_ACTIONS[order.status] ?? []).filter((action) => {
+    if (!staff && action.status === "PROCESSING") return false;
+    return true;
+  });
   const canShip = order.status === "PAID" || order.status === "PROCESSING";
   const refundable = canOpenRefund(order.status);
-  const staff = isStaff(session.role);
+  const canPickUp = !staff && order.status === "PAID";
 
   const timeline = [
     { label: "Placed", at: order.createdAt },
@@ -58,6 +63,9 @@ export default async function OrderDetailPage({
         actions={<StatusBadge value={order.status} labels={ORDER_STATUS} />}
       />
       <div className="mb-6 flex flex-wrap gap-2">
+        {canPickUp ? (
+          <PickupDialog orderId={order.id} orderNumber={order.orderNumber} amountLabel={money(order.total)} />
+        ) : null}
         {actions.map((action) => (
           <form key={action.status} action={updateOrderStatus.bind(null, order.id, action.status)}>
             <Button type="submit" variant={action.status === "CANCELLED" ? "danger" : "primary"}>

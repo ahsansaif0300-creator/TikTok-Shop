@@ -21,6 +21,7 @@ export async function getDashboardData(session: SessionUser) {
     activeMerchants,
     pendingApplications,
     awaitingFulfillment,
+    readyToPickUp,
     store,
     recentOrders,
     chartOrders,
@@ -52,6 +53,9 @@ export async function getDashboardData(session: SessionUser) {
       : prisma.merchantApplication.count({ where: { status: "PENDING" } }),
     prisma.order.count({
       where: { ...scope, status: { in: ["PAID", "PROCESSING"] } },
+    }),
+    prisma.order.count({
+      where: { ...scope, status: "PAID" },
     }),
     isMerchant && session.merchantId
       ? prisma.merchant.findUnique({
@@ -101,6 +105,7 @@ export async function getDashboardData(session: SessionUser) {
     activeMerchants,
     pendingApplications,
     awaitingFulfillment,
+    readyToPickUp,
     store,
     recentOrders,
     chart: [...byDay.entries()].map(([day, value]) => ({ day, ...value })),

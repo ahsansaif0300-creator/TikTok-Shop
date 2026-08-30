@@ -4,6 +4,8 @@ import {
   CircleDollarSign,
   ClipboardList,
   FileCheck2,
+  Headset,
+  Landmark,
   LayoutDashboard,
   Package,
   Settings,
@@ -15,6 +17,7 @@ import {
   Users,
   UserRound,
   Wallet,
+  Warehouse,
 } from "lucide-react";
 import type { Role } from "@prisma/client";
 
@@ -24,6 +27,7 @@ export type NavItem = {
   icon: typeof LayoutDashboard;
   staffOnly?: boolean;
   adminOnly?: boolean;
+  merchantOnly?: boolean;
 };
 
 export const NAV: { title: string; items: NavItem[] }[] = [
@@ -31,6 +35,7 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     title: "Overview",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/service", label: "Service", icon: Headset },
       { href: "/notifications", label: "Notifications", icon: Bell },
     ],
   },
@@ -38,6 +43,7 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     title: "Selling",
     items: [
       { href: "/orders", label: "Orders", icon: ClipboardList },
+      { href: "/distribution", label: "Distribution", icon: Warehouse, merchantOnly: true },
       { href: "/refunds", label: "Refunds", icon: Undo2 },
       { href: "/shipping", label: "Shipping", icon: Truck },
       { href: "/products", label: "Products", icon: Package },
@@ -59,6 +65,7 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/finance", label: "Ledger", icon: CircleDollarSign },
       { href: "/finance/payouts", label: "Payouts", icon: Wallet },
+      { href: "/withdraw", label: "Withdrawal", icon: Landmark, merchantOnly: true },
     ],
   },
   {
@@ -66,6 +73,7 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/users", label: "Team", icon: UserRound, adminOnly: true },
       { href: "/profile", label: "Profile", icon: UserRound },
+      { href: "/account", label: "Personal information", icon: UserRound, merchantOnly: true },
       { href: "/settings", label: "Settings", icon: Settings, adminOnly: true },
     ],
   },
@@ -77,6 +85,7 @@ export function visibleNav(role: Role) {
     items: group.items.filter((item) => {
       if (item.adminOnly && role !== "SUPER_ADMIN") return false;
       if (item.staffOnly && role === "MERCHANT") return false;
+      if (item.merchantOnly && role !== "MERCHANT") return false;
       return true;
     }),
   })).filter((group) => group.items.length > 0);
