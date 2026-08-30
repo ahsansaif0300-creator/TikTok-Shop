@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { requireSuperAdmin } from "@/lib/auth";
 import { requestOrigin } from "@/lib/shop-url";
 import { processDueReleases } from "@/lib/process-releases";
+import { dummyProductImage } from "@/lib/product-image";
 
 function fail(path: string, code: string): never {
   redirect(`${path}?error=${code}`);
@@ -86,6 +87,7 @@ export async function placeStaffOrder(formData: FormData) {
             quantity,
             price: product.price,
             cost: product.cost,
+            image: product.image || dummyProductImage(product.sku),
           },
         },
       },

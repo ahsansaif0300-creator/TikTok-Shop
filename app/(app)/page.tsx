@@ -8,6 +8,7 @@ import { shopAbsoluteUrl } from "@/lib/shop-url";
 import { MerchantHome } from "@/components/merchant-home";
 import { Card, Empty, PageHeader, StatCard, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 import { RevenueChart } from "@/components/charts";
+import { ProductThumb } from "@/components/product-thumb";
 
 export default async function DashboardPage() {
   const session = await requireSession();
@@ -73,6 +74,7 @@ export default async function DashboardPage() {
               <thead>
                 <tr>
                   <Th>Order</Th>
+                  <Th>Product</Th>
                   <Th>Customer</Th>
                   <Th>Status</Th>
                   <Th>Total</Th>
@@ -86,6 +88,15 @@ export default async function DashboardPage() {
                         {order.orderNumber}
                       </Link>
                       <p className="text-xs text-muted">{format(order.createdAt, "MMM d, yyyy")}</p>
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-2">
+                        <ProductThumb src={order.items[0]?.image} alt={order.items[0]?.title ?? order.orderNumber} />
+                        <span className="max-w-[140px] truncate text-sm">
+                          {order.items[0]?.title ?? "—"}
+                          {order.items.length > 1 ? ` +${order.items.length - 1}` : ""}
+                        </span>
+                      </div>
                     </Td>
                     <Td>{order.customer.name}</Td>
                     <Td>
@@ -157,9 +168,12 @@ export default async function DashboardPage() {
                     href={`/products/${product.id}`}
                     className="flex items-center justify-between rounded-xl bg-soft px-3 py-2"
                   >
-                    <div>
-                      <p className="text-sm font-medium">{product.title}</p>
-                      <p className="text-xs text-muted">{product.merchant.name}</p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <ProductThumb src={product.image} alt={product.title} size={40} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{product.title}</p>
+                        <p className="text-xs text-muted">{product.merchant.name}</p>
+                      </div>
                     </div>
                     <p className="text-sm font-semibold text-amber-800">{product.stock}</p>
                   </Link>
@@ -181,24 +195,34 @@ export default async function DashboardPage() {
         ) : (
           <TableWrap>
             <thead>
-              <tr>
-                <Th>Order</Th>
-                <Th>Merchant</Th>
-                <Th>Customer</Th>
-                <Th>Status</Th>
-                <Th>Total</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-soft">
-                  <Td>
-                    <Link href={`/orders/${order.id}`} className="font-medium text-accent hover:underline">
-                      {order.orderNumber}
-                    </Link>
-                    <p className="text-xs text-muted">{format(order.createdAt, "MMM d, yyyy")}</p>
-                  </Td>
-                  <Td>{order.merchant.name}</Td>
+                <tr>
+                  <Th>Order</Th>
+                  <Th>Product</Th>
+                  <Th>Merchant</Th>
+                  <Th>Customer</Th>
+                  <Th>Status</Th>
+                  <Th>Total</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-soft">
+                    <Td>
+                      <Link href={`/orders/${order.id}`} className="font-medium text-accent hover:underline">
+                        {order.orderNumber}
+                      </Link>
+                      <p className="text-xs text-muted">{format(order.createdAt, "MMM d, yyyy")}</p>
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-2">
+                        <ProductThumb src={order.items[0]?.image} alt={order.items[0]?.title ?? order.orderNumber} />
+                        <span className="max-w-[140px] truncate text-sm">
+                          {order.items[0]?.title ?? "—"}
+                          {order.items.length > 1 ? ` +${order.items.length - 1}` : ""}
+                        </span>
+                      </div>
+                    </Td>
+                    <Td>{order.merchant.name}</Td>
                   <Td>{order.customer.name}</Td>
                   <Td>
                     <StatusBadge value={order.status} labels={ORDER_STATUS} />

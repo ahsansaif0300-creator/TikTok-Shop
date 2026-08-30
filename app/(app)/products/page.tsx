@@ -6,6 +6,7 @@ import { merchantScope } from "@/lib/scope";
 import { money } from "@/lib/utils";
 import { PRODUCT_STATUS } from "@/lib/labels";
 import { Card, Empty, PageHeader, SearchForm, StatusBadge, TableWrap, Tabs, Td, Th } from "@/components/ui";
+import { ProductThumb } from "@/components/product-thumb";
 
 const TABS = [
   { value: "", label: "All" },
@@ -71,10 +72,15 @@ export default async function ProductsPage({
               {products.map((product) => (
                 <tr key={product.id} className="hover:bg-soft">
                   <Td>
-                    <Link href={`/products/${product.id}`} className="font-medium text-accent hover:underline">
-                      {product.title}
-                    </Link>
-                    <p className="font-mono text-xs text-muted">{product.sku}</p>
+                    <div className="flex items-center gap-3">
+                      <ProductThumb src={product.image} alt={product.title} />
+                      <div>
+                        <Link href={`/products/${product.id}`} className="font-medium text-accent hover:underline">
+                          {product.title}
+                        </Link>
+                        <p className="font-mono text-xs text-muted">{product.sku}</p>
+                      </div>
+                    </div>
                   </Td>
                   {merchantView ? null : <Td>{product.merchant.name}</Td>}
                   <Td>{product.category.name}</Td>

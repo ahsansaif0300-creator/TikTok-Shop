@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/auth";
 import { canAccessMerchant } from "@/lib/scope";
 import { saveProduct } from "@/lib/actions/catalog";
 import { Button, Card, Field, PageHeader } from "@/components/ui";
+import { ProductThumb } from "@/components/product-thumb";
 
 const ERRORS: Record<string, string> = {
   cap: "This store is at its seller-plan product cap. Archive SKUs or move the store to a higher plan.",
@@ -88,6 +89,13 @@ export default async function ProductFormPage({
           )}
           <Field name="title" label="Title" defaultValue={product?.title} required />
           <Field name="sku" label="SKU" defaultValue={product?.sku} required />
+          {product?.image ? (
+            <div className="flex items-center gap-3">
+              <ProductThumb src={product.image} alt={product.title} size={72} />
+              <p className="text-sm text-muted">Current catalog photo. New products get a dummy photo automatically if you leave Image blank.</p>
+            </div>
+          ) : null}
+          <Field name="image" label="Image path or URL" defaultValue={product?.image ?? ""} />
           <label className="space-y-1.5 text-sm">
             <span className="font-medium">Category</span>
             <select

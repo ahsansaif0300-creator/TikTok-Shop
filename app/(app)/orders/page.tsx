@@ -7,6 +7,7 @@ import { merchantScope } from "@/lib/scope";
 import { money } from "@/lib/utils";
 import { ORDER_STATUS } from "@/lib/labels";
 import { PickupDialog } from "@/components/pickup-dialog";
+import { ProductThumb } from "@/components/product-thumb";
 import { Card, Empty, PageHeader, SearchForm, StatusBadge, TableWrap, Tabs, Td, Th } from "@/components/ui";
 
 const TABS = [
@@ -89,10 +90,13 @@ export default async function OrdersPage({
               </div>
               <ul className="mt-4 space-y-2 text-sm">
                 {order.items.map((item) => (
-                  <li key={item.id} className="flex justify-between gap-3 rounded-xl bg-soft px-3 py-2">
-                    <span>
-                      {item.title}
-                      <span className="block text-xs text-muted">Qty {item.quantity}</span>
+                  <li key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-soft px-3 py-2">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <ProductThumb src={item.image} alt={item.title} size={48} />
+                      <span>
+                        {item.title}
+                        <span className="block text-xs text-muted">Qty {item.quantity}</span>
+                      </span>
                     </span>
                     <span className="font-medium">{money(item.price * item.quantity)}</span>
                   </li>
@@ -116,6 +120,7 @@ export default async function OrdersPage({
             <thead>
               <tr>
                 <Th>Order</Th>
+                <Th>Product</Th>
                 <Th>Merchant</Th>
                 <Th>Customer</Th>
                 <Th>Items</Th>
@@ -132,6 +137,15 @@ export default async function OrdersPage({
                       {order.orderNumber}
                     </Link>
                     <p className="text-xs text-muted">{format(order.createdAt, "MMM d, yyyy HH:mm")}</p>
+                  </Td>
+                  <Td>
+                    <div className="flex items-center gap-2">
+                      <ProductThumb src={order.items[0]?.image} alt={order.items[0]?.title ?? order.orderNumber} />
+                      <span className="max-w-[160px] truncate text-sm">
+                        {order.items[0]?.title ?? "—"}
+                        {order.items.length > 1 ? ` +${order.items.length - 1}` : ""}
+                      </span>
+                    </div>
                   </Td>
                   <Td>{order.merchant.name}</Td>
                   <Td>

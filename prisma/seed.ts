@@ -256,6 +256,7 @@ async function main() {
           cost: item.cost,
           stock: item.stock,
           status: item.merchant === 5 ? ProductStatus.ARCHIVED : ProductStatus.ACTIVE,
+          image: `/products/p${String(index + 1).padStart(2, "0")}.jpg`,
         },
       }),
     );
@@ -384,6 +385,7 @@ async function main() {
             quantity: qty,
             price: product.price,
             cost: product.cost,
+            image: product.image,
           },
         },
       },
@@ -510,6 +512,7 @@ async function main() {
             quantity: extraQty,
             price: product.price,
             cost: product.cost,
+            image: product.image,
           },
         },
       },

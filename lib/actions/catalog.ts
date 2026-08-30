@@ -6,6 +6,7 @@ import type { ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { canAccessMerchant, catalogMerchantId } from "@/lib/scope";
+import { dummyProductImage } from "@/lib/product-image";
 
 const PRODUCT_STATUSES: ProductStatus[] = ["ACTIVE", "DRAFT", "ARCHIVED"];
 
@@ -33,12 +34,14 @@ export async function saveProduct(formData: FormData) {
     cost: Number(formData.get("cost") ?? 0),
     stock: Number(formData.get("stock") ?? 0),
     status: PRODUCT_STATUSES.includes(statusRaw) ? statusRaw : "DRAFT",
+    image: String(formData.get("image") ?? "").trim(),
   };
   if (!data.title || !data.sku || !data.categoryId) fail(returnPath, "invalid");
   if (!Number.isFinite(data.price) || data.price < 0) fail(returnPath, "invalid");
   if (!Number.isFinite(data.cost) || data.cost < 0) fail(returnPath, "invalid");
   if (!Number.isFinite(data.stock) || data.stock < 0) fail(returnPath, "invalid");
   data.stock = Math.floor(data.stock);
+  if (!data.image) data.image = dummyProductImage(data.sku);
 
   const skuOwner = await prisma.product.findUnique({ where: { sku: data.sku } });
   if (skuOwner && skuOwner.id !== id) fail(returnPath, "sku");

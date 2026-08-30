@@ -65,7 +65,7 @@ export async function getDashboardData(session: SessionUser) {
       : Promise.resolve(null),
     prisma.order.findMany({
       where: scope,
-      include: { merchant: true, customer: true },
+      include: { merchant: true, customer: true, items: true },
       orderBy: { createdAt: "desc" },
       take: 8,
     }),

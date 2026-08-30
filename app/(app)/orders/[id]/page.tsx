@@ -10,6 +10,7 @@ import { ORDER_BUTTON_ACTIONS, canOpenRefund } from "@/lib/order-flow";
 import { addOrderNote, shipOrder, updateOrderStatus } from "@/lib/actions/orders";
 import { createRefund } from "@/lib/actions/refunds";
 import { PickupDialog } from "@/components/pickup-dialog";
+import { ProductThumb } from "@/components/product-thumb";
 import { Button, Card, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 
 export default async function OrderDetailPage({
@@ -109,9 +110,12 @@ export default async function OrderDetailPage({
                 {order.items.map((item) => (
                   <tr key={item.id}>
                     <Td>
-                      <Link href={`/products/${item.productId}`} className="hover:underline">
-                        {item.title}
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <ProductThumb src={item.image} alt={item.title} size={48} />
+                        <Link href={`/products/${item.productId}`} className="hover:underline">
+                          {item.title}
+                        </Link>
+                      </div>
                     </Td>
                     <Td className="font-mono text-xs">{item.sku}</Td>
                     <Td>{item.quantity}</Td>

@@ -185,6 +185,7 @@ model Product {
   cost        Float
   stock       Int
   status      ProductStatus @default(ACTIVE)
+  image       String        @default("")
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   orderItems  OrderItem[]
@@ -247,6 +248,7 @@ model OrderItem {
   quantity  Int
   price     Float
   cost      Float
+  image     String  @default("")
 }
 
 model Carrier {

@@ -10,6 +10,7 @@ import { assignPlan, setMerchantStatus } from "@/lib/actions/merchants";
 import { createStoreUser } from "@/lib/actions/users";
 import { Button, Card, Empty, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 import { CopyShopLink } from "@/components/copy-shop-link";
+import { ProductThumb } from "@/components/product-thumb";
 
 export default async function MerchantDetailPage({
   params,
@@ -216,9 +217,12 @@ export default async function MerchantDetailPage({
                 {merchant.products.map((product) => (
                   <tr key={product.id}>
                     <Td>
-                      <Link href={`/products/${product.id}`} className="hover:underline">
-                        {product.title}
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <ProductThumb src={product.image} alt={product.title} />
+                        <Link href={`/products/${product.id}`} className="hover:underline">
+                          {product.title}
+                        </Link>
+                      </div>
                     </Td>
                     <Td className="font-mono text-xs">{product.sku}</Td>
                     <Td>{money(product.price)}</Td>

@@ -5,6 +5,7 @@ import { requireMerchant } from "@/lib/auth";
 import { money } from "@/lib/utils";
 import { ORDER_STATUS } from "@/lib/labels";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/ui";
+import { ProductThumb } from "@/components/product-thumb";
 
 const PICKED = ["PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED"] as const;
 
@@ -55,11 +56,14 @@ export default async function DistributionPage() {
                   return (
                     <div key={item.id} className="rounded-xl bg-soft px-3 py-3 text-sm">
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-ink">{item.title}</p>
-                          <p className="text-xs text-muted">
-                            SKU {item.sku} · Qty {item.quantity}
-                          </p>
+                        <div className="flex min-w-0 items-start gap-3">
+                          <ProductThumb src={item.image} alt={item.title} size={56} />
+                          <div>
+                            <p className="font-medium text-ink">{item.title}</p>
+                            <p className="text-xs text-muted">
+                              SKU {item.sku} · Qty {item.quantity}
+                            </p>
+                          </div>
                         </div>
                       </div>
                       <dl className="mt-3 grid grid-cols-3 gap-2 text-center">

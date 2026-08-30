@@ -6,6 +6,7 @@ import { money } from "@/lib/utils";
 import { shopAbsoluteUrl, workspaceLoginUrl } from "@/lib/shop-url";
 import { BrandBar, HarborMark } from "@/components/brand";
 import { CopyShopLink } from "@/components/copy-shop-link";
+import { ProductThumb } from "@/components/product-thumb";
 
 export default async function PublicShopPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -17,7 +18,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
         where: { status: "ACTIVE" },
         orderBy: { updatedAt: "desc" },
         take: 8,
-        select: { id: true, title: true, price: true },
+        select: { id: true, title: true, price: true, image: true },
       },
       _count: { select: { products: true } },
     },
@@ -81,8 +82,11 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
               <h2 className="text-sm font-medium">Catalog</h2>
               <ul className="mt-2 divide-y divide-line">
                 {merchant.products.map((product) => (
-                  <li key={product.id} className="flex items-center justify-between py-2 text-sm">
-                    <span className="truncate pr-3">{product.title}</span>
+                  <li key={product.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <ProductThumb src={product.image} alt={product.title} size={40} />
+                      <span className="truncate">{product.title}</span>
+                    </span>
                     <span className="shrink-0 font-medium">{money(product.price)}</span>
                   </li>
                 ))}

@@ -187,6 +187,7 @@ async function phase1Static() {
     ]) {
       assert(schema.includes(token), `Schema missing ${token}`);
     }
+    assert(schema.includes("image"), "Product/order image field missing");
     assert(!/inviteCode|yuebao|virtualOrder|blockchain/i.test(schema), "Schema contains out-of-scope fields");
   });
   await check(1, "JWT session cookie is harbor_session", () => {
@@ -263,6 +264,7 @@ async function phase2Static() {
     assert(chrome.includes("Open menu"), "Mobile menu control missing");
     const nav = read("lib/nav.ts");
     assert(nav.includes("isNavActive"), "Longest-prefix nav matching missing");
+    assert(exists("public/products/p01.jpg") && exists("lib/product-image.ts"), "Dummy product images missing");
   });
   await check(2, "Nav hides staff/admin items by role", () => {
     const nav = read("lib/nav.ts");
@@ -1372,6 +1374,7 @@ async function phaseHttp(prisma) {
     assert(text.includes("Northline Outfitters"), "Store name missing from merchant workspace");
     assert(text.includes("Available balance"), "Merchant wallet missing");
     assert(hasHref(text, "/service"), "Merchant dashboard missing Service");
+    assert(text.includes("/products/p"), "Merchant dashboard missing product images");
     assert(!hasHref(text, "/merchants"), "Merchant nav leaked Merchants");
     assert(!hasHref(text, "/merchants/applications"), "Merchant nav leaked Applications");
     assert(!hasHref(text, "/customers"), "Merchant nav leaked Customers");
@@ -1388,6 +1391,7 @@ async function phaseHttp(prisma) {
     assert(!text.includes("Cedar &amp; Co") && !text.includes("Cedar & Co. Home"), "Merchant orders leaked Cedar & Co.");
     assert(!text.includes("Lumen Beauty"), "Merchant orders leaked Lumen Beauty");
     assert(text.includes("Click to Pick Up"), "Merchant orders missing pickup control");
+    assert(text.includes("/products/p"), "Merchant orders missing product images");
   });
   await check(3, "Admin /orders HTML includes multiple merchants", async () => {
     const { text } = await pageText("/orders", adminCookie);
