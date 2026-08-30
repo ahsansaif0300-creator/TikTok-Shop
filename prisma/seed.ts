@@ -463,55 +463,59 @@ async function main() {
     });
   }
 
-  const northlineProduct = products[0];
-  const extraQty = 2;
-  const extraSubtotal = northlineProduct.price * extraQty;
-  const extraShipping = 0;
-  const extraTax = Number((extraSubtotal * 0.07).toFixed(2));
-  const extraTotal = Number((extraSubtotal + extraShipping + extraTax).toFixed(2));
-  const extraCost = northlineProduct.cost * extraQty;
-  const extraFee = Number((extraSubtotal * growth.commissionRate).toFixed(2));
-  const extraProfit = Number((extraSubtotal - extraCost - extraFee).toFixed(2));
-  await prisma.order.create({
-    data: {
-      orderNumber: "HB-2026-PICKUP-01",
-      merchantId: merchants[0].id,
-      customerId: customers[0].id,
-      status: OrderStatus.PAID,
-      subtotal: extraSubtotal,
-      shippingFee: extraShipping,
-      tax: extraTax,
-      total: extraTotal,
-      cost: extraCost,
-      profit: extraProfit,
-      platformFee: extraFee,
-      paidAt: daysAgo(0, 2),
-      items: {
-        create: {
-          productId: northlineProduct.id,
-          title: northlineProduct.title,
-          sku: northlineProduct.sku,
-          quantity: extraQty,
-          price: northlineProduct.price,
-          cost: northlineProduct.cost,
+  const pickupProducts = [products[0], products[1]];
+  let pickupProfit = 0;
+  for (const [index, product] of pickupProducts.entries()) {
+    const extraQty = index + 1;
+    const extraSubtotal = product.price * extraQty;
+    const extraTax = Number((extraSubtotal * 0.07).toFixed(2));
+    const extraTotal = Number((extraSubtotal + extraTax).toFixed(2));
+    const extraCost = product.cost * extraQty;
+    const extraFee = Number((extraSubtotal * growth.commissionRate).toFixed(2));
+    const extraProfit = Number((extraSubtotal - extraCost - extraFee).toFixed(2));
+    pickupProfit += extraProfit;
+    const orderNumber = `HB-2026-PICKUP-0${index + 1}`;
+    await prisma.order.create({
+      data: {
+        orderNumber,
+        merchantId: merchants[0].id,
+        customerId: customers[index].id,
+        status: OrderStatus.PAID,
+        subtotal: extraSubtotal,
+        shippingFee: 0,
+        tax: extraTax,
+        total: extraTotal,
+        cost: extraCost,
+        profit: extraProfit,
+        platformFee: extraFee,
+        paidAt: daysAgo(0, 2 + index),
+        items: {
+          create: {
+            productId: product.id,
+            title: product.title,
+            sku: product.sku,
+            quantity: extraQty,
+            price: product.price,
+            cost: product.cost,
+          },
         },
       },
-    },
-  });
+    });
+    await prisma.ledgerEntry.create({
+      data: {
+        merchantId: merchants[0].id,
+        type: LedgerType.SALE,
+        amount: extraProfit,
+        reference: orderNumber,
+        note: "Pending settlement",
+      },
+    });
+  }
   await prisma.merchant.update({
     where: { id: merchants[0].id },
     data: {
-      pendingBalance: { increment: extraProfit },
+      pendingBalance: { increment: pickupProfit },
       availableBalance: { increment: 5000 },
-    },
-  });
-  await prisma.ledgerEntry.create({
-    data: {
-      merchantId: merchants[0].id,
-      type: LedgerType.SALE,
-      amount: extraProfit,
-      reference: "HB-2026-PICKUP-01",
-      note: "Pending settlement",
     },
   });
 

@@ -64,7 +64,12 @@ export default async function OrderDetailPage({
       />
       <div className="mb-6 flex flex-wrap gap-2">
         {canPickUp ? (
-          <PickupDialog orderId={order.id} orderNumber={order.orderNumber} amountLabel={money(order.total)} />
+          <PickupDialog
+            orderId={order.id}
+            orderNumber={order.orderNumber}
+            amountLabel={money(order.total)}
+            cancelHref={`/orders/${order.id}`}
+          />
         ) : null}
         {actions.map((action) => (
           <form key={action.status} action={updateOrderStatus.bind(null, order.id, action.status)}>
