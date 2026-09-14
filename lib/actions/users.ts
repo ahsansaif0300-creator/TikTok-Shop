@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { canManageTeam, isStaff, requireSession } from "@/lib/auth";
+import { allocateReferralCode } from "@/lib/referral";
 
 export async function createTeamUser(formData: FormData) {
   const session = await requireSession();
@@ -17,12 +18,14 @@ export async function createTeamUser(formData: FormData) {
   if (password.length < 8) redirect("/users?error=password");
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) redirect("/users?error=email");
+  const roleValue = role === "SUPER_ADMIN" ? "SUPER_ADMIN" : "OPS";
   await prisma.user.create({
     data: {
       name,
       email,
       passwordHash: await bcrypt.hash(password, 10),
-      role: role === "SUPER_ADMIN" ? "SUPER_ADMIN" : "OPS",
+      role: roleValue,
+      referralCode: roleValue === "OPS" ? await allocateReferralCode() : null,
     },
   });
   revalidatePath("/users");

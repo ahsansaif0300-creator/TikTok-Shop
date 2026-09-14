@@ -17,6 +17,13 @@ export default async function ProfilePage({
   const session = await requireSession();
   const { saved, error } = await searchParams;
   const staff = isStaff(session.role);
+  const opsUser =
+    session.role === "OPS"
+      ? await prisma.user.findUnique({
+          where: { id: session.userId },
+          select: { referralCode: true },
+        })
+      : null;
   const store = session.merchantId
     ? await prisma.merchant.findUnique({
         where: { id: session.merchantId },
@@ -89,6 +96,18 @@ export default async function ProfilePage({
   return (
     <div className="max-w-xl">
       <PageHeader title="Profile" subtitle={`${ROLE_LABEL[session.role]} · ${session.email}`} />
+      {opsUser?.referralCode ? (
+        <Card className="mb-4 p-5">
+          <p className="text-sm font-medium text-ink">Store referral code</p>
+          <p className="mt-1 text-xs text-muted">
+            Give this code to a new store at signup. Their ID photos still go to Super Admin, and approval lands here in Normal Backend.
+          </p>
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-soft px-3 py-2">
+            <p className="font-mono text-sm text-ink">{opsUser.referralCode}</p>
+            <CopyShopLink url={opsUser.referralCode} label="Copy code" />
+          </div>
+        </Card>
+      ) : null}
       {saved ? (
         <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Profile saved.</p>
       ) : null}

@@ -102,8 +102,11 @@ model User {
   notifications       Notification[]
   auditLogs           AuditLog[]
   reviews             MerchantApplication[] @relation("ApplicationReviewer")
+  referredMerchants   Merchant[]            @relation("MerchantReferrer")
+  referredApplications MerchantApplication[] @relation("ApplicationReferrer")
   supportMessages     SupportMessage[]
   placedOrders        Order[]           @relation("OrderPlacedBy")
+  referralCode        String?           @unique
 }
 
 model Plan {
@@ -139,7 +142,12 @@ model Merchant {
   logo             String                 @default("")
   cnicNumber       String                 @default("")
   cnicImage        String                 @default("")
+  cnicImageFront   String                 @default("")
+  cnicImageBack    String                 @default("")
   storeCode        String                 @default("")
+  referralCodeUsed String                 @default("")
+  referredByUserId String?
+  referredBy       User?                  @relation("MerchantReferrer", fields: [referredByUserId], references: [id])
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
   users            User[]
@@ -167,6 +175,9 @@ model MerchantApplication {
   reviewer     User?             @relation("ApplicationReviewer", fields: [reviewerId], references: [id])
   merchantId   String?
   merchant     Merchant?         @relation(fields: [merchantId], references: [id])
+  referredByUserId String?
+  referredBy   User?             @relation("ApplicationReferrer", fields: [referredByUserId], references: [id])
+  referralCode String            @default("")
   createdAt    DateTime          @default(now())
   reviewedAt   DateTime?
 }

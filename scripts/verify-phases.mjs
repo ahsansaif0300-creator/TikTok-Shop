@@ -188,6 +188,9 @@ async function phase1Static() {
       "model PaymentRelease",
       "walletReleased",
       "cnicNumber",
+      "cnicImageFront",
+      "cnicImageBack",
+      "referralCode",
     ]) {
       assert(schema.includes(token), `Schema missing ${token}`);
     }
@@ -306,6 +309,12 @@ async function phase2Static() {
     assert(proxy.includes("/signup") && proxy.includes("/s/"), "proxy.ts must allow signup and shop cards");
     assert(read("lib/actions/signup.ts").includes("MERCHANT"), "Public signup must create a merchant user");
     assert(read("lib/actions/signup.ts").includes("allocateStoreCode"), "Signup must mint a Store ID");
+    assert(read("lib/actions/signup.ts").includes("idFront"), "Signup must collect ID card front");
+    assert(read("lib/actions/signup.ts").includes("idBack"), "Signup must collect ID card back");
+    assert(read("lib/actions/signup.ts").includes("referralCode"), "Signup must accept a referral code");
+    const signupPage = read("app/signup/page.tsx");
+    assert(signupPage.includes("idFront") && signupPage.includes("idBack"), "Signup form missing ID uploads");
+    assert(signupPage.includes("referralCode"), "Signup form missing referral code");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {

@@ -26,7 +26,7 @@ export default async function ApplicationsPage({
   const { status = "" } = await searchParams;
   const applications = await prisma.merchantApplication.findMany({
     where: status ? { status: status as ApplicationStatus } : {},
-    include: { reviewer: true, merchant: true },
+    include: { reviewer: true, merchant: true, referredBy: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -35,7 +35,7 @@ export default async function ApplicationsPage({
       <div>
         <PageHeader
           title="Seller applications"
-          subtitle="Inbound onboarding. Approval creates an active merchant on the Starter plan."
+          subtitle="Inbound onboarding and referred store signups. Approval is handled here in Normal Backend."
         />
         <div className="mb-4">
           <Tabs items={TABS} active={status} basePath="/merchants/applications" />
@@ -49,7 +49,7 @@ export default async function ApplicationsPage({
                 <tr>
                   <Th>Business</Th>
                   <Th>Contact</Th>
-                  <Th>Category</Th>
+                  <Th>Referral</Th>
                   <Th>Status</Th>
                   <Th>Review</Th>
                 </tr>
@@ -76,7 +76,21 @@ export default async function ApplicationsPage({
                       {application.contactName}
                       <p className="text-xs text-muted">{application.email}</p>
                     </Td>
-                    <Td>{application.category}</Td>
+                    <Td>
+                      {application.referralCode ? (
+                        <div>
+                          <p className="font-mono text-xs">{application.referralCode}</p>
+                          <p className="text-xs text-muted">
+                            {application.referredBy?.username || application.referredBy?.name || "Normal Backend"}
+                          </p>
+                          {application.referredByUserId === session.userId ? (
+                            <p className="text-[11px] font-medium text-accent">Your referral</p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </Td>
                     <Td>
                       <StatusBadge value={application.status} labels={APPLICATION_STATUS} />
                     </Td>

@@ -3,6 +3,7 @@ import { applyRuntimeEnv } from "./runtime-env";
 import { getPrisma, resetPrisma } from "./db";
 import { STORE_CATEGORIES, categorySlug } from "./store-categories";
 import { backfillStoreCodes } from "./store-code";
+import { ensureOpsReferralCodes } from "./referral";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -29,6 +30,33 @@ async function backfill() {
     await backfillStoreCodes();
   } catch (error) {
     console.warn("[harbor] storeCode backfill skipped", error);
+  }
+  for (const sql of [
+    `ALTER TABLE "User" ADD COLUMN "referralCode" TEXT`,
+    `ALTER TABLE "Merchant" ADD COLUMN "cnicImageFront" TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE "Merchant" ADD COLUMN "cnicImageBack" TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE "Merchant" ADD COLUMN "referralCodeUsed" TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE "Merchant" ADD COLUMN "referredByUserId" TEXT`,
+    `ALTER TABLE "MerchantApplication" ADD COLUMN "referredByUserId" TEXT`,
+    `ALTER TABLE "MerchantApplication" ADD COLUMN "referralCode" TEXT NOT NULL DEFAULT ''`,
+  ]) {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+    } catch {
+      // Column already exists on upgraded databases.
+    }
+  }
+  try {
+    await prisma.$executeRawUnsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "User_referralCode_key" ON "User"("referralCode")`,
+    );
+  } catch (error) {
+    console.warn("[harbor] referral index skipped", error);
+  }
+  try {
+    await ensureOpsReferralCodes();
+  } catch (error) {
+    console.warn("[harbor] referral code backfill skipped", error);
   }
   try {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });

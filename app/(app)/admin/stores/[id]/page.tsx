@@ -25,6 +25,7 @@ export default async function StoreRecordDetailPage({
     include: {
       plan: true,
       users: true,
+      referredBy: { select: { name: true, username: true, referralCode: true, email: true } },
       _count: { select: { products: true, orders: true } },
     },
   });
@@ -67,6 +68,13 @@ export default async function StoreRecordDetailPage({
               ["Products", String(store._count.products)],
               ["Orders", String(store._count.orders)],
               ["Shop link", shopUrl],
+              ["Referral code", store.referralCodeUsed || "—"],
+              [
+                "Referred by",
+                store.referredBy
+                  ? `${store.referredBy.name} (${store.referredBy.username || store.referredBy.email})`
+                  : "—",
+              ],
               ["Registered", format(store.createdAt, "MMM d, yyyy HH:mm")],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between gap-4">
@@ -102,19 +110,39 @@ export default async function StoreRecordDetailPage({
         </Card>
         <Card className="p-5">
           <h2 className="font-medium">Identity document</h2>
-          <p className="mt-1 text-sm text-muted">National ID number and picture on file for this store.</p>
-          {store.cnicImage ? (
-            <Image
-              src={store.cnicImage}
-              alt="Store identity document"
-              width={640}
-              height={360}
-              unoptimized
-              className="mt-4 max-h-64 w-auto rounded-xl border border-line object-contain"
-            />
-          ) : (
-            <p className="mt-4 text-sm text-muted">No picture on file.</p>
-          )}
+          <p className="mt-1 text-sm text-muted">ID card front and back collected at store signup.</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs font-medium text-muted">Front</p>
+              {store.cnicImageFront || store.cnicImage ? (
+                <Image
+                  src={store.cnicImageFront || store.cnicImage}
+                  alt="ID card front"
+                  width={640}
+                  height={360}
+                  unoptimized
+                  className="mt-2 max-h-56 w-auto rounded-xl border border-line object-contain"
+                />
+              ) : (
+                <p className="mt-2 text-sm text-muted">No front picture on file.</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted">Back</p>
+              {store.cnicImageBack ? (
+                <Image
+                  src={store.cnicImageBack}
+                  alt="ID card back"
+                  width={640}
+                  height={360}
+                  unoptimized
+                  className="mt-2 max-h-56 w-auto rounded-xl border border-line object-contain"
+                />
+              ) : (
+                <p className="mt-2 text-sm text-muted">No back picture on file.</p>
+              )}
+            </div>
+          </div>
           <form action={updateStoreRecord} className="mt-4 space-y-3">
             <input type="hidden" name="merchantId" value={store.id} />
             <label className="block space-y-1.5 text-sm">
@@ -127,8 +155,12 @@ export default async function StoreRecordDetailPage({
               />
             </label>
             <label className="block space-y-1.5 text-sm">
-              <span className="font-medium">ID picture</span>
-              <input name="cnicImage" type="file" accept="image/jpeg,image/png,image/webp" className="w-full text-sm" />
+              <span className="font-medium">Replace front</span>
+              <input name="cnicImageFront" type="file" accept="image/jpeg,image/png,image/webp" className="w-full text-sm" />
+            </label>
+            <label className="block space-y-1.5 text-sm">
+              <span className="font-medium">Replace back</span>
+              <input name="cnicImageBack" type="file" accept="image/jpeg,image/png,image/webp" className="w-full text-sm" />
             </label>
             <Button type="submit">Save identity fields</Button>
           </form>

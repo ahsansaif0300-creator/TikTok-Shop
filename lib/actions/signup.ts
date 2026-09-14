@@ -7,6 +7,8 @@ import { createSession } from "@/lib/auth";
 import { ensureDatabase } from "@/lib/ensure-db";
 import { uniqueMerchantSlug } from "@/lib/slug";
 import { allocateStoreCode } from "@/lib/store-code";
+import { fileToDataUrl, idCardError } from "@/lib/logo";
+import { findOpsByReferralCode, normalizeReferralCode } from "@/lib/referral";
 
 export async function signupMerchantAction(formData: FormData) {
   const storeName = String(formData.get("storeName") ?? "").trim();
@@ -19,6 +21,9 @@ export async function signupMerchantAction(formData: FormData) {
   const phone = String(formData.get("phone") ?? "").trim();
   const country = String(formData.get("country") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
+  const referralRaw = String(formData.get("referralCode") ?? "");
+  const idFront = formData.get("idFront");
+  const idBack = formData.get("idBack");
 
   try {
     await ensureDatabase();
@@ -33,6 +38,21 @@ export async function signupMerchantAction(formData: FormData) {
   if (password.length < 8) redirect("/signup?error=password");
   if (confirm && confirm !== password) redirect("/signup?error=mismatch");
 
+  const frontFile = idFront instanceof File ? idFront : null;
+  const backFile = idBack instanceof File ? idBack : null;
+  const frontProblem = idCardError(frontFile);
+  const backProblem = idCardError(backFile);
+  if (frontProblem === "missing" || backProblem === "missing") redirect("/signup?error=id");
+  if (frontProblem === "type" || backProblem === "type") redirect("/signup?error=id-type");
+  if (frontProblem === "size" || backProblem === "size") redirect("/signup?error=id-size");
+
+  const referralCode = normalizeReferralCode(referralRaw);
+  let referrer: Awaited<ReturnType<typeof findOpsByReferralCode>> = null;
+  if (referralCode) {
+    referrer = await findOpsByReferralCode(referralCode);
+    if (!referrer) redirect("/signup?error=referral");
+  }
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) redirect("/signup?error=email");
 
@@ -44,6 +64,9 @@ export async function signupMerchantAction(formData: FormData) {
     return Boolean(hit);
   });
   const storeCode = await allocateStoreCode();
+  const frontUrl = await fileToDataUrl(frontFile!);
+  const backUrl = await fileToDataUrl(backFile!);
+  const needsApproval = Boolean(referrer);
 
   const merchant = await prisma.merchant.create({
     data: {
@@ -56,8 +79,13 @@ export async function signupMerchantAction(formData: FormData) {
       country,
       city: city || country,
       address: "Address pending",
-      status: "ACTIVE",
+      status: needsApproval ? "PENDING" : "ACTIVE",
       planId: starter.id,
+      cnicImage: frontUrl,
+      cnicImageFront: frontUrl,
+      cnicImageBack: backUrl,
+      referralCodeUsed: referrer?.referralCode ?? "",
+      referredByUserId: referrer?.id ?? null,
     },
   });
 
@@ -73,13 +101,41 @@ export async function signupMerchantAction(formData: FormData) {
     },
   });
 
+  if (referrer) {
+    await prisma.merchantApplication.create({
+      data: {
+        businessName: storeName,
+        contactName,
+        email,
+        phone,
+        country,
+        category: "Public signup",
+        notes: `Referred with ${referrer.referralCode} by ${referrer.username || referrer.email}`,
+        status: "PENDING",
+        merchantId: merchant.id,
+        referredByUserId: referrer.id,
+        referralCode: referrer.referralCode ?? "",
+      },
+    });
+    await prisma.notification.create({
+      data: {
+        userId: referrer.id,
+        title: "Referred store waiting for approval",
+        body: `${storeName} signed up with your referral code. Review it in Applications.`,
+        href: "/merchants/applications",
+      },
+    });
+  }
+
   await prisma.auditLog.create({
     data: {
       userId: user.id,
-      action: "merchant:signup",
+      action: needsApproval ? "merchant:signup-referral" : "merchant:signup",
       entity: "Merchant",
       entityId: merchant.id,
-      detail: `Public signup created shop ${storeName} (${slug})`,
+      detail: needsApproval
+        ? `Public signup ${storeName} referred by ${referrer?.referralCode} (pending Normal Backend approval)`
+        : `Public signup created shop ${storeName} (${slug})`,
     },
   });
 
@@ -91,5 +147,5 @@ export async function signupMerchantAction(formData: FormData) {
     merchantId: user.merchantId,
   });
 
-  redirect("/");
+  redirect(needsApproval ? "/?pending=1" : "/");
 }

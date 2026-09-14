@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function CopyShopLink({ url }: { url: string }) {
+export function CopyShopLink({ url, label = "Copy link" }: { url: string; label?: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
@@ -24,7 +24,7 @@ export function CopyShopLink({ url }: { url: string }) {
         window.setTimeout(() => setCopied(false), 1600);
       }}
     >
-      {copied ? "Copied" : "Copy link"}
+      {copied ? "Copied" : label}
     </button>
   );
 }

@@ -8,7 +8,7 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { requestOrigin } from "@/lib/shop-url";
 import { processDueReleases } from "@/lib/process-releases";
 import { dummyProductImage } from "@/lib/product-image";
-import { isListedProduct } from "@/lib/product-listing";
+import { allocateReferralCode } from "@/lib/referral";
 
 function fail(path: string, code: string): never {
   redirect(`${path}?error=${code}`);
@@ -242,6 +242,7 @@ export async function createOpsUser(formData: FormData) {
   });
   if (taken) fail("/admin/users", "taken");
 
+  const referralCode = await allocateReferralCode();
   await prisma.user.create({
     data: {
       name: username,
@@ -249,6 +250,7 @@ export async function createOpsUser(formData: FormData) {
       username,
       passwordHash: await bcrypt.hash(password, 10),
       role: "OPS",
+      referralCode,
     },
   });
   await prisma.auditLog.create({
@@ -262,7 +264,9 @@ export async function createOpsUser(formData: FormData) {
   });
   revalidatePath("/admin/users");
   const origin = await requestOrigin();
-  redirect(`/admin/users?created=1&username=${encodeURIComponent(username)}&login=${encodeURIComponent(`${origin}/login/ops`)}`);
+  redirect(
+    `/admin/users?created=1&username=${encodeURIComponent(username)}&login=${encodeURIComponent(`${origin}/login/ops`)}&referral=${encodeURIComponent(referralCode)}`,
+  );
 }
 
 export async function broadcastToStores(formData: FormData) {
@@ -309,23 +313,31 @@ export async function updateStoreRecord(formData: FormData) {
     fail(`/admin/stores/${merchantId}`, "cnic");
   }
 
-  let cnicImage: string | undefined;
-  const file = formData.get("cnicImage");
-  if (file instanceof File && file.size > 0) {
-    if (file.size > 1_500_000) fail(`/admin/stores/${merchantId}`, "image");
+  let cnicImageFront: string | undefined;
+  let cnicImageBack: string | undefined;
+  const front = formData.get("cnicImageFront");
+  const back = formData.get("cnicImageBack");
+  const legacy = formData.get("cnicImage");
+  async function readId(file: FormDataEntryValue | null, path: string) {
+    if (!(file instanceof File) || file.size === 0) return undefined;
+    if (file.size > 1_000_000) fail(path, "image");
     const type = file.type || "image/jpeg";
-    if (!["image/jpeg", "image/png", "image/webp"].includes(type)) {
-      fail(`/admin/stores/${merchantId}`, "image");
-    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(type)) fail(path, "image");
     const buf = Buffer.from(await file.arrayBuffer());
-    cnicImage = `data:${type};base64,${buf.toString("base64")}`;
+    return `data:${type};base64,${buf.toString("base64")}`;
   }
+  const path = `/admin/stores/${merchantId}`;
+  cnicImageFront = await readId(front, path);
+  cnicImageBack = await readId(back, path);
+  const cnicImage = cnicImageFront ?? (await readId(legacy, path));
 
   await prisma.merchant.update({
     where: { id: merchantId },
     data: {
       cnicNumber,
       ...(cnicImage ? { cnicImage } : {}),
+      ...(cnicImageFront ? { cnicImageFront } : {}),
+      ...(cnicImageBack ? { cnicImageBack } : {}),
     },
   });
   await prisma.auditLog.create({

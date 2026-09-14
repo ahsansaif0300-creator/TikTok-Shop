@@ -193,6 +193,7 @@ async function main() {
       passwordHash: opsHash,
       role: "OPS",
       username: "harborops",
+      referralCode: "REFOPS001",
     },
   });
   const merchantUser = await prisma.user.create({

@@ -1,10 +1,18 @@
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 export const MAX_LOGO_BYTES = 1_500_000;
+export const MAX_ID_BYTES = 1_000_000;
 
 export function logoError(file: File | null) {
   if (!file || file.size === 0) return "missing";
   if (!ALLOWED.has(file.type)) return "type";
   if (file.size > MAX_LOGO_BYTES) return "size";
+  return null;
+}
+
+export function idCardError(file: File | null) {
+  if (!file || file.size === 0) return "missing";
+  if (!ALLOWED.has(file.type)) return "type";
+  if (file.size > MAX_ID_BYTES) return "size";
   return null;
 }
 

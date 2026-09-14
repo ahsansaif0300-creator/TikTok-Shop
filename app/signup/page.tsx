@@ -19,12 +19,20 @@ export default async function SignupPage({
             ? "TikiTok Shop could not create a shop right now. Try again after the database is ready."
             : error === "invalid"
               ? "Fill in shop name, your name, email, password, and country."
-              : null;
+              : error === "id"
+                ? "Upload both the front and back of the ID card."
+                : error === "id-type"
+                  ? "ID photos must be JPEG, PNG, or WebP."
+                  : error === "id-size"
+                    ? "Each ID photo must be 1 MB or smaller."
+                    : error === "referral"
+                      ? "That referral code is not valid for a Normal Backend user."
+                      : null;
 
   return (
     <AuthFrame
       title="Create a TikiTok Shop"
-      subtitle="You get a unique shop link and a seller login to manage products, orders, and payouts."
+      subtitle="You get a unique shop link and a seller login. ID photos go to Super Admin. A Normal Backend referral code sends the shop for approval first."
       footer={
         <>
           Already selling on TikiTok Shop?{" "}
@@ -112,6 +120,39 @@ export default async function SignupPage({
             />
           </label>
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">ID card front</span>
+            <input
+              name="idFront"
+              type="file"
+              required
+              accept="image/jpeg,image/png,image/webp"
+              className="w-full text-sm"
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">ID card back</span>
+            <input
+              name="idBack"
+              type="file"
+              required
+              accept="image/jpeg,image/png,image/webp"
+              className="w-full text-sm"
+            />
+          </label>
+        </div>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium">Referral code (optional)</span>
+          <input
+            name="referralCode"
+            placeholder="From a Normal Backend user"
+            className="h-11 w-full rounded-xl border border-line px-3 text-sm outline-none ring-accent/30 focus:ring-2"
+          />
+          <span className="block text-xs text-muted">
+            If you enter a code, Normal Backend reviews and approves the store before it goes live.
+          </span>
+        </label>
         <button className="h-11 w-full rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#e11d48]">
           Create shop
         </button>

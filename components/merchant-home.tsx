@@ -51,6 +51,8 @@ export function MerchantHome({
   availableBalance,
   pendingBalance,
   attention,
+  storeStatus,
+  pendingApproval,
 }: {
   name: string;
   storeName: string;
@@ -61,9 +63,16 @@ export function MerchantHome({
   availableBalance: number;
   pendingBalance: number;
   attention: { href: string; label: string }[];
+  storeStatus?: string;
+  pendingApproval?: boolean;
 }) {
   return (
     <div>
+      {pendingApproval || storeStatus === "PENDING" ? (
+        <p className="mb-4 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          This store is waiting for Normal Backend approval. Super Admin already has your ID card photos.
+        </p>
+      ) : null}
       <div className="mb-4">
         <p className="text-sm text-muted">Store overview</p>
         <h1 className="text-2xl font-semibold tracking-tight text-ink">Hi, {name}</h1>

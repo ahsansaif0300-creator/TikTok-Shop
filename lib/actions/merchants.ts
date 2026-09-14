@@ -92,6 +92,12 @@ export async function reviewApplication(formData: FormData) {
         reviewedAt: new Date(),
       },
     });
+    if (application.merchantId) {
+      await prisma.merchant.update({
+        where: { id: application.merchantId },
+        data: { status: "SUSPENDED" },
+      });
+    }
     await prisma.auditLog.create({
       data: {
         userId: session.userId,
@@ -110,24 +116,35 @@ export async function reviewApplication(formData: FormData) {
   const starter = await prisma.plan.findFirst({ orderBy: { monthlyFee: "asc" } });
   if (!starter) throw new Error("No seller plan configured");
 
-  const merchant = await prisma.merchant.create({
-    data: {
-      name: application.businessName,
-      slug: await uniqueMerchantSlug(application.businessName, async (candidate) => {
-        const hit = await prisma.merchant.findUnique({ where: { slug: candidate }, select: { id: true } });
-        return Boolean(hit);
-      }),
-      storeCode: await allocateStoreCode(),
-      legalName: application.businessName,
-      email: application.email,
-      phone: application.phone,
-      country: application.country,
-      city: application.country,
-      address: "Onboarding — address pending",
-      status: "ACTIVE",
-      planId: starter.id,
-    },
-  });
+  let merchantId = application.merchantId;
+  if (merchantId) {
+    await prisma.merchant.update({
+      where: { id: merchantId },
+      data: { status: "ACTIVE" },
+    });
+  } else {
+    const merchant = await prisma.merchant.create({
+      data: {
+        name: application.businessName,
+        slug: await uniqueMerchantSlug(application.businessName, async (candidate) => {
+          const hit = await prisma.merchant.findUnique({ where: { slug: candidate }, select: { id: true } });
+          return Boolean(hit);
+        }),
+        storeCode: await allocateStoreCode(),
+        legalName: application.businessName,
+        email: application.email,
+        phone: application.phone,
+        country: application.country,
+        city: application.country,
+        address: "Onboarding — address pending",
+        status: "ACTIVE",
+        planId: starter.id,
+        referredByUserId: application.referredByUserId,
+        referralCodeUsed: application.referralCode,
+      },
+    });
+    merchantId = merchant.id;
+  }
 
   await prisma.merchantApplication.update({
     where: { id },
@@ -136,7 +153,7 @@ export async function reviewApplication(formData: FormData) {
       reviewNote,
       reviewerId: session.userId,
       reviewedAt: new Date(),
-      merchantId: merchant.id,
+      merchantId,
     },
   });
   await prisma.auditLog.create({
@@ -148,5 +165,21 @@ export async function reviewApplication(formData: FormData) {
       detail: `Approved ${application.businessName} on ${starter.name}`,
     },
   });
+  if (merchantId) {
+    const sellers = await prisma.user.findMany({
+      where: { merchantId, role: "MERCHANT" },
+      select: { id: true },
+    });
+    if (sellers.length > 0) {
+      await prisma.notification.createMany({
+        data: sellers.map((user) => ({
+          userId: user.id,
+          title: "Store approved",
+          body: "Normal Backend approved your shop. You can sell now.",
+          href: "/",
+        })),
+      });
+    }
+  }
   revalidatePath("/", "layout");
 }

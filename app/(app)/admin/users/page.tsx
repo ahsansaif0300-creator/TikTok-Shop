@@ -13,10 +13,10 @@ const ERRORS: Record<string, string> = {
 export default async function BackendUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string; username?: string; login?: string; error?: string }>;
+  searchParams: Promise<{ created?: string; username?: string; login?: string; referral?: string; error?: string }>;
 }) {
   await requireSuperAdmin();
-  const { created, username, login, error } = await searchParams;
+  const { created, username, login, referral, error } = await searchParams;
   const users = await prisma.user.findMany({
     where: { role: "OPS" },
     orderBy: { createdAt: "desc" },
@@ -34,6 +34,7 @@ export default async function BackendUsersPage({
             <p className="font-medium">User created. Send these credentials:</p>
             <p className="mt-2 font-mono text-xs break-all">Login URL: {login}</p>
             <p className="font-mono text-xs">Username: {username}</p>
+            {referral ? <p className="font-mono text-xs break-all">Referral code: {referral}</p> : null}
             <p className="text-xs text-emerald-800">Password is the value you just entered (it is not stored in this message).</p>
           </div>
         ) : null}
@@ -45,6 +46,7 @@ export default async function BackendUsersPage({
             <thead>
               <tr>
                 <Th>Username</Th>
+                <Th>Referral code</Th>
                 <Th>Email</Th>
                 <Th>Created</Th>
               </tr>
@@ -53,6 +55,7 @@ export default async function BackendUsersPage({
               {users.map((user) => (
                 <tr key={user.id}>
                   <Td className="font-medium">{user.username ?? "—"}</Td>
+                  <Td className="font-mono text-xs">{user.referralCode ?? "—"}</Td>
                   <Td>{user.email}</Td>
                   <Td>{format(user.createdAt, "MMM d, yyyy")}</Td>
                 </tr>
@@ -63,7 +66,7 @@ export default async function BackendUsersPage({
       </div>
       <Card className="h-fit p-5">
         <h2 className="font-medium">Add normal backend user</h2>
-        <p className="mt-1 text-xs text-muted">They sign in on the same TikiTok Shop login page with this username and password.</p>
+        <p className="mt-1 text-xs text-muted">They sign in at /login/ops. Each user gets a referral code for store signup.</p>
         <form action={createOpsUser} className="mt-4 space-y-3">
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">Username</span>
