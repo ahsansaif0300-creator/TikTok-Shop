@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Harbor Commerce",
+  title: "TikiTok Shop",
   description: "Multi-merchant commerce operations dashboard",
   icons: {
     icon: [{ url: "/brand-mark.webp", type: "image/webp" }, { url: "/icon.png" }],

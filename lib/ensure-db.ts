@@ -30,6 +30,16 @@ async function backfill() {
   } catch (error) {
     console.warn("[harbor] storeCode backfill skipped", error);
   }
+  try {
+    const name = await prisma.setting.findUnique({ where: { key: "storeName" } });
+    if (!name) {
+      await prisma.setting.create({ data: { key: "storeName", value: "TikiTok Shop" } });
+    } else if (name.value === "Harbor Commerce") {
+      await prisma.setting.update({ where: { key: "storeName" }, data: { value: "TikiTok Shop" } });
+    }
+  } catch (error) {
+    console.warn("[harbor] storeName backfill skipped", error);
+  }
 }
 
 export async function ensureDatabase() {

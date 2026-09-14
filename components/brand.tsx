@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 /** Client-supplied mark. Served as-is from /public — do not redraw. */
 export const BRAND_MARK_SRC = "/brand-mark.webp";
@@ -22,7 +23,7 @@ export function BrandMark({
   return (
     <img
       src={BRAND_MARK_SRC}
-      alt="Harbor"
+      alt={BRAND_NAME}
       width={700}
       height={700}
       className={cn("shrink-0 object-contain object-center", box, className)}
@@ -45,14 +46,13 @@ export function HarborMark({
       <div>
         <p
           className={cn(
-            "font-semibold tracking-wide",
+            "font-semibold tracking-wide leading-tight",
             large ? "text-base" : "text-sm",
             light ? "text-white" : "text-ink",
           )}
         >
-          Harbor
+          {BRAND_NAME}
         </p>
-        <p className={cn("text-[11px]", light ? "text-white/55" : "text-muted")}>Commerce OS</p>
       </div>
     </div>
   );
@@ -71,7 +71,7 @@ export function BrandFooter({ light = true }: { light?: boolean }) {
       )}
     >
       <BrandMark size="xs" />
-      <span>Harbor Commerce</span>
+      <span>{BRAND_NAME}</span>
     </div>
   );
 }

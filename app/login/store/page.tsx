@@ -11,7 +11,7 @@ export default async function StoreLoginPage({
   return (
     <RoleLoginForm
       title="Store Login"
-      subtitle="Sign in to your Harbor shop dashboard. You only see this store’s catalog, orders, balance, and service inbox."
+      subtitle="Sign in to your TikiTok Shop dashboard. You only see this store’s catalog, orders, balance, and service inbox."
       action={loginStoreAction}
       error={error}
       footer={

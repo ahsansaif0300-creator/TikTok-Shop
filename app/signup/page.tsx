@@ -10,24 +10,24 @@ export default async function SignupPage({
   const { error } = await searchParams;
   const message =
     error === "email"
-      ? "That email already has a Harbor login."
+      ? "That email already has a TikiTok Shop login."
       : error === "password"
         ? "Password must be at least 8 characters."
         : error === "mismatch"
           ? "Password and confirmation do not match."
           : error === "setup"
-            ? "Harbor could not create a shop right now. Try again after the database is ready."
+            ? "TikiTok Shop could not create a shop right now. Try again after the database is ready."
             : error === "invalid"
               ? "Fill in shop name, your name, email, password, and country."
               : null;
 
   return (
     <AuthFrame
-      title="Create a Harbor shop"
+      title="Create a TikiTok Shop"
       subtitle="You get a unique shop link and a seller login to manage products, orders, and payouts."
       footer={
         <>
-          Already selling on Harbor?{" "}
+          Already selling on TikiTok Shop?{" "}
           <Link href="/login/store" className="font-medium text-cyan hover:underline">
             Sign in
           </Link>

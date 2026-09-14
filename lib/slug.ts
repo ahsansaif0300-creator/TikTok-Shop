@@ -7,6 +7,8 @@ const RESERVED_SHOP_SLUGS = new Set([
   "signup",
   "s",
   "harbor",
+  "tikitok",
+  "tikitok-shop",
   "static",
   "mail",
   "ftp",

@@ -5,7 +5,7 @@ import { LOGIN } from "@/lib/access";
 export default function WelcomePage() {
   return (
     <AuthFrame
-      title="Harbor Commerce"
+      title="TikiTok Shop"
       subtitle="Real shops, orders, and bank payouts. Pick the door that matches your account — they are separate logins, not one shared form."
       footer={
         <>

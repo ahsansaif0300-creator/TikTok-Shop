@@ -13,7 +13,7 @@ const STATUS_LABEL = {
 };
 
 function senderLabel(sender: string, name?: string | null) {
-  if (sender === "BOT") return "Harbor Service assistant";
+  if (sender === "BOT") return "TikiTok Shop Service assistant";
   if (sender === "AGENT") return `${name ?? "Support"} · team`;
   return `${name ?? "Store"} · store`;
 }

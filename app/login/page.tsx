@@ -5,7 +5,7 @@ import { LOGIN } from "@/lib/access";
 export default function LoginIndexPage() {
   return (
     <AuthFrame
-      title="Harbor sign in"
+      title="TikiTok Shop sign in"
       subtitle="Choose the login that matches your account. Each area has its own URL and only accepts that role."
     >
       <ul className="mt-6 space-y-3 text-sm">

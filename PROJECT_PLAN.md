@@ -1,8 +1,8 @@
-# Harbor Commerce OS — phase plan
+# TikiTok Shop — phase plan
 
 This is the working plan for the legitimate multi-merchant operations dashboard. Each phase has a checklist. Run `npm run verify` after setup; it checks Phases 1–6 against the database and source. Run `npm run verify:http` while the app is listening to check routes and role scoping.
 
-Product name: **Harbor Commerce OS**. Sidebar: Harbor / Commerce OS. Accent: teal `#0f7a6c`. Dark sidebar: `#161310`.
+Product name: **TikiTok Shop**. Sidebar: TikiTok Shop. Accent: magenta `#fe2c55` and cyan `#25f4ee`. Dark sidebar: `#000000`.
 
 ## Rules that never ship
 
@@ -61,11 +61,11 @@ npm run verify
 
 ### Deliverables
 
-- `components/shell.tsx` + `components/workspace-chrome.tsx` — Harbor mark, role, store context, mobile menu, logout
+- `components/shell.tsx` + `components/workspace-chrome.tsx` — product mark, role, store context, mobile menu, logout
 - `lib/nav.ts` — nav groups; `staffOnly` / `adminOnly` filters; longest-prefix active item
 - Dashboard `/` with GMV, orders, 14-day chart, low stock, needs-attention queue
 - Merchant dashboard shows available/pending balances; staff sees active merchants and payouts
-- Login screen with Harbor copy (not a marketplace clone)
+- Login screen with TikiTok Shop copy (not a marketplace clone)
 
 ### Checklist
 

@@ -32,7 +32,7 @@ export function ServiceComposer({
       {waiting ? (
         <p className="text-sm text-muted">A support team member will continue this chat. You can add more detail below.</p>
       ) : null}
-      {withAgent ? <p className="text-sm text-muted">You are chatting with a Harbor support team member.</p> : null}
+      {withAgent ? <p className="text-sm text-muted">You are chatting with a TikiTok Shop support team member.</p> : null}
       <form action={sendSupportMessage} className="space-y-3">
         {merchantId ? <input type="hidden" name="merchantId" value={merchantId} /> : null}
         <textarea

@@ -18,7 +18,7 @@ export function RoleLoginForm({
     <AuthFrame title={title} subtitle={subtitle} footer={footer}>
       {error === "setup" ? (
         <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          Harbor could not open the packed demo database. Redeploy the latest{" "}
+          TikiTok Shop could not open the packed demo database. Redeploy the latest{" "}
           <code>main</code> branch, click Restart, then try again. Keep{" "}
           <code>AUTH_SECRET</code> set in Hostinger Environment variables.
         </p>

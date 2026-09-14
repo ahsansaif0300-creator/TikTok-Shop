@@ -93,7 +93,7 @@ Paste that output as `AUTH_SECRET`. Do not use the example value from `.env.exam
 
 Do **not** set `AUTH_COOKIE_SECURE=false`. The temporary domain is HTTPS, so the login cookie should stay Secure.
 
-Set `APP_BASE_URL` to the same URL people type in the browser (no trailing slash). Harbor uses it when it prints a shop link such as `https://YOUR-TEMP-DOMAIN.hostingersite.com/s/northline-outfitters`.
+Set `APP_BASE_URL` to the same URL people type in the browser (no trailing slash). TikiTok Shop uses it when it prints a shop link such as `https://YOUR-TEMP-DOMAIN.hostingersite.com/s/northline-outfitters`.
 
 After you attach a **custom domain**, change `APP_BASE_URL` to `https://yourdomain.com`. If you also add a wildcard DNS record (`*.yourdomain.com`) pointing at the same app, set `SHOP_BASE_DOMAIN=yourdomain.com` so each shop can be opened as `https://shop-slug.yourdomain.com`. Without wildcard DNS, keep using `/s/shop-slug` on the main domain.
 
@@ -127,7 +127,7 @@ Change these under **Profile** before you invite anyone.
 
 - **Build failed:** open **Deployments** and read the log. Node must be 20+.
 - **Site not reachable / 403:** do not edit `public_html/.htaccess`. Redeploy so Hostinger regenerates it.
-- **“Harbor could not open the workspace database” / “packed demo database”:** Redeploy the latest **`main`** branch (it includes `prisma/demo.sqlite`). Then **Restart**. `DATABASE_URL` can stay `file:./dev.db`; the app copies the packed demo DB into a writable folder automatically.
+- **“TikiTok Shop could not open the packed demo database”:** Redeploy the latest **`main`** branch (it includes `prisma/demo.sqlite`). Then **Restart**. `DATABASE_URL` can stay `file:./dev.db`; the app copies the packed demo DB into a writable folder automatically.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
 - **Empty data after every deploy:** SQLite lives in the app folder and can reset on redeploy. Fine for a demo. For real orders, move to a VPS disk or hosted Postgres later.
 

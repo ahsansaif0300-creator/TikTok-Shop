@@ -63,7 +63,7 @@ export default async function BackendUsersPage({
       </div>
       <Card className="h-fit p-5">
         <h2 className="font-medium">Add normal backend user</h2>
-        <p className="mt-1 text-xs text-muted">They sign in on the same Harbor login page with this username and password.</p>
+        <p className="mt-1 text-xs text-muted">They sign in on the same TikiTok Shop login page with this username and password.</p>
         <form action={createOpsUser} className="mt-4 space-y-3">
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">Username</span>

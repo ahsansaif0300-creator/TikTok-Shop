@@ -22,7 +22,7 @@ export default function ErrorPage({
         </div>
         <h1 className="mt-4 text-2xl font-semibold text-ink">This page could not load</h1>
         <p className="mt-2 text-sm text-muted">
-          The server hit an error while opening Harbor. If this happened right after sign-in, Redeploy
+          The server hit an error while opening TikiTok Shop. If this happened right after sign-in, Redeploy
           the Node app and confirm <code>DATABASE_URL</code> and <code>AUTH_SECRET</code> are set in
           Hostinger Environment variables.
         </p>

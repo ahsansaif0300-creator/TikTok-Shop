@@ -53,7 +53,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
             <div className="min-w-0">
               <h1 className="truncate text-xl font-semibold">{merchant.name}</h1>
               <p className="text-sm text-muted">
-                {open ? "Harbor seller" : "This shop is not taking orders right now."}
+                {open ? "TikiTok Shop seller" : "This shop is not taking orders right now."}
               </p>
             </div>
           </div>

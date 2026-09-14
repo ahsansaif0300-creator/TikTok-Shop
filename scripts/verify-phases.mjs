@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Phase checklist runner for Harbor Commerce OS.
+ * Phase checklist runner for TikiTok Shop.
  *   node scripts/verify-phases.mjs           # files + seed + lifecycle (phases 1–7)
  *   node scripts/verify-phases.mjs --http    # also hit a running server (phases 2–7)
  */
@@ -242,7 +242,7 @@ async function phase1Database(prisma, bcrypt) {
   });
   await check(1, "Workspace settings are seeded", async () => {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });
-    assert(name?.value === "Harbor Commerce", `storeName is ${name?.value}`);
+    assert(name?.value === "TikiTok Shop", `storeName is ${name?.value}`);
   });
 }
 
@@ -265,7 +265,7 @@ async function phase2Static() {
       assert(exists(file), `Missing ${file}`);
     }
     const chrome = read("components/workspace-chrome.tsx") + read("components/brand.tsx");
-    assert(chrome.includes("Harbor") && chrome.includes("Commerce OS"), "Harbor mark missing from shell");
+    assert(chrome.includes("TikiTok Shop"), "Brand mark missing from shell");
     assert(chrome.includes("logoutAction"), "Logout control missing");
     assert(chrome.includes("Open menu"), "Mobile menu control missing");
     const nav = read("lib/nav.ts");
@@ -308,14 +308,14 @@ async function phase2Static() {
     assert(read("lib/actions/signup.ts").includes("allocateStoreCode"), "Signup must mint a Store ID");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
-  await check(2, "Login screens are Harbor-branded and hide demo passwords", () => {
+  await check(2, "Login screens use the product name and hide demo passwords", () => {
     const login =
       read("app/login/page.tsx") +
       read("app/login/admin/page.tsx") +
       read("app/login/ops/page.tsx") +
       read("app/login/store/page.tsx") +
       read("components/role-login-form.tsx");
-    assert(login.includes("Harbor"), "Login missing Harbor name");
+    assert(login.includes("TikiTok Shop"), "Login missing product name");
     assert(!/tiktok/i.test(login), "Login still mentions TikTok");
     assert(!login.includes("HarborAdmin!2026"), "Demo admin password leaked on login");
     assert(!login.includes("HarborMerchant!2026"), "Demo merchant password leaked on login");
@@ -1286,10 +1286,10 @@ async function phaseHttp(prisma) {
     assert([301, 302, 303, 307, 308].includes(res.status), `Expected redirect, got ${res.status}`);
     assert(locationPath(res) === "/welcome", `Redirected to ${locationPath(res)}`);
   });
-  await check(2, "Login HTML is Harbor, not a marketplace clone", async () => {
+  await check(2, "Login HTML uses the product name, not a marketplace clone", async () => {
     const { res, text } = await pageText("/login");
     assert(res.status === 200, `/login ${res.status}`);
-    assert(/Harbor/.test(text), "Login HTML missing Harbor");
+    assert(/TikiTok Shop/.test(text), "Login HTML missing product name");
     assert(!/tiktok/i.test(text), "Login HTML mentions TikTok");
     assert(/signup/i.test(text), "Login HTML missing Sign up");
     assert(!/HarborAdmin!2026|HarborMerchant!2026|HarborOps!2026/.test(text), "Login HTML leaked demo passwords");
@@ -1312,7 +1312,7 @@ async function phaseHttp(prisma) {
     assert(signup.status === 200, `/signup returned ${signup.status}`);
     const { res, text } = await pageText("/s/northline-outfitters");
     assert(res.status === 200, `/s/northline-outfitters ${res.status}`);
-    assert(/Harbor/.test(text), "Shop card missing Harbor");
+    assert(/TikiTok Shop/.test(text), "Shop card missing product name");
     assert(/Seller login|Sign in/.test(text), "Shop card missing seller login");
     assert(/northline-outfitters/.test(text), "Shop card missing slug");
   });
@@ -1586,7 +1586,7 @@ async function phaseHttp(prisma) {
     assert(service.res.status === 200, `Merchant /service ${service.res.status}`);
     assert(service.text.includes("Store ID"), "Service missing store identity");
     assert(service.text.includes("Northline Outfitters"), "Service missing logged-in store name");
-    assert(service.text.includes("Harbor Service assistant") || service.text.includes("assistant"), "Service assistant missing");
+    assert(service.text.includes("TikiTok Shop Service assistant") || service.text.includes("assistant"), "Service assistant missing");
     const profile = await pageText("/profile", merchantCookie);
     assert(profile.res.status === 200, `Merchant /profile ${profile.res.status}`);
     assert(profile.text.includes("Available balance"), "Store profile missing server balance");
@@ -1621,7 +1621,7 @@ function printSummary() {
 async function main() {
   process.chdir(root);
   loadEnv();
-  console.log("Harbor Commerce OS — phase verification");
+  console.log("TikiTok Shop — phase verification");
   console.log(httpMode ? `Mode: source + database + HTTP (${baseUrl})` : "Mode: source + database");
 
   await phase1Static();

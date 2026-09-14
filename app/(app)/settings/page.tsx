@@ -23,7 +23,7 @@ export default async function SettingsPage({
       ) : null}
       <Card className="p-6">
         <form action={saveSettings} className="space-y-4">
-          <Field name="storeName" label="Workspace name" defaultValue={settings.storeName ?? "Harbor Commerce"} />
+          <Field name="storeName" label="Workspace name" defaultValue={settings.storeName ?? "TikiTok Shop"} />
           <Field name="supportEmail" label="Support email" defaultValue={settings.supportEmail ?? ""} />
           <Field name="supportUrl" label="Help center URL" defaultValue={settings.supportUrl ?? ""} />
           <Field name="currency" label="Currency" defaultValue={settings.currency ?? "USD"} />

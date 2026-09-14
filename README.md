@@ -1,4 +1,4 @@
-# Harbor Commerce OS
+# TikiTok Shop
 
 A professional multi-merchant commerce operations dashboard. It covers the legitimate parts of a seller-center style admin — orders, catalog, onboarding, refunds, shipping, and bank payouts — without marketplace impersonation, fake orders, or MLM mechanics.
 
@@ -85,7 +85,7 @@ If you later buy a domain: **Domains** → **Add domain** → set it primary. Yo
 
 ### 2. Deploy as a Node.js web app (Business / Cloud)
 
-1. Push this repo to GitHub (the Harbor branch is fine).
+1. Push this repo to GitHub (the main branch is fine).
 2. In hPanel: **Websites** → **Add Website** → **Node.js web app**.
 3. If that domain already has a PHP/WordPress site, Hostinger wants you to **remove that website slot first** (download a backup). Then add the Node app on the same domain.
 4. Choose **Import Git repository**, connect GitHub, pick this repo and branch **`main`** (that branch has `package.json` at the root).

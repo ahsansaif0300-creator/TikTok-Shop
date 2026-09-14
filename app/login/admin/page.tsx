@@ -11,7 +11,7 @@ export default async function SuperAdminLoginPage({
   return (
     <RoleLoginForm
       title="Super Admin Login"
-      subtitle="Main Backend for Harbor staff who manage every store, payouts, and system settings."
+      subtitle="Main Backend for TikiTok Shop staff who manage every store, payouts, and system settings."
       action={loginAdminAction}
       error={error}
       footer={

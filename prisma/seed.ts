@@ -49,7 +49,7 @@ async function main() {
 
   await prisma.setting.createMany({
     data: [
-      { key: "storeName", value: "Harbor Commerce" },
+      { key: "storeName", value: "TikiTok Shop" },
       { key: "supportEmail", value: "julia.r@example.org" },
       { key: "currency", value: "USD" },
       { key: "supportUrl", value: "https://support.harbor.example" },
@@ -260,7 +260,7 @@ async function main() {
           categoryId: category.id,
           title: item.title,
           sku: `HB-${String(index + 1).padStart(4, "0")}`,
-          description: `${item.title} from a verified Harbor seller. In-stock and ready to ship.`,
+          description: `${item.title} from a verified TikiTok Shop seller. In-stock and ready to ship.`,
           price: item.price,
           cost: item.cost,
           stock: item.stock,
@@ -310,7 +310,7 @@ async function main() {
           name,
           email: `${name.toLowerCase().replace(/ /g, ".")}@shopper.example`,
           phone: `+1-555-01${String(10 + i).padStart(2, "0")}`,
-          address: `${120 + i} Harbor Ave`,
+          address: `${120 + i} Market Ave`,
           city,
           country: "United States",
         },
@@ -678,7 +678,7 @@ async function main() {
     ],
   });
 
-  console.log("Harbor demo data ready.");
+  console.log("TikiTok Shop demo data ready.");
   console.log("  oscar.d@example.net / HarborAdmin!2026");
   console.log("  sarah.b@example.net / HarborOps!2026");
   console.log("  iris.p@example.org / HarborMerchant!2026");

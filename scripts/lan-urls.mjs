@@ -48,7 +48,7 @@ export function extraAllowedOrigins() {
 export function printAccessUrls(port = process.env.PORT || "3000") {
   const ips = lanIPv4s();
   console.log("");
-  console.log("Open Harbor:");
+  console.log("Open TikiTok Shop:");
   console.log(`  On this computer:     http://127.0.0.1:${port}/welcome`);
   console.log(`  Store login:          http://127.0.0.1:${port}/login/store`);
   console.log(`  Ops login:            http://127.0.0.1:${port}/login/ops`);

@@ -13,7 +13,7 @@ const STATUS_LABEL = {
 };
 
 function senderLabel(sender: string, name?: string | null) {
-  if (sender === "BOT") return "Harbor Service assistant";
+  if (sender === "BOT") return "TikiTok Shop Service assistant";
   if (sender === "AGENT") return `${name ?? "Support"} · team`;
   return `${name ?? "Store"} · store`;
 }
@@ -131,7 +131,7 @@ export default async function ServicePage({
     <div className="max-w-3xl">
       <PageHeader
         title="Service"
-        subtitle="Harbor support. The assistant asks a few basics, then a team member joins. Your store is identified from this login."
+        subtitle="TikiTok Shop support. The assistant asks a few basics, then a team member joins. Your store is identified from this login."
       />
       {error === "empty" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Write a message first.</p>

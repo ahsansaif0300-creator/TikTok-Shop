@@ -16,7 +16,7 @@ const FOLLOW_UP: Record<string, string> = {
 
 export function welcomeBody(storeName: string, storeId: string, userName: string) {
   return [
-    `Hi ${userName} — this is the Harbor Service assistant.`,
+    `Hi ${userName} — this is the TikiTok Shop Service assistant.`,
     `You're already identified as ${storeName}. Store ID ${storeId} is attached to this chat, so you don't need to type your store name or ID.`,
     "I'll ask a couple of basic questions, then a support team member will take over.",
     "What do you need help with today?",
