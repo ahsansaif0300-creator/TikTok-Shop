@@ -37,54 +37,44 @@ export default async function DistributionPage({
     <div>
       <PageHeader
         title="Distribution Center"
-        subtitle="Mark a SKU Listed to put it in this store’s catalog, Order Sender, and staff backends. On Shelf keeps the same product record off the live list."
+        subtitle="Each product has a listing status under its prices. Listed SKUs appear in the store catalog and Order Sender. On Shelf keeps the same record off those lists."
       />
       {error === "listing" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Choose On Shelf or Listed.</p>
       ) : null}
-      <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-muted">Products</h2>
+      <h2 className="mb-3 text-base font-semibold text-ink">Products</h2>
       {products.length === 0 ? (
         <Card>
           <Empty title="No products yet" body="Add a product, then set listing status here." />
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {products.map((product) => {
-            const profit = product.price - product.cost;
-            return (
-              <Card key={product.id} className="p-5">
-                <div className="flex items-start gap-3">
-                  <ProductThumb src={product.image} alt={product.title} size={64} />
-                  <div className="min-w-0">
-                    <p className="font-medium text-ink">{product.title}</p>
-                    <p className="mt-0.5 text-sm text-ink">{product.category.name}</p>
-                    <p className="text-xs text-muted">
-                      SKU {product.sku} · stock {product.stock}
-                    </p>
-                    <StatusBadge value={product.listingStatus} labels={LISTING_STATUS} />
-                  </div>
+        <div className="space-y-4">
+          {products.map((product) => (
+            <Card key={product.id} className="p-5">
+              <div className="flex items-start gap-3">
+                <ProductThumb src={product.image} alt={product.title} size={72} />
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-wide text-muted">Product</p>
+                  <p className="text-lg font-semibold text-ink">{product.title}</p>
+                  <p className="text-sm text-muted">{product.category.name}</p>
                 </div>
-                <dl className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="rounded-lg bg-soft px-2 py-2">
-                    <dt className="text-[11px] uppercase tracking-wide text-muted">Cost price</dt>
-                    <dd className="mt-1 font-medium">{money(product.cost)}</dd>
-                  </div>
-                  <div className="rounded-lg bg-soft px-2 py-2">
-                    <dt className="text-[11px] uppercase tracking-wide text-muted">Profit</dt>
-                    <dd className="mt-1 font-medium">{money(profit)}</dd>
-                  </div>
-                  <div className="rounded-lg bg-soft px-2 py-2">
-                    <dt className="text-[11px] uppercase tracking-wide text-muted">Total price</dt>
-                    <dd className="mt-1 font-medium">{money(product.price)}</dd>
-                  </div>
-                </dl>
-                <ListingStatusForm productId={product.id} value={product.listingStatus} returnTo="/distribution" />
-              </Card>
-            );
-          })}
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl bg-soft px-3 py-3">
+                  <dt className="text-muted">Cost Price</dt>
+                  <dd className="mt-1 text-base font-semibold">{money(product.cost)}</dd>
+                </div>
+                <div className="rounded-xl bg-soft px-3 py-3">
+                  <dt className="text-muted">Selling Price</dt>
+                  <dd className="mt-1 text-base font-semibold">{money(product.price)}</dd>
+                </div>
+              </dl>
+              <ListingStatusForm productId={product.id} value={product.listingStatus} returnTo="/distribution" />
+            </Card>
+          ))}
         </div>
       )}
-      <h2 className="mb-3 mt-8 text-sm font-medium uppercase tracking-wide text-muted">Picked-up orders</h2>
+      <h2 className="mb-3 mt-8 text-base font-semibold text-ink">Picked-up orders</h2>
       {orders.length === 0 ? (
         <Card>
           <Empty title="Nothing in distribution yet" body="Picked-up orders appear here after Click to Pick Up succeeds." />
@@ -108,50 +98,33 @@ export default async function DistributionPage({
                 />
               </div>
               <div className="mt-4 space-y-3">
-                {order.items.map((item) => {
-                  const cost = item.cost * item.quantity;
-                  const total = item.price * item.quantity;
-                  const profit = total - cost;
-                  return (
-                    <div key={item.id} className="rounded-xl bg-soft px-3 py-3 text-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <ProductThumb src={item.image} alt={item.title} size={56} />
-                          <div>
-                            <p className="font-medium text-ink">{item.title}</p>
-                            <p className="text-xs text-muted">
-                              SKU {item.sku} · Qty {item.quantity} · {LISTING_STATUS[item.product.listingStatus]}
-                            </p>
-                          </div>
-                        </div>
+                {order.items.map((item) => (
+                  <div key={item.id} className="rounded-xl bg-soft px-3 py-3">
+                    <div className="flex items-start gap-3">
+                      <ProductThumb src={item.image} alt={item.title} size={56} />
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted">Product</p>
+                        <p className="font-semibold text-ink">{item.title}</p>
+                        <p className="text-xs text-muted">SKU {item.sku} · Qty {item.quantity}</p>
                       </div>
-                      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-                        <div className="rounded-lg bg-white px-2 py-2">
-                          <dt className="text-[11px] uppercase tracking-wide text-muted">Cost price</dt>
-                          <dd className="mt-1 font-medium">{money(cost)}</dd>
-                        </div>
-                        <div className="rounded-lg bg-white px-2 py-2">
-                          <dt className="text-[11px] uppercase tracking-wide text-muted">Profit</dt>
-                          <dd className="mt-1 font-medium">{money(profit)}</dd>
-                        </div>
-                        <div className="rounded-lg bg-white px-2 py-2">
-                          <dt className="text-[11px] uppercase tracking-wide text-muted">Total price</dt>
-                          <dd className="mt-1 font-medium">{money(total)}</dd>
-                        </div>
-                      </dl>
-                      <ListingStatusForm
-                        productId={item.productId}
-                        value={item.product.listingStatus}
-                        returnTo="/distribution"
-                      />
                     </div>
-                  );
-                })}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
-                <span>Order total {money(order.total)}</span>
-                <span>Order cost {money(order.cost)}</span>
-                <span>Merchant profit {money(order.profit)}</span>
+                    <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <div className="rounded-lg bg-white px-3 py-2">
+                        <dt className="text-muted">Cost Price</dt>
+                        <dd className="mt-1 font-semibold">{money(item.cost * item.quantity)}</dd>
+                      </div>
+                      <div className="rounded-lg bg-white px-3 py-2">
+                        <dt className="text-muted">Selling Price</dt>
+                        <dd className="mt-1 font-semibold">{money(item.price * item.quantity)}</dd>
+                      </div>
+                    </dl>
+                    <ListingStatusForm
+                      productId={item.productId}
+                      value={item.product.listingStatus}
+                      returnTo="/distribution"
+                    />
+                  </div>
+                ))}
               </div>
             </Card>
           ))}

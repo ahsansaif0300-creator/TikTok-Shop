@@ -1438,7 +1438,8 @@ async function phaseHttp(prisma) {
     assert(res.status === 200, `/distribution ${res.status}`);
     assert(text.includes("On Shelf"), "Distribution missing On Shelf");
     assert(text.includes("Listed"), "Distribution missing Listed");
-    assert(text.includes("Listing status"), "Distribution missing listing control");
+    assert(text.includes("Status"), "Distribution missing Status label");
+    assert(text.includes('name="listingStatus"'), "Distribution missing listing status control");
   });
   await check(3, "Order Sender lists stores and listed products", async () => {
     const northline = await prisma.merchant.findUnique({ where: { slug: "northline-outfitters" } });

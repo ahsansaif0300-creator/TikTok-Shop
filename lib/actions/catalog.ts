@@ -87,6 +87,9 @@ export async function setProductListingStatus(formData: FormData) {
     where: { id: product.id },
     data: { listingStatus },
   });
+  revalidatePath("/distribution");
+  revalidatePath("/products");
+  revalidatePath("/admin/place-order");
   revalidatePath("/", "layout");
   redirect(next);
 }
