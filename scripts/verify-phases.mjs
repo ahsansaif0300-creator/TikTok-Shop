@@ -759,6 +759,31 @@ async function phase5Static() {
     assert(read("app/(app)/categories/page.tsx").includes("isStaff"), "Categories not staff-gated");
     assert(read("app/(app)/customers/page.tsx").includes("isStaff"), "Customers not staff-gated");
     assert(read("app/(app)/products/page.tsx").includes("LOW_STOCK"), "Low-stock catalog filter missing");
+    const taxonomy = read("lib/store-categories.ts");
+    for (const name of [
+      "Hot Selling Items",
+      "Computer accessories",
+      "Home cabinets",
+      "Health Products",
+      "Men's clothing",
+      "Women's clothing",
+      "Snacks and desserts",
+      "Mobile accessories",
+      "Children's toys",
+      "Beverages",
+      "Office supplies",
+      "Digital products",
+      "Beauty and skincare",
+      "Mother and baby products",
+      "Jewelry and watches",
+      "Luxury goods",
+      "Children's clothing",
+      "Men's bags",
+      "Women's bags",
+      "Fitness Equipment",
+    ]) {
+      assert(taxonomy.includes(name), `Missing category ${name}`);
+    }
   });
 }
 
@@ -769,7 +794,7 @@ async function phase5Database(prisma) {
     const reviews = await prisma.review.count();
     const customers = await prisma.customer.count();
     assert(products >= 10, `Only ${products} products`);
-    assert(categories >= 6, `Only ${categories} categories`);
+    assert(categories >= 20, `Only ${categories} categories`);
     assert(reviews >= 5, `Only ${reviews} reviews`);
     assert(customers >= 8, `Only ${customers} customers`);
   });
@@ -1503,7 +1528,9 @@ async function phaseHttp(prisma) {
     assert(!reviews.text.includes("Vitamin C Serum"), "Merchant reviews leaked Lumen");
     const categories = await pageText("/categories", adminCookie);
     assert(categories.res.status === 200, `/categories ${categories.res.status}`);
-    assert(categories.text.includes("Apparel"), "Categories missing Apparel");
+    assert(categories.text.includes("Hot Selling Items"), "Categories missing Hot Selling Items");
+    assert(categories.text.includes("Fitness Equipment"), "Categories missing Fitness Equipment");
+    assert(categories.text.includes("Beauty and skincare"), "Categories missing Beauty and skincare");
     const customers = await pageText("/customers", adminCookie);
     assert(customers.res.status === 200, `/customers ${customers.res.status}`);
     assert(customers.text.includes("Elena") || customers.text.includes("@shopper.example"), "Customers missing seed shoppers");

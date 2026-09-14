@@ -5,6 +5,7 @@ import type { ApplicationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { APPLICATION_STATUS } from "@/lib/labels";
+import { STORE_CATEGORIES } from "@/lib/store-categories";
 import { createApplication, reviewApplication } from "@/lib/actions/merchants";
 import { Button, Card, Empty, Field, PageHeader, StatusBadge, TableWrap, Tabs, Td, Th } from "@/components/ui";
 
@@ -120,7 +121,16 @@ export default async function ApplicationsPage({
           <Field name="email" label="Email" type="email" required />
           <Field name="phone" label="Phone" />
           <Field name="country" label="Country" required defaultValue="United States" />
-          <Field name="category" label="Category" required />
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-ink">Category</span>
+            <select name="category" required className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm">
+              {STORE_CATEGORIES.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="block space-y-1.5">
             <span className="text-sm font-medium text-ink">Notes</span>
             <textarea name="notes" rows={3} className="w-full rounded-xl border border-line p-3 text-sm" />

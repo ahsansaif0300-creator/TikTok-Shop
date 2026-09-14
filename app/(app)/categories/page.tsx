@@ -2,15 +2,17 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { saveCategory } from "@/lib/actions/catalog";
+import { sortStoreCategories } from "@/lib/store-categories";
 import { Button, Card, Field, PageHeader, TableWrap, Td, Th } from "@/components/ui";
 
 export default async function CategoriesPage() {
   const session = await requireSession();
   if (!isStaff(session.role)) redirect("/");
-  const categories = await prisma.category.findMany({
-    include: { _count: { select: { products: true } } },
-    orderBy: { name: "asc" },
-  });
+  const categories = sortStoreCategories(
+    await prisma.category.findMany({
+      include: { _count: { select: { products: true } } },
+    }),
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">

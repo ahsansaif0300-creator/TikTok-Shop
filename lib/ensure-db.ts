@@ -1,6 +1,7 @@
 import { installDemoDb } from "../scripts/copy-demo-db.mjs";
 import { applyRuntimeEnv } from "./runtime-env";
 import { getPrisma, resetPrisma } from "./db";
+import { STORE_CATEGORIES, categorySlug } from "./store-categories";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -10,6 +11,18 @@ async function backfill() {
     );
   } catch (error) {
     console.warn("[harbor] walletReleased backfill skipped", error);
+  }
+  for (const name of STORE_CATEGORIES) {
+    const slug = categorySlug(name);
+    try {
+      await prisma.category.upsert({
+        where: { slug },
+        create: { name, slug },
+        update: { name },
+      });
+    } catch (error) {
+      console.warn("[harbor] category backfill skipped", name, error);
+    }
   }
 }
 

@@ -57,8 +57,9 @@ export default async function DistributionPage({
                   <ProductThumb src={product.image} alt={product.title} size={64} />
                   <div className="min-w-0">
                     <p className="font-medium text-ink">{product.title}</p>
+                    <p className="mt-0.5 text-sm text-ink">{product.category.name}</p>
                     <p className="text-xs text-muted">
-                      SKU {product.sku} · {product.category.name} · stock {product.stock}
+                      SKU {product.sku} · stock {product.stock}
                     </p>
                     <StatusBadge value={product.listingStatus} labels={LISTING_STATUS} />
                   </div>

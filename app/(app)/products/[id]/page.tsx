@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { canAccessMerchant } from "@/lib/scope";
 import { saveProduct } from "@/lib/actions/catalog";
+import { sortStoreCategories } from "@/lib/store-categories";
 import { Button, Card, Field, PageHeader, StatusBadge } from "@/components/ui";
 import { ProductThumb } from "@/components/product-thumb";
 import { ListingStatusForm } from "@/components/listing-status-form";
@@ -38,7 +39,7 @@ export default async function ProductFormPage({
     session.role === "MERCHANT" ? session.merchantId : product?.merchantId ?? undefined;
 
   const [categories, merchants, merchant] = await Promise.all([
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.category.findMany().then(sortStoreCategories),
     session.role === "MERCHANT"
       ? prisma.merchant.findMany({ where: { id: session.merchantId ?? "" } })
       : prisma.merchant.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" } }),
