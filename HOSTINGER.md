@@ -33,7 +33,7 @@ In Hostinger hPanel you need **Business Web Hosting** or **Cloud** (Startup / Pr
 2. Open **Websites** → **Add Website**.
 3. Choose **Node.js web app** (not WordPress, not PHP).
 4. When asked for a domain, pick **Free subdomain** / **Use temporary domain**.
-5. Hostinger generates an address such as `yourname.hostingersite.com`. Copy it. You will open `https://THAT-ADDRESS/login` when deploy finishes.
+5. Hostinger generates an address such as `yourname.hostingersite.com`. Copy it. You will open `https://THAT-ADDRESS/welcome` when deploy finishes.
 
 If that domain already has a PHP/WordPress site, Hostinger needs that website slot **removed** first (download a backup). Then add the Node app again.
 
@@ -109,7 +109,7 @@ First start creates SQLite and the demo accounts if `prisma/dev.db` is missing.
 2. Turn on **SSL** if the padlock is missing (**Security → SSL**).
 3. Visit:
 
-   `https://YOUR-TEMP-DOMAIN.hostingersite.com/login`
+   `https://YOUR-TEMP-DOMAIN.hostingersite.com/welcome`
 
    Merchants can also open **Sign up** on that page, or a shop card at `/s/their-shop-slug`.
 

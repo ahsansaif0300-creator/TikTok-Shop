@@ -2,11 +2,13 @@
 
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ensureDatabase } from "@/lib/ensure-db";
-import { clearSession, createSession, requireSession } from "@/lib/auth";
+import { clearSession, createSession, getSession, requireSession } from "@/lib/auth";
+import { LOGIN, loginPathForRole } from "@/lib/access";
 
-export async function loginAction(formData: FormData) {
+async function loginWithRole(formData: FormData, expectedRole: Role, failPath: string) {
   const identifier = String(formData.get("email") ?? formData.get("identifier") ?? "")
     .trim()
     .toLowerCase();
@@ -16,7 +18,7 @@ export async function loginAction(formData: FormData) {
     await ensureDatabase();
   } catch (error) {
     console.error("[harbor] login database failed", error);
-    redirect("/login?error=setup");
+    redirect(`${failPath}?error=setup`);
   }
 
   let user: Awaited<ReturnType<typeof prisma.user.findFirst>> | null = null;
@@ -24,15 +26,16 @@ export async function loginAction(formData: FormData) {
     user = await prisma.user.findFirst({
       where: identifier ? { OR: [{ email: identifier }, { username: identifier }] } : { id: "__none__" },
     });
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user || user.role !== expectedRole || !(await bcrypt.compare(password, user.passwordHash))) {
       user = null;
     }
   } catch (error) {
     console.error("[harbor] login query failed", error);
-    redirect("/login?error=setup");
+    redirect(`${failPath}?error=setup`);
   }
 
-  if (!user) redirect("/login?error=1");
+  if (!user) redirect(`${failPath}?error=1`);
+  if (expectedRole === "MERCHANT" && !user.merchantId) redirect(`${failPath}?error=1`);
 
   try {
     await createSession({
@@ -44,15 +47,34 @@ export async function loginAction(formData: FormData) {
     });
   } catch (error) {
     console.error("[harbor] login session failed", error);
-    redirect("/login?error=setup");
+    redirect(`${failPath}?error=setup`);
   }
 
   redirect("/");
 }
 
+export async function loginAdminAction(formData: FormData) {
+  await loginWithRole(formData, "SUPER_ADMIN", LOGIN.admin);
+}
+
+export async function loginOpsAction(formData: FormData) {
+  await loginWithRole(formData, "OPS", LOGIN.ops);
+}
+
+export async function loginStoreAction(formData: FormData) {
+  await loginWithRole(formData, "MERCHANT", LOGIN.store);
+}
+
+/** @deprecated Use a role-specific login action. Kept so old forms fail closed. */
+export async function loginAction() {
+  redirect("/welcome");
+}
+
 export async function logoutAction() {
+  const session = await getSession();
+  const next = session ? loginPathForRole(session.role) : LOGIN.store;
   await clearSession();
-  redirect("/login");
+  redirect(next);
 }
 
 export async function updateProfileAction(formData: FormData) {

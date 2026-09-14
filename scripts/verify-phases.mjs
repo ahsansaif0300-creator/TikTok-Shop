@@ -149,6 +149,10 @@ async function phase1Static() {
     "lib/ensure-db.ts",
     "prisma/demo.sqlite",
     "app/login/page.tsx",
+    "app/login/admin/page.tsx",
+    "app/login/ops/page.tsx",
+    "app/login/store/page.tsx",
+    "app/welcome/page.tsx",
     "next.config.ts",
   ];
   await check(1, "Required foundation files exist", () => {
@@ -187,7 +191,7 @@ async function phase1Static() {
     ]) {
       assert(schema.includes(token), `Schema missing ${token}`);
     }
-    assert(schema.includes("image"), "Product/order image field missing");
+    assert(schema.includes("storeCode"), "Merchant storeCode missing");
     assert(!/inviteCode|yuebao|virtualOrder|blockchain/i.test(schema), "Schema contains out-of-scope fields");
   });
   await check(1, "JWT session cookie is harbor_session", () => {
@@ -195,10 +199,12 @@ async function phase1Static() {
     assert(auth.includes('harbor_session'), "Cookie name missing");
     assert(auth.includes("SignJWT") && auth.includes("jwtVerify"), "jose JWT helpers missing");
   });
-  await check(1, "proxy.ts redirects anonymous users to /login", () => {
-    const proxy = read("proxy.ts");
-    assert(proxy.includes('pathname = "/login"'), "Login redirect missing");
+  await check(1, "proxy.ts redirects anonymous users to the matching login", () => {
+    const proxy = read("proxy.ts") + read("lib/access.ts");
+    assert(proxy.includes("loginPathForRequest"), "Login redirect helper missing");
+    assert(proxy.includes("/login/admin") && proxy.includes("/login/store") && proxy.includes("/login/ops"), "Separate login paths missing");
     assert(proxy.includes("harbor_session"), "Session cookie not read");
+    assert(proxy.includes("canAccessPath"), "Role path gate missing");
   });
   await check(1, "No impersonation or trap-product code in app source", () => {
     const hits = [];
@@ -294,18 +300,26 @@ async function phase2Static() {
     ]) {
       assert(exists(file), `Missing ${file}`);
     }
-    const login = read("app/login/page.tsx");
+    const login = read("app/login/store/page.tsx") + read("app/login/page.tsx");
     assert(login.includes("/signup"), "Login is missing a Sign up path");
     const proxy = read("proxy.ts");
     assert(proxy.includes("/signup") && proxy.includes("/s/"), "proxy.ts must allow signup and shop cards");
     assert(read("lib/actions/signup.ts").includes("MERCHANT"), "Public signup must create a merchant user");
+    assert(read("lib/actions/signup.ts").includes("allocateStoreCode"), "Signup must mint a Store ID");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
-  await check(2, "Login screen is Harbor-branded", () => {
-    const login = read("app/login/page.tsx");
+  await check(2, "Login screens are Harbor-branded and hide demo passwords", () => {
+    const login =
+      read("app/login/page.tsx") +
+      read("app/login/admin/page.tsx") +
+      read("app/login/ops/page.tsx") +
+      read("app/login/store/page.tsx") +
+      read("components/role-login-form.tsx");
     assert(login.includes("Harbor"), "Login missing Harbor name");
     assert(!/tiktok/i.test(login), "Login still mentions TikTok");
-    assert(login.includes("oscar.d@example.net"), "Demo admin hint missing");
+    assert(!login.includes("HarborAdmin!2026"), "Demo admin password leaked on login");
+    assert(!login.includes("HarborMerchant!2026"), "Demo merchant password leaked on login");
+    assert(!login.includes("oscar.d@example.net"), "Demo admin email leaked on login");
   });
 }
 
@@ -1201,7 +1215,7 @@ async function phase7Static() {
     assert(/Free subdomain|temporary domain/i.test(hostinger), "HOSTINGER.md missing temporary domain steps");
     assert(hostinger.includes("hostingersite.com"), "HOSTINGER.md missing hostingersite.com");
     const usage = read("USAGE.md");
-    assert(usage.includes("localhost:3000/login"), "USAGE.md missing local login URL");
+    assert(usage.includes("localhost:3000/welcome"), "USAGE.md missing local login URL");
     assert(usage.includes("Hostinger"), "USAGE.md missing Hostinger steps");
     assert(/phone|Wi-Fi|Wi‑Fi|other device/i.test(usage), "USAGE.md missing other-device access steps");
     assert(exists("scripts/lan-urls.mjs"), "scripts/lan-urls.mjs missing");
@@ -1270,7 +1284,7 @@ async function phaseHttp(prisma) {
   await check(1, "Anonymous / redirects to /login", async () => {
     const res = await getWithCookie("/");
     assert([301, 302, 303, 307, 308].includes(res.status), `Expected redirect, got ${res.status}`);
-    assert(locationPath(res) === "/login", `Redirected to ${locationPath(res)}`);
+    assert(locationPath(res) === "/welcome", `Redirected to ${locationPath(res)}`);
   });
   await check(2, "Login HTML is Harbor, not a marketplace clone", async () => {
     const { res, text } = await pageText("/login");
@@ -1278,6 +1292,20 @@ async function phaseHttp(prisma) {
     assert(/Harbor/.test(text), "Login HTML missing Harbor");
     assert(!/tiktok/i.test(text), "Login HTML mentions TikTok");
     assert(/signup/i.test(text), "Login HTML missing Sign up");
+    assert(!/HarborAdmin!2026|HarborMerchant!2026|HarborOps!2026/.test(text), "Login HTML leaked demo passwords");
+  });
+  await check(2, "Role login URLs are separate and unauthenticated admin routes use Super Admin login", async () => {
+    for (const pathname of ["/login/admin", "/login/ops", "/login/store", "/welcome"]) {
+      const res = await fetchManual(`${baseUrl}${pathname}`);
+      assert(res.status === 200, `${pathname} returned ${res.status}`);
+    }
+    const adminGate = await getWithCookie("/admin/place-order");
+    assert([301, 302, 303, 307, 308].includes(adminGate.status), `/admin/place-order was ${adminGate.status}`);
+    assert(locationPath(adminGate) === "/login/admin", `Admin gate redirected to ${locationPath(adminGate)}`);
+    const storeGate = await getWithCookie("/distribution");
+    assert(locationPath(storeGate) === "/login/store", `Store gate redirected to ${locationPath(storeGate)}`);
+    const opsGate = await getWithCookie("/merchants");
+    assert(locationPath(opsGate) === "/login/ops", `Ops gate redirected to ${locationPath(opsGate)}`);
   });
   await check(2, "Anonymous signup and shop card are public", async () => {
     const signup = await fetchManual(`${baseUrl}/signup`);

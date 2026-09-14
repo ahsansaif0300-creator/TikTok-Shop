@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { ensureDatabase } from "@/lib/ensure-db";
 import { uniqueMerchantSlug } from "@/lib/slug";
+import { allocateStoreCode } from "@/lib/store-code";
 
 export async function signupMerchantAction(formData: FormData) {
   const storeName = String(formData.get("storeName") ?? "").trim();
@@ -42,11 +43,13 @@ export async function signupMerchantAction(formData: FormData) {
     const hit = await prisma.merchant.findUnique({ where: { slug: candidate }, select: { id: true } });
     return Boolean(hit);
   });
+  const storeCode = await allocateStoreCode();
 
   const merchant = await prisma.merchant.create({
     data: {
       name: storeName,
       slug,
+      storeCode,
       legalName: storeName,
       email,
       phone,

@@ -28,7 +28,7 @@ export default async function SignupPage({
       footer={
         <>
           Already selling on Harbor?{" "}
-          <Link href="/login" className="font-medium text-cyan hover:underline">
+          <Link href="/login/store" className="font-medium text-cyan hover:underline">
             Sign in
           </Link>
         </>
@@ -117,7 +117,7 @@ export default async function SignupPage({
         </button>
         <p className="text-center text-sm text-muted">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-accent hover:underline">
+          <Link href="/login/store" className="font-medium text-accent hover:underline">
             Sign in
           </Link>
         </p>

@@ -49,10 +49,13 @@ export function printAccessUrls(port = process.env.PORT || "3000") {
   const ips = lanIPv4s();
   console.log("");
   console.log("Open Harbor:");
-  console.log(`  On this computer:     http://127.0.0.1:${port}/login`);
+  console.log(`  On this computer:     http://127.0.0.1:${port}/welcome`);
+  console.log(`  Store login:          http://127.0.0.1:${port}/login/store`);
+  console.log(`  Ops login:            http://127.0.0.1:${port}/login/ops`);
+  console.log(`  Super admin login:    http://127.0.0.1:${port}/login/admin`);
   if (ips.length) {
     for (const ip of ips) {
-      console.log(`  On your phone/Wi-Fi:  http://${ip}:${port}/login`);
+      console.log(`  On your phone/Wi-Fi:  http://${ip}:${port}/welcome`);
     }
   } else {
     console.log("  On your phone/Wi-Fi:  run `ipconfig` (Windows) or `hostname -I` (Mac/Linux) and use that IPv4");

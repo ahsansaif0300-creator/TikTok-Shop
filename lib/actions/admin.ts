@@ -262,7 +262,7 @@ export async function createOpsUser(formData: FormData) {
   });
   revalidatePath("/admin/users");
   const origin = await requestOrigin();
-  redirect(`/admin/users?created=1&username=${encodeURIComponent(username)}&login=${encodeURIComponent(`${origin}/login`)}`);
+  redirect(`/admin/users?created=1&username=${encodeURIComponent(username)}&login=${encodeURIComponent(`${origin}/login/ops`)}`);
 }
 
 export async function broadcastToStores(formData: FormData) {

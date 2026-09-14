@@ -36,7 +36,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
       <header className="mx-auto flex max-w-lg items-center justify-between px-5 py-5">
         <HarborMark light />
         <div className="flex gap-2 text-sm">
-          <Link href="/login" className="rounded-full bg-white/10 px-3 py-1.5 font-medium hover:bg-white/15">
+          <Link href="/login/store" className="rounded-full bg-white/10 px-3 py-1.5 font-medium hover:bg-white/15">
             Sign in
           </Link>
           <Link href="/signup" className="rounded-full bg-accent px-3 py-1.5 font-semibold text-white hover:bg-[#e11d48]">

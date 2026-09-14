@@ -154,7 +154,7 @@ export default async function MerchantDetailPage({
           <form action={createStoreUser} className="mt-5 space-y-3 border-t border-line pt-4">
             <h3 className="font-medium">Create store login</h3>
             <p className="text-xs text-muted">
-              The seller signs in at /login or this shop link, then only sees this store.
+              The seller signs in at /login/store or this shop link, then only sees this store.
             </p>
             <input type="hidden" name="merchantId" value={merchant.id} />
             <Field name="name" label="Name" required defaultValue={merchant.name} />

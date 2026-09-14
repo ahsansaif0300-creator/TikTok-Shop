@@ -44,6 +44,7 @@ const TONE = {
 export function MerchantHome({
   name,
   storeName,
+  storeCode,
   shopUrl,
   todayOrderCount,
   todaySales,
@@ -53,6 +54,7 @@ export function MerchantHome({
 }: {
   name: string;
   storeName: string;
+  storeCode?: string;
   shopUrl: string;
   todayOrderCount: number;
   todaySales: number;
@@ -65,7 +67,10 @@ export function MerchantHome({
       <div className="mb-4">
         <p className="text-sm text-muted">Store overview</p>
         <h1 className="text-2xl font-semibold tracking-tight text-ink">Hi, {name}</h1>
-        <p className="mt-1 text-sm text-muted">{storeName} · catalog, orders, and bank balances from real sales.</p>
+        <p className="mt-1 text-sm text-muted">
+          {storeName}
+          {storeCode ? ` · Store ID ${storeCode}` : ""} · catalog, orders, and bank balances from real sales.
+        </p>
       </div>
       <div className="mb-4 hidden items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3 lg:flex">
         <div className="min-w-0">

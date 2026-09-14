@@ -5,6 +5,7 @@ import type { MerchantStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { uniqueMerchantSlug } from "@/lib/slug";
+import { allocateStoreCode } from "@/lib/store-code";
 
 export async function setMerchantStatus(merchantId: string, status: MerchantStatus) {
   const session = await requireSession();
@@ -116,6 +117,7 @@ export async function reviewApplication(formData: FormData) {
         const hit = await prisma.merchant.findUnique({ where: { slug: candidate }, select: { id: true } });
         return Boolean(hit);
       }),
+      storeCode: await allocateStoreCode(),
       legalName: application.businessName,
       email: application.email,
       phone: application.phone,

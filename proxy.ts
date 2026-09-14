@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { readSessionFromToken } from "@/lib/auth";
 import { shopSlugFromHost } from "@/lib/shop-host";
-
-function isPublicPath(pathname: string) {
-  return pathname === "/login" || pathname === "/signup" || pathname.startsWith("/s/");
-}
+import { canAccessPath, isPublicPath, loginPathForRequest } from "@/lib/access";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,12 +19,19 @@ export async function proxy(request: NextRequest) {
 
   if (!session && !publicPath) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = loginPathForRequest(pathname);
     url.search = "";
     return NextResponse.redirect(url);
   }
 
-  if (session && (pathname === "/login" || pathname === "/signup")) {
+  if (session && (pathname === "/welcome" || pathname === "/signup" || pathname === "/login" || pathname.startsWith("/login/"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (session && !publicPath && !canAccessPath(session.role, pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

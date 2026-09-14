@@ -154,6 +154,7 @@ async function main() {
         data: {
           name: def.name,
           slug,
+          storeCode: `STORE${String(merchants.length + 1).padStart(3, "0")}`,
           legalName: `${def.name} LLC`,
           email: `hello@${slug.replace(/-/g, "")}.example`,
           phone: "+1-555-0100",
@@ -179,6 +180,7 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       email: "oscar.d@example.net",
+      username: "harboradmin",
       name: "Amina Shah",
       passwordHash,
       role: "SUPER_ADMIN",

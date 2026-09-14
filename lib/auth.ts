@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
+import { LOGIN } from "@/lib/access";
 
 export type SessionUser = {
   userId: string;
@@ -74,7 +75,7 @@ export async function getSession(): Promise<SessionUser | null> {
 export async function requireSession() {
   const session = await getSession();
   if (!session) {
-    redirect("/login");
+    redirect(LOGIN.store);
   }
   return session;
 }
@@ -88,15 +89,26 @@ export function canManageTeam(role: Role) {
 }
 
 export async function requireMerchant() {
-  const session = await requireSession();
+  const session = await getSession();
+  if (!session) redirect(LOGIN.store);
   if (session.role !== "MERCHANT" || !session.merchantId) {
     redirect("/");
   }
   return { ...session, merchantId: session.merchantId };
 }
 
+export async function requireStaff() {
+  const session = await getSession();
+  if (!session) redirect(LOGIN.ops);
+  if (session.role !== "SUPER_ADMIN" && session.role !== "OPS") {
+    redirect("/");
+  }
+  return session;
+}
+
 export async function requireSuperAdmin() {
-  const session = await requireSession();
+  const session = await getSession();
+  if (!session) redirect(LOGIN.admin);
   if (session.role !== "SUPER_ADMIN") {
     redirect("/");
   }

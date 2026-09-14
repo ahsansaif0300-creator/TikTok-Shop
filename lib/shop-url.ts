@@ -31,5 +31,5 @@ export async function shopAbsoluteUrl(slug: string) {
 export async function workspaceLoginUrl(shopSlug?: string) {
   const origin = await requestOrigin();
   const q = shopSlug ? `?shop=${encodeURIComponent(shopSlug)}` : "";
-  return `${origin}/login${q}`;
+  return `${origin}/login/store${q}`;
 }

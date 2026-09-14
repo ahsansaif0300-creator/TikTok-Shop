@@ -25,7 +25,7 @@ This is the day-to-day guide after the app is installed. It is an **operations d
    npm run dev
    ```
 
-   Open **http://localhost:3000/login** on this computer. That address does **not** work on a phone or another PC — see [Open from your phone or another device](#open-from-your-phone-or-another-device) below.
+   Open **http://localhost:3000/welcome** on this computer, then use **Store Login**, **Normal Backend Login**, or **Super Admin Login**. Those addresses do **not** work on a phone or another PC — see [Open from your phone or another device](#open-from-your-phone-or-another-device) below.
 
 4. Or run the production build (same process Hostinger uses):
 
@@ -57,13 +57,13 @@ This is the day-to-day guide after the app is installed. It is an **operations d
    npm run urls
    ```
 
-   It prints a line like `On your phone/Wi-Fi: http://192.168.1.23:3000/login`.
+   It prints a line like `On your phone/Wi-Fi: http://192.168.1.23:3000/welcome`.
    Or look it up yourself:
    - **Windows:** Command Prompt → `ipconfig` → **IPv4 Address** (often `192.168.x.x` or `10.x.x.x`)
    - **Mac:** Terminal → `ipconfig getifaddr en0`
    - **Linux:** `hostname -I`
 3. On the phone, join the **same Wi‑Fi** (not mobile data).
-4. In the phone browser open `http://YOUR-COMPUTER-IP:3000/login` — for example `http://192.168.1.23:3000/login`. Do not type `localhost`.
+4. In the phone browser open `http://YOUR-COMPUTER-IP:3000/welcome` — for example `http://192.168.1.23:3000/welcome`. Do not type `localhost`.
 5. If login does not stick, add `AUTH_COOKIE_SECURE=false` to `.env` and restart.
 6. If it still refuses to connect:
    - Windows Firewall: allow **Node.js** (or port **3000**) on a **Private** network
@@ -78,7 +78,7 @@ Use one of these instead:
 
 - Run the app **on your own computer** and use the Wi‑Fi IP steps above
 - In the agent **Ports** panel, expose port **3000** and copy the **public preview URL** (that URL needs the Ports network token; the app cannot create it)
-- Deploy to Hostinger and use `https://your-domain.com/login`
+- Deploy to Hostinger and use `https://your-domain.com/welcome`
 
 ### Anyone on the internet
 
@@ -86,13 +86,13 @@ Use your Hostinger / VPS domain (section 5). Do not try to share `localhost`.
 
 ## 2. Sign in
 
-Demo passwords are for local/preview only. Change them under **Profile** before anyone else uses the app.
+Use the login URL that matches the account. Do **not** share one form for every role. Demo passwords are for local/preview only and are **not** printed on the login pages. Change them under **Profile** before anyone else uses the app.
 
-| Who you are | Email | Password | What you see |
-| --- | --- | --- | --- |
-| Super admin | `oscar.d@example.net` | `HarborAdmin!2026` | Every store, Team, Settings |
-| Operations | `sarah.b@example.net` | `HarborOps!2026` | Every store, no Team/Settings |
-| Merchant | `iris.p@example.org` | `HarborMerchant!2026` | Northline Outfitters only |
+| Who you are | Login URL | Email | Password | What you see |
+| --- | --- | --- | --- | --- |
+| Super admin | `/login/admin` | `oscar.d@example.net` | `HarborAdmin!2026` | Main Backend |
+| Operations | `/login/ops` | `sarah.b@example.net` | `HarborOps!2026` | Normal Backend |
+| Merchant | `/login/store` | `iris.p@example.org` | `HarborMerchant!2026` | Store dashboard (Northline only) |
 
 After login you land on the dashboard. Use the sidebar (or **Open menu** on a phone). Merchants also get a bottom bar: Home, Products, Orders, Payouts, Profile.
 
@@ -159,7 +159,7 @@ Staff path:
 2. On that row click **Approve**. Harbor creates an ACTIVE store on the Starter plan with a unique slug.
 3. Open **Merchants** → click the store → **Activate** if needed, assign a **Seller plan**. Copy the **Shop link**.
 4. On the same page, **Create store login** (email + password 8+ characters) if the seller did not sign up themselves.
-5. The seller signs in at `/login` or the shop card’s **Seller login**, and only sees that shop (products, orders, shipping, payouts).
+5. The seller signs in at `/login/store` or the shop card’s **Seller login**, and only sees that shop (products, orders, shipping, payouts).
 6. You manage everyone from **Orders**, **Refunds**, **Shipping**, **Ledger**, and **Payouts**.
 
 Demo shop already there: Northline Outfitters (`iris.p@example.org` / `HarborMerchant!2026`), public card `/s/northline-outfitters`.
@@ -174,7 +174,7 @@ Short version:
 2. **Websites** → **Add Website** → **Node.js web app** → **Free subdomain**.
 3. Import GitHub branch `main` (repo root has `package.json`), or upload `npm run pack:hostinger`’s zip.
 4. Start command `npm run start`. Env: `DATABASE_URL=file:./dev.db`, a new `AUTH_SECRET`, and `APP_BASE_URL=https://YOUR-TEMP.hostingersite.com`.
-5. Open `https://YOUR-TEMP.hostingersite.com/login` (Sign up is on that screen). Shop cards live at `/s/{slug}`.
+5. Open `https://YOUR-TEMP.hostingersite.com/welcome`. Shop cards live at `/s/{slug}`. Store login is `/login/store`.
 
 Do not copy the project into `public_html`.
 

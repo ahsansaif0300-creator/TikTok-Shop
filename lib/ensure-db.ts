@@ -2,6 +2,7 @@ import { installDemoDb } from "../scripts/copy-demo-db.mjs";
 import { applyRuntimeEnv } from "./runtime-env";
 import { getPrisma, resetPrisma } from "./db";
 import { STORE_CATEGORIES, categorySlug } from "./store-categories";
+import { backfillStoreCodes } from "./store-code";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -23,6 +24,11 @@ async function backfill() {
     } catch (error) {
       console.warn("[harbor] category backfill skipped", name, error);
     }
+  }
+  try {
+    await backfillStoreCodes();
+  } catch (error) {
+    console.warn("[harbor] storeCode backfill skipped", error);
   }
 }
 

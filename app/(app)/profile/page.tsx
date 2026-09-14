@@ -24,6 +24,7 @@ export default async function ProfilePage({
           id: true,
           name: true,
           slug: true,
+          storeCode: true,
           logo: true,
           availableBalance: true,
           pendingBalance: true,
@@ -35,7 +36,7 @@ export default async function ProfilePage({
   if (!staff && store) {
     return (
       <div className="max-w-xl">
-        <PageHeader title="Profile" subtitle={`${store.name} · ${session.email}`} />
+        <PageHeader title="Profile" subtitle={`${store.name}${store.storeCode ? ` · ${store.storeCode}` : ""} · ${session.email}`} />
         <Card className="mb-4 p-5">
           <div className="flex items-center gap-4">
             {store.logo ? (

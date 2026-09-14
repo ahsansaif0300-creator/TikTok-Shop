@@ -53,6 +53,7 @@ export default async function DashboardPage() {
         <MerchantHome
           name={session.name}
           storeName={data.store?.name ?? "Your store"}
+          storeCode={data.store?.storeCode ?? ""}
           shopUrl={shopUrl}
           todayOrderCount={data.todayOrderCount}
           todaySales={data.todaySales}
