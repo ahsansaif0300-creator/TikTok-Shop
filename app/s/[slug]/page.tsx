@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { ensureDatabase } from "@/lib/ensure-db";
 import { money } from "@/lib/utils";
 import { shopAbsoluteUrl, workspaceLoginUrl } from "@/lib/shop-url";
-import { BrandBar, HarborMark } from "@/components/brand";
+import { BrandBar, BrandFooter, HarborMark } from "@/components/brand";
 import { CopyShopLink } from "@/components/copy-shop-link";
 import { ProductThumb } from "@/components/product-thumb";
 import { listedCatalogWhere } from "@/lib/product-listing";
@@ -101,6 +101,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
           )}
         </div>
       </main>
+      <BrandFooter />
     </div>
   );
 }

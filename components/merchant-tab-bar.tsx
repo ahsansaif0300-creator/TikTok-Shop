@@ -17,7 +17,8 @@ export function MerchantTabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <div className="h-0.5 bg-gradient-to-r from-cyan via-white to-accent" />
       <ul className="grid grid-cols-5">
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -28,7 +29,7 @@ export function MerchantTabBar() {
                 href={tab.href}
                 className={cn(
                   "flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium",
-                  active ? "text-accent" : "text-muted",
+                  active ? "text-accent" : "text-white/55",
                 )}
               >
                 <Icon className="size-5" strokeWidth={active ? 2.4 : 1.8} />

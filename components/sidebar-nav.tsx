@@ -37,7 +37,9 @@ export function SidebarNav({
                   onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
-                    active ? "bg-accent text-white" : "text-white/75 hover:bg-white/10 hover:text-white",
+                    active
+                      ? "bg-accent text-white shadow-[inset_3px_0_0_0_var(--cyan)]"
+                      : "text-white/75 hover:bg-white/10 hover:text-white",
                   )}
                 >
                   <Icon className="size-4 opacity-90" />

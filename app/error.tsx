@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BrandMark } from "@/components/brand";
 
 export default function ErrorPage({
   error,
@@ -16,7 +17,10 @@ export default function ErrorPage({
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6">
       <div className="w-full max-w-md rounded-3xl border border-line bg-card p-8 text-center">
-        <h1 className="text-2xl font-semibold text-ink">This page could not load</h1>
+        <div className="flex justify-center">
+          <BrandMark size="md" />
+        </div>
+        <h1 className="mt-4 text-2xl font-semibold text-ink">This page could not load</h1>
         <p className="mt-2 text-sm text-muted">
           The server hit an error while opening Harbor. If this happened right after sign-in, Redeploy
           the Node app and confirm <code>DATABASE_URL</code> and <code>AUTH_SECRET</code> are set in

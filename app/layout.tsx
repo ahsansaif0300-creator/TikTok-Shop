@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Harbor Commerce",
   description: "Multi-merchant commerce operations dashboard",
+  icons: {
+    icon: [{ url: "/brand-mark.webp", type: "image/webp" }, { url: "/icon.png" }],
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
