@@ -1,15 +1,17 @@
 import Link from "next/link";
-import type { ProductStatus } from "@prisma/client";
+import type { ProductListingStatus, ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { merchantScope } from "@/lib/scope";
 import { money } from "@/lib/utils";
-import { PRODUCT_STATUS } from "@/lib/labels";
+import { LISTING_STATUS, PRODUCT_STATUS } from "@/lib/labels";
 import { Card, Empty, PageHeader, SearchForm, StatusBadge, TableWrap, Tabs, Td, Th } from "@/components/ui";
 import { ProductThumb } from "@/components/product-thumb";
 
 const TABS = [
   { value: "", label: "All" },
+  { value: "LISTED", label: "Listed" },
+  { value: "ON_SHELF", label: "On Shelf" },
   { value: "ACTIVE", label: "Active" },
   { value: "DRAFT", label: "Draft" },
   { value: "ARCHIVED", label: "Archived" },
@@ -28,10 +30,12 @@ export default async function ProductsPage({
     where: {
       ...merchantScope(session),
       ...(status === "LOW_STOCK"
-        ? { stock: { lte: 20 }, status: "ACTIVE" }
-        : status
-          ? { status: status as ProductStatus }
-          : {}),
+        ? { stock: { lte: 20 }, status: "ACTIVE", listingStatus: "LISTED" }
+        : status === "LISTED" || status === "ON_SHELF"
+          ? { listingStatus: status as ProductListingStatus }
+          : status
+            ? { status: status as ProductStatus }
+            : {}),
       ...(q ? { OR: [{ title: { contains: q } }, { sku: { contains: q } }] } : {}),
     },
     include: { merchant: true, category: true },
@@ -42,7 +46,7 @@ export default async function ProductsPage({
     <div>
       <PageHeader
         title="Products"
-        subtitle="Live catalog with real stock. Sales counts come from orders, not bulk-edited vanity metrics."
+        subtitle="Live catalog with real stock. Listed SKUs show in the shop and Order Sender. On Shelf uses the same product record."
         actions={
           <Link href="/products/new" className="inline-flex h-10 items-center rounded-xl bg-accent px-4 text-sm font-medium text-white">
             Add product
@@ -65,6 +69,7 @@ export default async function ProductsPage({
                 <Th>Category</Th>
                 <Th>Price</Th>
                 <Th>Stock</Th>
+                <Th>Listing</Th>
                 <Th>Status</Th>
               </tr>
             </thead>
@@ -86,6 +91,9 @@ export default async function ProductsPage({
                   <Td>{product.category.name}</Td>
                   <Td>{money(product.price)}</Td>
                   <Td className={product.stock <= 20 ? "font-semibold text-amber-800" : ""}>{product.stock}</Td>
+                  <Td>
+                    <StatusBadge value={product.listingStatus} labels={LISTING_STATUS} />
+                  </Td>
                   <Td>
                     <StatusBadge value={product.status} labels={PRODUCT_STATUS} />
                   </Td>

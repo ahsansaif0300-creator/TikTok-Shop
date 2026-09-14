@@ -7,6 +7,7 @@ import { shopAbsoluteUrl, workspaceLoginUrl } from "@/lib/shop-url";
 import { BrandBar, HarborMark } from "@/components/brand";
 import { CopyShopLink } from "@/components/copy-shop-link";
 import { ProductThumb } from "@/components/product-thumb";
+import { listedCatalogWhere } from "@/lib/product-listing";
 
 export default async function PublicShopPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -15,12 +16,12 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
     where: { slug },
     include: {
       products: {
-        where: { status: "ACTIVE" },
+        where: listedCatalogWhere,
         orderBy: { updatedAt: "desc" },
         take: 8,
         select: { id: true, title: true, price: true, image: true },
       },
-      _count: { select: { products: true } },
+      _count: { select: { products: { where: listedCatalogWhere } } },
     },
   });
   if (!merchant) notFound();
@@ -91,7 +92,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-muted">{merchant._count.products} live SKUs · checkout stays on your own storefront.</p>
+              <p className="mt-2 text-xs text-muted">{merchant._count.products} listed SKUs · checkout stays on your own storefront.</p>
             </div>
           ) : (
             <p className="mt-6 text-sm text-muted">

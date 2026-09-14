@@ -8,6 +8,7 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { requestOrigin } from "@/lib/shop-url";
 import { processDueReleases } from "@/lib/process-releases";
 import { dummyProductImage } from "@/lib/product-image";
+import { isListedProduct } from "@/lib/product-listing";
 
 function fail(path: string, code: string): never {
   redirect(`${path}?error=${code}`);
@@ -40,7 +41,7 @@ export async function placeStaffOrder(formData: FormData) {
     prisma.customer.findUnique({ where: { id: customerId } }),
   ]);
   if (!merchant || merchant.status === "SUSPENDED") fail("/admin/place-order", "store");
-  if (!product || product.merchantId !== merchant.id || product.status !== "ACTIVE") {
+  if (!product || product.merchantId !== merchant.id || !isListedProduct(product)) {
     fail("/admin/place-order", "product");
   }
   if (!customer) fail("/admin/place-order", "customer");

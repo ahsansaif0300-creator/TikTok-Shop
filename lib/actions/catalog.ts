@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import type { ProductStatus } from "@prisma/client";
+import type { ProductListingStatus, ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { canAccessMerchant, catalogMerchantId } from "@/lib/scope";
@@ -60,7 +60,35 @@ export async function saveProduct(formData: FormData) {
     await prisma.product.create({ data });
   }
   revalidatePath("/products");
+  revalidatePath("/distribution");
   redirect("/products");
+}
+
+export async function setProductListingStatus(formData: FormData) {
+  const session = await requireSession();
+  const productId = String(formData.get("productId") ?? "");
+  const listingStatus = String(formData.get("listingStatus") ?? "") as ProductListingStatus;
+  const returnTo = String(formData.get("returnTo") ?? "");
+  const fallback = session.role === "MERCHANT" ? "/distribution" : "/products";
+  const allowed = ["/distribution", "/products", "/merchants", "/admin/place-order"];
+  const next = allowed.some(
+    (base) => returnTo === base || returnTo.startsWith(`${base}?`) || returnTo.startsWith(`${base}/`),
+  )
+    ? returnTo
+    : fallback;
+  if (listingStatus !== "ON_SHELF" && listingStatus !== "LISTED") {
+    redirect(`${fallback}?error=listing`);
+  }
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product || !canAccessMerchant(session, product.merchantId)) {
+    redirect(`${fallback}?error=forbidden`);
+  }
+  await prisma.product.update({
+    where: { id: product.id },
+    data: { listingStatus },
+  });
+  revalidatePath("/", "layout");
+  redirect(next);
 }
 
 export async function saveCategory(formData: FormData) {

@@ -31,6 +31,11 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum ProductListingStatus {
+  ON_SHELF
+  LISTED
+}
+
 enum OrderStatus {
   PENDING_PAYMENT
   PAID
@@ -185,6 +190,7 @@ model Product {
   cost        Float
   stock       Int
   status      ProductStatus @default(ACTIVE)
+  listingStatus ProductListingStatus @default(ON_SHELF)
   image       String        @default("")
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

@@ -77,7 +77,7 @@ export const NAV: { title: string; items: NavItem[] }[] = [
   {
     title: "Super admin",
     items: [
-      { href: "/admin/place-order", label: "Place order", icon: ShoppingBag, adminOnly: true },
+      { href: "/admin/place-order", label: "Order Sender", icon: ShoppingBag, adminOnly: true },
       { href: "/admin/funds", label: "Add funds", icon: Banknote, adminOnly: true },
       { href: "/admin/releases", label: "Payment release", icon: Timer, adminOnly: true },
       { href: "/admin/users", label: "Backend users", icon: UserPlus, adminOnly: true },

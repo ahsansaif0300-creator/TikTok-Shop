@@ -26,6 +26,11 @@ export const PRODUCT_STATUS = {
   ARCHIVED: "Archived",
 } as const;
 
+export const LISTING_STATUS = {
+  ON_SHELF: "On Shelf",
+  LISTED: "Listed",
+} as const;
+
 export const REFUND_STATUS = {
   PENDING: "Pending",
   APPROVED: "Approved",
@@ -91,6 +96,8 @@ export const TONE: Record<string, "neutral" | "success" | "warning" | "danger" |
   REJECTED: "danger",
   DRAFT: "neutral",
   ARCHIVED: "neutral",
+  ON_SHELF: "warning",
+  LISTED: "success",
   IN_TRANSIT: "info",
   EXCEPTION: "danger",
   PAID_OUT: "success",

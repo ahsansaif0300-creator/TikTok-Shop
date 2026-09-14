@@ -74,7 +74,7 @@ export async function getDashboardData(session: SessionUser) {
       select: { createdAt: true, total: true },
     }),
     prisma.product.findMany({
-      where: { ...scope, stock: { lte: 20 }, status: "ACTIVE" },
+      where: { ...scope, stock: { lte: 20 }, status: "ACTIVE", listingStatus: "LISTED" },
       include: { merchant: true },
       orderBy: { stock: "asc" },
       take: 6,

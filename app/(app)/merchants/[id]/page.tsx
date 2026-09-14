@@ -4,13 +4,14 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { money } from "@/lib/utils";
-import { LEDGER_TYPE, MERCHANT_STATUS, ORDER_STATUS } from "@/lib/labels";
+import { LEDGER_TYPE, LISTING_STATUS, MERCHANT_STATUS, ORDER_STATUS } from "@/lib/labels";
 import { shopAbsoluteUrl, shopPath } from "@/lib/shop-url";
 import { assignPlan, setMerchantStatus } from "@/lib/actions/merchants";
 import { createStoreUser } from "@/lib/actions/users";
 import { Button, Card, Empty, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 import { CopyShopLink } from "@/components/copy-shop-link";
 import { ProductThumb } from "@/components/product-thumb";
+import { listedCatalogWhere } from "@/lib/product-listing";
 
 export default async function MerchantDetailPage({
   params,
@@ -28,7 +29,7 @@ export default async function MerchantDetailPage({
     include: {
       plan: true,
       users: true,
-      products: { take: 8, orderBy: { updatedAt: "desc" } },
+      products: { where: listedCatalogWhere, take: 8, orderBy: { updatedAt: "desc" } },
       orders: { take: 8, orderBy: { createdAt: "desc" }, include: { customer: true } },
       ledger: { take: 8, orderBy: { createdAt: "desc" } },
       _count: { select: { products: true, orders: true } },
@@ -202,7 +203,7 @@ export default async function MerchantDetailPage({
         <Card>
           <div className="px-5 py-4 font-medium">Catalog snapshot</div>
           {merchant.products.length === 0 ? (
-            <Empty title="No products" body="This store has not listed SKUs yet." />
+            <Empty title="No listed products" body="SKUs marked Listed in Distribution Center appear here." />
           ) : (
             <TableWrap>
               <thead>
@@ -211,6 +212,7 @@ export default async function MerchantDetailPage({
                   <Th>SKU</Th>
                   <Th>Price</Th>
                   <Th>Stock</Th>
+                  <Th>Listing</Th>
                 </tr>
               </thead>
               <tbody>
@@ -227,6 +229,9 @@ export default async function MerchantDetailPage({
                     <Td className="font-mono text-xs">{product.sku}</Td>
                     <Td>{money(product.price)}</Td>
                     <Td>{product.stock}</Td>
+                    <Td>
+                      <StatusBadge value={product.listingStatus} labels={LISTING_STATUS} />
+                    </Td>
                   </tr>
                 ))}
               </tbody>

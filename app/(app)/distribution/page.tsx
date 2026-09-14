@@ -3,29 +3,87 @@ import { format } from "date-fns";
 import { prisma } from "@/lib/db";
 import { requireMerchant } from "@/lib/auth";
 import { money } from "@/lib/utils";
-import { ORDER_STATUS } from "@/lib/labels";
+import { LISTING_STATUS, ORDER_STATUS } from "@/lib/labels";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/ui";
 import { ProductThumb } from "@/components/product-thumb";
+import { ListingStatusForm } from "@/components/listing-status-form";
 
 const PICKED = ["PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED"] as const;
 
-export default async function DistributionPage() {
+export default async function DistributionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const session = await requireMerchant();
-  const orders = await prisma.order.findMany({
-    where: {
-      merchantId: session.merchantId,
-      OR: [{ status: { in: [...PICKED] } }, { pickedAt: { not: null } }],
-    },
-    include: { customer: true, items: true },
-    orderBy: [{ pickedAt: "desc" }, { createdAt: "desc" }],
-  });
+  const { error } = await searchParams;
+  const [products, orders] = await Promise.all([
+    prisma.product.findMany({
+      where: { merchantId: session.merchantId },
+      include: { category: true },
+      orderBy: [{ listingStatus: "asc" }, { title: "asc" }],
+    }),
+    prisma.order.findMany({
+      where: {
+        merchantId: session.merchantId,
+        OR: [{ status: { in: [...PICKED] } }, { pickedAt: { not: null } }],
+      },
+      include: { customer: true, items: { include: { product: true } } },
+      orderBy: [{ pickedAt: "desc" }, { createdAt: "desc" }],
+    }),
+  ]);
 
   return (
     <div>
       <PageHeader
         title="Distribution Center"
-        subtitle="Products and orders this store has already picked up. Cost, profit, and selling price are shown separately."
+        subtitle="Mark a SKU Listed to put it in this store’s catalog, Order Sender, and staff backends. On Shelf keeps the same product record off the live list."
       />
+      {error === "listing" ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Choose On Shelf or Listed.</p>
+      ) : null}
+      <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-muted">Products</h2>
+      {products.length === 0 ? (
+        <Card>
+          <Empty title="No products yet" body="Add a product, then set listing status here." />
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {products.map((product) => {
+            const profit = product.price - product.cost;
+            return (
+              <Card key={product.id} className="p-5">
+                <div className="flex items-start gap-3">
+                  <ProductThumb src={product.image} alt={product.title} size={64} />
+                  <div className="min-w-0">
+                    <p className="font-medium text-ink">{product.title}</p>
+                    <p className="text-xs text-muted">
+                      SKU {product.sku} · {product.category.name} · stock {product.stock}
+                    </p>
+                    <StatusBadge value={product.listingStatus} labels={LISTING_STATUS} />
+                  </div>
+                </div>
+                <dl className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
+                  <div className="rounded-lg bg-soft px-2 py-2">
+                    <dt className="text-[11px] uppercase tracking-wide text-muted">Cost price</dt>
+                    <dd className="mt-1 font-medium">{money(product.cost)}</dd>
+                  </div>
+                  <div className="rounded-lg bg-soft px-2 py-2">
+                    <dt className="text-[11px] uppercase tracking-wide text-muted">Profit</dt>
+                    <dd className="mt-1 font-medium">{money(profit)}</dd>
+                  </div>
+                  <div className="rounded-lg bg-soft px-2 py-2">
+                    <dt className="text-[11px] uppercase tracking-wide text-muted">Total price</dt>
+                    <dd className="mt-1 font-medium">{money(product.price)}</dd>
+                  </div>
+                </dl>
+                <ListingStatusForm productId={product.id} value={product.listingStatus} returnTo="/distribution" />
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      <h2 className="mb-3 mt-8 text-sm font-medium uppercase tracking-wide text-muted">Picked-up orders</h2>
       {orders.length === 0 ? (
         <Card>
           <Empty title="Nothing in distribution yet" body="Picked-up orders appear here after Click to Pick Up succeeds." />
@@ -61,7 +119,7 @@ export default async function DistributionPage() {
                           <div>
                             <p className="font-medium text-ink">{item.title}</p>
                             <p className="text-xs text-muted">
-                              SKU {item.sku} · Qty {item.quantity}
+                              SKU {item.sku} · Qty {item.quantity} · {LISTING_STATUS[item.product.listingStatus]}
                             </p>
                           </div>
                         </div>
@@ -80,6 +138,11 @@ export default async function DistributionPage() {
                           <dd className="mt-1 font-medium">{money(total)}</dd>
                         </div>
                       </dl>
+                      <ListingStatusForm
+                        productId={item.productId}
+                        value={item.product.listingStatus}
+                        returnTo="/distribution"
+                      />
                     </div>
                   );
                 })}

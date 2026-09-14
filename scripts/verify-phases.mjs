@@ -904,6 +904,12 @@ async function phase6Static() {
     assert(read("lib/auth.ts").includes("requireSuperAdmin"), "requireSuperAdmin missing");
     assert(read("app/(app)/admin/layout.tsx").includes("requireSuperAdmin"), "Admin layout is not gated");
     assert(read("lib/nav.ts").includes("/admin/place-order") && read("lib/nav.ts").includes("adminOnly"), "Super admin nav missing");
+    assert(read("lib/nav.ts").includes("Order Sender"), "Order Sender nav label missing");
+    const listing = read("prisma/schema.prisma") + read("app/(app)/distribution/page.tsx") + read("lib/actions/catalog.ts");
+    assert(listing.includes("ProductListingStatus") && listing.includes("ON_SHELF") && listing.includes("LISTED"), "Listing status missing");
+    assert(listing.includes("setProductListingStatus"), "Listing status action missing");
+    assert(read("app/(app)/admin/place-order/page.tsx").includes("Search Store"), "Order Sender store search missing");
+    assert(read("lib/actions/admin.ts").includes("isListedProduct"), "Order Sender must use listed products");
     assert(read("lib/actions/auth.ts").includes("username"), "Login does not accept username");
     assert(!/virtual.?order|auto.?order/i.test(admin), "Forbidden order-generation terms in admin actions");
   });
@@ -917,6 +923,13 @@ async function phase6Database(prisma) {
       const count = await prisma.payout.count({ where: { status } });
       assert(count > 0, `No ${status} payouts`);
     }
+  });
+
+  await check(6, "Products share one record with On Shelf and Listed statuses", async () => {
+    const listed = await prisma.product.count({ where: { listingStatus: "LISTED" } });
+    const shelf = await prisma.product.count({ where: { listingStatus: "ON_SHELF" } });
+    assert(listed > 0, "No listed products");
+    assert(shelf > 0, "No on-shelf products");
   });
 
   await check(6, "Isolated payout: request then mark paid decrements available", async () => {
@@ -1313,6 +1326,7 @@ async function phaseHttp(prisma) {
     assert(hasHref(text, "/settings"), "Admin nav missing Settings");
     assert(hasHref(text, "/merchants"), "Admin nav missing Merchants");
     assert(hasHref(text, "/admin/place-order"), "Admin nav missing Place order");
+    assert(text.includes("Order Sender"), "Admin nav missing Order Sender label");
     assert(hasHref(text, "/admin/funds"), "Admin nav missing Add funds");
     assert(text.includes("Needs attention"), "Admin attention queue missing");
   });
@@ -1375,6 +1389,7 @@ async function phaseHttp(prisma) {
     assert(text.includes("Available balance"), "Merchant wallet missing");
     assert(hasHref(text, "/service"), "Merchant dashboard missing Service");
     assert(text.includes("/products/p"), "Merchant dashboard missing product images");
+    assert(hasHref(text, "/distribution"), "Merchant dashboard missing Distribution");
     assert(!hasHref(text, "/merchants"), "Merchant nav leaked Merchants");
     assert(!hasHref(text, "/merchants/applications"), "Merchant nav leaked Applications");
     assert(!hasHref(text, "/customers"), "Merchant nav leaked Customers");
@@ -1392,6 +1407,24 @@ async function phaseHttp(prisma) {
     assert(!text.includes("Lumen Beauty"), "Merchant orders leaked Lumen Beauty");
     assert(text.includes("Click to Pick Up"), "Merchant orders missing pickup control");
     assert(text.includes("/products/p"), "Merchant orders missing product images");
+  });
+  await check(3, "Distribution Center shows listing status on products", async () => {
+    const { res, text } = await pageText("/distribution", merchantCookie);
+    assert(res.status === 200, `/distribution ${res.status}`);
+    assert(text.includes("On Shelf"), "Distribution missing On Shelf");
+    assert(text.includes("Listed"), "Distribution missing Listed");
+    assert(text.includes("Listing status"), "Distribution missing listing control");
+  });
+  await check(3, "Order Sender lists stores and listed products", async () => {
+    const northline = await prisma.merchant.findUnique({ where: { slug: "northline-outfitters" } });
+    assert(northline, "Northline store missing");
+    const { res, text } = await pageText(`/admin/place-order?merchantId=${northline.id}`, adminCookie);
+    assert(res.status === 200, `/admin/place-order ${res.status}`);
+    assert(text.includes("Order Sender"), "Order Sender title missing");
+    assert(text.includes("Search Store"), "Search Store missing");
+    assert(text.includes("Northline Outfitters"), "Store list missing Northline");
+    assert(text.includes("Trail Fleece Jacket") || text.includes("Alpine Daypack"), "Listed Northline products missing");
+    assert(!text.includes("Insulated Water Bottle"), "On-shelf product leaked into Order Sender");
   });
   await check(3, "Admin /orders HTML includes multiple merchants", async () => {
     const { text } = await pageText("/orders", adminCookie);

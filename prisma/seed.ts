@@ -7,6 +7,7 @@ import {
   PayoutStatus,
   PrismaClient,
   ProductStatus,
+  ProductListingStatus,
   RefundStatus,
   RefundType,
   ShipmentStatus,
@@ -256,6 +257,13 @@ async function main() {
           cost: item.cost,
           stock: item.stock,
           status: item.merchant === 5 ? ProductStatus.ARCHIVED : ProductStatus.ACTIVE,
+          listingStatus:
+            item.merchant === 5 ||
+            item.title === "Woven Throw Blanket" ||
+            item.title === "Jump Rope Steel" ||
+            item.title === "Insulated Water Bottle"
+              ? ProductListingStatus.ON_SHELF
+              : ProductListingStatus.LISTED,
           image: `/products/p${String(index + 1).padStart(2, "0")}.jpg`,
         },
       }),

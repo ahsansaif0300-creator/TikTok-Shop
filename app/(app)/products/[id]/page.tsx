@@ -4,8 +4,10 @@ import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { canAccessMerchant } from "@/lib/scope";
 import { saveProduct } from "@/lib/actions/catalog";
-import { Button, Card, Field, PageHeader } from "@/components/ui";
+import { Button, Card, Field, PageHeader, StatusBadge } from "@/components/ui";
 import { ProductThumb } from "@/components/product-thumb";
+import { ListingStatusForm } from "@/components/listing-status-form";
+import { LISTING_STATUS } from "@/lib/labels";
 
 const ERRORS: Record<string, string> = {
   cap: "This store is at its seller-plan product cap. Archive SKUs or move the store to a higher plan.",
@@ -137,6 +139,23 @@ export default async function ProductFormPage({
               <option value="ARCHIVED">Archived</option>
             </select>
           </label>
+          {product ? (
+            <div className="rounded-xl bg-soft px-3 py-3">
+              <StatusBadge value={product.listingStatus} labels={LISTING_STATUS} />
+              <p className="mt-2 text-sm text-muted">
+                Listing uses this same product record. Listed SKUs appear in the store catalog and Order Sender.
+              </p>
+              <ListingStatusForm
+                productId={product.id}
+                value={product.listingStatus}
+                returnTo={`/products/${product.id}`}
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-muted">
+              New products start On Shelf. List them from Distribution Center when they should appear in the live catalog.
+            </p>
+          )}
           <Button type="submit" disabled={Boolean(isNew && remaining !== null && remaining <= 0)}>
             {isNew ? "Create product" : "Save changes"}
           </Button>
