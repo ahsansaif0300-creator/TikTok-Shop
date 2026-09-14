@@ -31,19 +31,28 @@ async function backfill() {
   } catch (error) {
     console.warn("[harbor] storeCode backfill skipped", error);
   }
-  for (const sql of [
-    `ALTER TABLE "User" ADD COLUMN "referralCode" TEXT`,
-    `ALTER TABLE "Merchant" ADD COLUMN "cnicImageFront" TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE "Merchant" ADD COLUMN "cnicImageBack" TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE "Merchant" ADD COLUMN "referralCodeUsed" TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE "Merchant" ADD COLUMN "referredByUserId" TEXT`,
-    `ALTER TABLE "MerchantApplication" ADD COLUMN "referredByUserId" TEXT`,
-    `ALTER TABLE "MerchantApplication" ADD COLUMN "referralCode" TEXT NOT NULL DEFAULT ''`,
-  ]) {
+  const columns = {
+    User: new Set((await prisma.$queryRawUnsafe(`PRAGMA table_info("User")`)).map((row) => row.name)),
+    Merchant: new Set((await prisma.$queryRawUnsafe(`PRAGMA table_info("Merchant")`)).map((row) => row.name)),
+    MerchantApplication: new Set(
+      (await prisma.$queryRawUnsafe(`PRAGMA table_info("MerchantApplication")`)).map((row) => row.name),
+    ),
+  };
+  const needed = [
+    ["User", "referralCode", `ALTER TABLE "User" ADD COLUMN "referralCode" TEXT`],
+    ["Merchant", "cnicImageFront", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageFront" TEXT NOT NULL DEFAULT ''`],
+    ["Merchant", "cnicImageBack", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageBack" TEXT NOT NULL DEFAULT ''`],
+    ["Merchant", "referralCodeUsed", `ALTER TABLE "Merchant" ADD COLUMN "referralCodeUsed" TEXT NOT NULL DEFAULT ''`],
+    ["Merchant", "referredByUserId", `ALTER TABLE "Merchant" ADD COLUMN "referredByUserId" TEXT`],
+    ["MerchantApplication", "referredByUserId", `ALTER TABLE "MerchantApplication" ADD COLUMN "referredByUserId" TEXT`],
+    ["MerchantApplication", "referralCode", `ALTER TABLE "MerchantApplication" ADD COLUMN "referralCode" TEXT NOT NULL DEFAULT ''`],
+  ];
+  for (const [table, column, sql] of needed) {
+    if (columns[table].has(column)) continue;
     try {
       await prisma.$executeRawUnsafe(sql);
-    } catch {
-      // Column already exists on upgraded databases.
+    } catch (error) {
+      console.warn("[harbor] column add skipped", table, column, error);
     }
   }
   try {
