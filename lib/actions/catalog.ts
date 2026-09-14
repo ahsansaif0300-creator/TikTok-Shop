@@ -72,7 +72,11 @@ export async function setProductListingStatus(formData: FormData) {
   const fallback = session.role === "MERCHANT" ? "/distribution" : "/products";
   const allowed = ["/distribution", "/products", "/merchants", "/admin/place-order"];
   const next = allowed.some(
-    (base) => returnTo === base || returnTo.startsWith(`${base}?`) || returnTo.startsWith(`${base}/`),
+    (base) =>
+      returnTo === base ||
+      returnTo.startsWith(`${base}?`) ||
+      returnTo.startsWith(`${base}/`) ||
+      returnTo.startsWith(`${base}#`),
   )
     ? returnTo
     : fallback;

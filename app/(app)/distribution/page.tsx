@@ -51,25 +51,31 @@ export default async function DistributionPage({
         <div className="space-y-4">
           {products.map((product) => (
             <Card key={product.id} className="p-5">
-              <div className="flex items-start gap-3">
-                <ProductThumb src={product.image} alt={product.title} size={72} />
-                <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-wide text-muted">Product</p>
-                  <p className="text-lg font-semibold text-ink">{product.title}</p>
-                  <p className="text-sm text-muted">{product.category.name}</p>
+              <div id={`product-${product.id}`} className="scroll-mt-24">
+                <div className="flex items-start gap-3">
+                  <ProductThumb src={product.image} alt={product.title} size={72} />
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-wide text-muted">Product</p>
+                    <p className="text-lg font-semibold text-ink">{product.title}</p>
+                    <p className="text-sm text-muted">{product.category.name}</p>
+                  </div>
                 </div>
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-xl bg-soft px-3 py-3">
+                    <dt className="text-muted">Cost Price</dt>
+                    <dd className="mt-1 text-base font-semibold">{money(product.cost)}</dd>
+                  </div>
+                  <div className="rounded-xl bg-soft px-3 py-3">
+                    <dt className="text-muted">Selling Price</dt>
+                    <dd className="mt-1 text-base font-semibold">{money(product.price)}</dd>
+                  </div>
+                </dl>
+                <ListingStatusForm
+                  productId={product.id}
+                  value={product.listingStatus}
+                  returnTo={`/distribution#product-${product.id}`}
+                />
               </div>
-              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl bg-soft px-3 py-3">
-                  <dt className="text-muted">Cost Price</dt>
-                  <dd className="mt-1 text-base font-semibold">{money(product.cost)}</dd>
-                </div>
-                <div className="rounded-xl bg-soft px-3 py-3">
-                  <dt className="text-muted">Selling Price</dt>
-                  <dd className="mt-1 text-base font-semibold">{money(product.price)}</dd>
-                </div>
-              </dl>
-              <ListingStatusForm productId={product.id} value={product.listingStatus} returnTo="/distribution" />
             </Card>
           ))}
         </div>
@@ -121,7 +127,7 @@ export default async function DistributionPage({
                     <ListingStatusForm
                       productId={item.productId}
                       value={item.product.listingStatus}
-                      returnTo="/distribution"
+                      returnTo={`/distribution#product-${item.productId}`}
                     />
                   </div>
                 ))}
