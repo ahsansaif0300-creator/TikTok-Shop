@@ -264,7 +264,7 @@ async function phase2Static() {
     ]) {
       assert(exists(file), `Missing ${file}`);
     }
-    const chrome = read("components/workspace-chrome.tsx") + read("components/brand.tsx");
+    const chrome = read("components/workspace-chrome.tsx") + read("components/brand.tsx") + read("lib/brand-name.ts");
     assert(chrome.includes("TikiTok Shop"), "Brand mark missing from shell");
     assert(chrome.includes("logoutAction"), "Logout control missing");
     assert(chrome.includes("Open menu"), "Mobile menu control missing");
