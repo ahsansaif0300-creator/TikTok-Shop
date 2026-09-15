@@ -1273,6 +1273,10 @@ async function phase7Static() {
       "bootstrap looks in the wrong place for SQLite",
     );
     assert(boot.includes("prisma/seed.ts") || boot.includes("seed.ts"), "bootstrap does not seed");
+    assert(exists("prisma.config.ts"), "prisma.config.ts missing");
+    const pkgJson = read("package.json");
+    assert(!pkgJson.includes('"seed": "tsx prisma/seed.ts"'), "package.json#prisma seed must move to prisma.config.ts");
+    assert(pkgJson.includes("16.3.5") || pkgJson.includes("16.3.3"), "Next.js must be patched for Hostinger npm audit");
   });
   await check(7, "Session cookie can stay off Secure on plain HTTP", () => {
     const auth = read("lib/auth.ts");

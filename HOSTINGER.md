@@ -140,6 +140,7 @@ Change these under **Profile** before you invite anyone.
 - **“TikiTok Shop could not open the packed demo database”:** Redeploy the latest **`main`** branch (it includes `prisma/demo.sqlite`). Then **Restart**. `DATABASE_URL` can stay `file:./dev.db`; the app copies the packed demo DB into a writable folder automatically.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
 - **Empty data after every deploy:** SQLite lives in the app folder and can reset on redeploy. Fine for a demo. For real orders, move to a VPS disk or hosted Postgres later.
+- **npm audit / “7 vulnerabilities” after a green Next.js build:** Hostinger is blocking install on `next@16.3.1` and nested Prisma/js-yaml/sharp advisories. Latest **`main`** uses Next.js **16.3.5** and `package.json` overrides. Deploy **`main` again** (do not “Fix and redeploy” the old failed snapshot). Then **Restart**. Do not upgrade Prisma to 7 on Hostinger; SQLite `db push` stays on Prisma 6.
 
 ### 9. Later, when you buy a domain
 
