@@ -312,10 +312,13 @@ async function phase2Static() {
     assert(read("lib/actions/signup.ts").includes("idFront"), "Signup must collect ID card front");
     assert(read("lib/actions/signup.ts").includes("idBack"), "Signup must collect ID card back");
     assert(read("lib/actions/signup.ts").includes("referralCode"), "Signup must accept a referral code");
-    const signupPage = read("app/signup/page.tsx") + read("components/id-card-capture.tsx");
+    const signupPage =
+      read("app/signup/page.tsx") + read("components/signup-form.tsx") + read("components/id-card-capture.tsx");
     assert(signupPage.includes("idFront") && signupPage.includes("idBack"), "Signup form missing ID uploads");
     assert(signupPage.includes("Gallery") && signupPage.includes("Camera"), "Signup ID capture missing gallery/camera");
     assert(signupPage.includes("referralCode"), "Signup form missing referral code");
+    const start = read("scripts/start.mjs");
+    assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {

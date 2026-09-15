@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { AuthFrame } from "@/components/auth-frame";
 import { LOGIN } from "@/lib/access";
+import { buildStamp } from "@/lib/build-stamp";
 
 export default function WelcomePage() {
+  const stamp = buildStamp();
   return (
     <AuthFrame
       title="TikiTok Shop"
@@ -10,6 +12,7 @@ export default function WelcomePage() {
       footer={
         <>
           Public shop pages live at <span className="font-mono text-white/90">/s/your-shop</span>
+          <span className="mt-2 block font-mono text-[10px] text-white/40">Release {stamp}</span>
         </>
       }
     >

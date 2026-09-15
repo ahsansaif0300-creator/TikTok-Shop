@@ -31,22 +31,13 @@ async function blobToJpegFile(blob: Blob, name: string) {
   return new File([out], `${base}.jpg`, { type: "image/jpeg" });
 }
 
-function assignFile(input: HTMLInputElement, file: File) {
-  const transfer = new DataTransfer();
-  transfer.items.add(file);
-  input.files = transfer.files;
-}
-
 export function IdCardCapture({
-  name,
   label,
-  required = false,
+  onFile,
 }: {
-  name: string;
   label: string;
-  required?: boolean;
+  onFile: (file: File) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraFileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -71,12 +62,12 @@ export function IdCardCapture({
   }, [live]);
 
   async function useFile(file: File | undefined) {
-    if (!file || !fileRef.current) return;
+    if (!file) return;
     setBusy(true);
     setHint("");
     try {
-      const prepared = await blobToJpegFile(file, file.name || name);
-      assignFile(fileRef.current, prepared);
+      const prepared = await blobToJpegFile(file, file.name || label);
+      onFile(prepared);
       setPreview((current) => {
         if (current) URL.revokeObjectURL(current);
         return URL.createObjectURL(prepared);
@@ -119,18 +110,17 @@ export function IdCardCapture({
     ctx.drawImage(video, 0, 0);
     stopLive();
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
-    if (blob) await useFile(new File([blob], `${name}-camera.jpg`, { type: "image/jpeg" }));
+    if (blob) await useFile(new File([blob], `${label}-camera.jpg`, { type: "image/jpeg" }));
   }
 
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">{label}</p>
-      <input ref={fileRef} name={name} type="file" accept="image/jpeg" required={required} className="sr-only" />
       <input
         ref={galleryRef}
         type="file"
         accept="image/*"
-        className="sr-only"
+        className="hidden"
         onChange={(event) => void useFile(event.target.files?.[0])}
       />
       <input
@@ -138,13 +128,13 @@ export function IdCardCapture({
         type="file"
         accept="image/*"
         capture="environment"
-        className="sr-only"
+        className="hidden"
         onChange={(event) => void useFile(event.target.files?.[0])}
       />
       <div className="overflow-hidden rounded-2xl border border-line bg-soft">
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt={`${label} preview`} className="h-40 w-full object-contain bg-black/90" />
+          <img src={preview} alt={`${label} preview`} className="h-40 w-full bg-black/90 object-contain" />
         ) : (
           <div className="grid h-32 place-items-center px-3 text-center text-xs text-muted">
             {busy ? "Preparing photo…" : "Choose a gallery photo or take one with the camera."}

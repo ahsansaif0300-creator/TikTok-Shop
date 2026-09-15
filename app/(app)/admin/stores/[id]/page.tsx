@@ -7,9 +7,8 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { money } from "@/lib/utils";
 import { MERCHANT_STATUS } from "@/lib/labels";
 import { shopAbsoluteUrl, shopPath } from "@/lib/shop-url";
-import { updateStoreRecord } from "@/lib/actions/admin";
-import { Button, Card, PageHeader, StatusBadge } from "@/components/ui";
-import { IdCardCapture } from "@/components/id-card-capture";
+import { Card, PageHeader, StatusBadge } from "@/components/ui";
+import { StoreIdentityForm } from "@/components/store-identity-form";
 
 export default async function StoreRecordDetailPage({
   params,
@@ -144,21 +143,7 @@ export default async function StoreRecordDetailPage({
               )}
             </div>
           </div>
-          <form action={updateStoreRecord} className="mt-4 space-y-3">
-            <input type="hidden" name="merchantId" value={store.id} />
-            <label className="block space-y-1.5 text-sm">
-              <span className="font-medium">ID number</span>
-              <input
-                name="cnicNumber"
-                defaultValue={store.cnicNumber}
-                placeholder="35202-1234567-1"
-                className="h-11 w-full rounded-xl border border-line px-3"
-              />
-            </label>
-            <IdCardCapture name="cnicImageFront" label="Replace front" />
-            <IdCardCapture name="cnicImageBack" label="Replace back" />
-            <Button type="submit">Save identity fields</Button>
-          </form>
+          <StoreIdentityForm merchantId={store.id} cnicNumber={store.cnicNumber} />
         </Card>
       </div>
     </div>

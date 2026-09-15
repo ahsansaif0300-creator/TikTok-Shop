@@ -99,7 +99,16 @@ After you attach a **custom domain**, change `APP_BASE_URL` to `https://yourdoma
 
 ### 6. Deploy
 
-Click **Deploy**. Wait until the build is green and the process badge is **Running**. After every GitHub deploy, click **Restart** on the Node app. Opening the site without Restart keeps the previous build on phones.
+Click **Deploy**. Wait until the build is green and the process badge is **Running**.
+
+A cache-clear or Restart alone used to keep the **old** `.next` folder, so phones still showed the previous signup page. `npm start` now rebuilds when app source is newer than that folder.
+
+Still do this after GitHub updates:
+
+1. Confirm hPanel uses branch **`main`**.
+2. Click **Deploy** (so Hostinger pulls GitHub).
+3. When it finishes, click **Restart**.
+4. Open `/welcome` or `/signup` and check the tiny **Release …** text at the bottom. It must change after a real deploy.
 
 First start creates SQLite and the demo accounts if `prisma/dev.db` is missing.
 

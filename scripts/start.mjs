@@ -1,3 +1,4 @@
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -34,7 +35,53 @@ function resolvePort() {
   return process.env.PORT || "3000";
 }
 
+function latestMtime(target) {
+  const full = path.isAbsolute(target) ? target : path.join(root, target);
+  if (!existsSync(full)) return 0;
+  const st = statSync(full);
+  if (st.isFile()) return st.mtimeMs;
+  let max = st.mtimeMs;
+  for (const name of readdirSync(full)) {
+    if (name === "node_modules" || name === ".next" || name.startsWith(".")) continue;
+    max = Math.max(max, latestMtime(path.join(full, name)));
+  }
+  return max;
+}
+
+function sourceMtime() {
+  return Math.max(
+    latestMtime("app"),
+    latestMtime("components"),
+    latestMtime("lib"),
+    latestMtime("prisma/schema.prisma"),
+    latestMtime("public"),
+    latestMtime("next.config.ts"),
+    latestMtime("package.json"),
+  );
+}
+
+function builtAt() {
+  const id = path.join(root, ".next", "BUILD_ID");
+  if (!existsSync(id)) return 0;
+  return statSync(id).mtimeMs;
+}
+
+function rebuildIfStale() {
+  const force = process.env.HARBOR_REBUILD_ON_START === "1";
+  const skip = process.env.HARBOR_REBUILD_ON_START === "0";
+  if (skip) return;
+  const source = sourceMtime();
+  const built = builtAt();
+  if (!force && built && source <= built + 2000) return;
+  console.log("[harbor] App source is newer than .next (or no build exists). Running next build…");
+  const prismaBin = require.resolve("prisma/build/index.js");
+  const nextBin = require.resolve("next/dist/bin/next");
+  run(process.execPath, [prismaBin, "generate"]);
+  run(process.execPath, [nextBin, "build"]);
+}
+
 run(process.execPath, [path.join(root, "scripts", "bootstrap.mjs")]);
+rebuildIfStale();
 
 const port = resolvePort();
 printAccessUrls(port);
