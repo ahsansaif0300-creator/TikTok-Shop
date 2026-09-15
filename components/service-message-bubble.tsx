@@ -1,7 +1,8 @@
 import { format } from "date-fns";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 function senderLabel(sender: string, name?: string | null) {
-  if (sender === "BOT") return "TikiTok Shop Service assistant";
+  if (sender === "BOT") return `${BRAND_NAME} Service assistant`;
   if (sender === "AGENT") return `${name ?? "Support"} · team`;
   return `${name ?? "Store"} · store`;
 }

@@ -14,6 +14,8 @@ import {
 } from "@prisma/client";
 import { STORE_CATEGORIES, categorySlug } from "../lib/store-categories";
 import { GROWTH_MAX_PRODUCTS, ON_SHELF_TITLES, pricedDistributionCatalog, pricedExtraProducts } from "../lib/distribution-catalog";
+import { BRAND_NAME } from "../lib/brand-name";
+import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "../lib/store-score";
 
 const prisma = new PrismaClient();
 
@@ -51,7 +53,7 @@ async function main() {
 
   await prisma.setting.createMany({
     data: [
-      { key: "storeName", value: "TikiTok Shop" },
+      { key: "storeName", value: BRAND_NAME },
       { key: "supportEmail", value: "julia.r@example.org" },
       { key: "currency", value: "USD" },
       { key: "supportUrl", value: "https://support.harbor.example" },
@@ -165,8 +167,8 @@ async function main() {
           address: `100 Market Street, ${def.city}`,
           status: def.status,
           planId: def.planId,
-          rating: 5.5,
-          creditScore: 100,
+          rating: DEFAULT_STORE_RATING,
+          creditScore: DEFAULT_STORE_CREDIT,
           reviewCount: 20 + Math.floor(Math.random() * 80),
           bankName: def.bankName,
           bankAccountLast4: def.last4,
@@ -665,7 +667,7 @@ async function main() {
     ],
   });
 
-  console.log("TikiTok Shop demo data ready.");
+  console.log(`${BRAND_NAME} demo data ready.`);
   console.log("  oscar.d@example.net / HarborAdmin!2026");
   console.log("  sarah.b@example.net / HarborOps!2026");
   console.log("  iris.p@example.org / HarborMerchant!2026");

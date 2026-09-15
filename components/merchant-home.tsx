@@ -106,7 +106,7 @@ export function MerchantHome({
       <div className="mt-3 grid grid-cols-2 gap-3">
         <Card className="p-4">
           <p className="text-xs text-muted">Store Rating</p>
-          <p className="mt-1 text-lg font-semibold text-ink">{formatStoreRating(storeRating)} / 10</p>
+          <p className="mt-1 text-lg font-semibold text-ink">{formatStoreRating(storeRating)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted">Credit Score</p>

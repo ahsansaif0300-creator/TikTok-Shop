@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "scripts/fetch-catalog-photos.ts", "scripts/normalize-catalog-photos.ts", "scripts/convert-ai-fitness.ts"]
+  "exclude": [
+    "node_modules",
+    "scripts/fetch-catalog-photos.ts",
+    "scripts/normalize-catalog-photos.ts",
+    "scripts/convert-ai-fitness.ts",
+    "scripts/render-catalog-photos.ts"
+  ]
 }

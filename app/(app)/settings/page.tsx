@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { saveSettings } from "@/lib/actions/catalog";
 import { Button, Card, Field, PageHeader } from "@/components/ui";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 export default async function SettingsPage({
   searchParams,
@@ -23,7 +24,7 @@ export default async function SettingsPage({
       ) : null}
       <Card className="p-6">
         <form action={saveSettings} className="space-y-4">
-          <Field name="storeName" label="Workspace name" defaultValue={settings.storeName ?? "TikiTok Shop"} />
+          <Field name="storeName" label="Workspace name" defaultValue={settings.storeName ?? BRAND_NAME} />
           <Field name="supportEmail" label="Support email" defaultValue={settings.supportEmail ?? ""} />
           <Field name="supportUrl" label="Help center URL" defaultValue={settings.supportUrl ?? ""} />
           <Field name="currency" label="Currency" defaultValue={settings.currency ?? "USD"} />

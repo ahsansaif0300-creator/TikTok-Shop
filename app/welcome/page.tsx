@@ -2,12 +2,13 @@ import Link from "next/link";
 import { AuthFrame } from "@/components/auth-frame";
 import { LOGIN } from "@/lib/access";
 import { buildStamp } from "@/lib/build-stamp";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 export default function WelcomePage() {
   const stamp = buildStamp();
   return (
     <AuthFrame
-      title="TikiTok Shop"
+      title={BRAND_NAME}
       subtitle="Real shops, orders, and bank payouts. Pick the door that matches your account — they are separate logins, not one shared form."
       footer={
         <>

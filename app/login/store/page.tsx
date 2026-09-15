@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loginStoreAction } from "@/lib/actions/auth";
 import { RoleLoginForm } from "@/components/role-login-form";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 export default async function StoreLoginPage({
   searchParams,
@@ -11,7 +12,7 @@ export default async function StoreLoginPage({
   return (
     <RoleLoginForm
       title="Store Login"
-      subtitle="Sign in to your TikiTok Shop dashboard. You only see this store’s catalog, orders, balance, and service inbox."
+      subtitle={`Sign in to your ${BRAND_NAME} dashboard. You only see this store’s catalog, orders, balance, and service inbox.`}
       action={loginStoreAction}
       error={error}
       footer={

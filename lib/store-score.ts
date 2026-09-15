@@ -1,8 +1,8 @@
 export const STORE_RATING_MIN = 0;
-export const STORE_RATING_MAX = 10;
+export const STORE_RATING_MAX = 5;
 export const STORE_CREDIT_MIN = 0;
 export const STORE_CREDIT_MAX = 100;
-export const DEFAULT_STORE_RATING = 5.5;
+export const DEFAULT_STORE_RATING = 5.0;
 export const DEFAULT_STORE_CREDIT = 100;
 
 function parseNumber(raw: unknown) {
@@ -31,5 +31,16 @@ export function parseStoreCreditScore(raw: unknown) {
 }
 
 export function formatStoreRating(value: number) {
-  return Number(value).toFixed(1);
+  return clampStoreRating(value).toFixed(1);
+}
+
+export function clampStoreRating(value: number) {
+  if (!Number.isFinite(value)) return DEFAULT_STORE_RATING;
+  if (value > STORE_RATING_MAX) return DEFAULT_STORE_RATING;
+  if (value < STORE_RATING_MIN) return STORE_RATING_MIN;
+  return Number(value.toFixed(1));
+}
+
+export function formatStoreRatingOutOf(value: number) {
+  return formatStoreRating(clampStoreRating(value));
 }

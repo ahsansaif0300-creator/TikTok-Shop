@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { AuthFrame } from "@/components/auth-frame";
 import { LOGIN } from "@/lib/access";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 export default function LoginIndexPage() {
   return (
     <AuthFrame
-      title="TikiTok Shop sign in"
+      title={`${BRAND_NAME} sign in`}
       subtitle="Choose the login that matches your account. Each area has its own URL and only accepts that role."
     >
       <ul className="mt-6 space-y-3 text-sm">

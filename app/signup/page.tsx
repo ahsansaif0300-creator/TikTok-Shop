@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuthFrame } from "@/components/auth-frame";
 import { SignupForm } from "@/components/signup-form";
 import { buildStamp } from "@/lib/build-stamp";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 export default async function SignupPage({
   searchParams,
@@ -13,11 +14,11 @@ export default async function SignupPage({
 
   return (
     <AuthFrame
-      title="Create a TikiTok Shop"
+      title={`Create a ${BRAND_NAME}`}
       subtitle="You get a unique shop link and a seller login. ID photos go to Super Admin. A Normal Backend referral code sends the shop for approval first."
       footer={
         <>
-          Already selling on TikiTok Shop?{" "}
+          Already selling on {BRAND_NAME}?{" "}
           <Link href="/login/store" className="font-medium text-cyan hover:underline">
             Sign in
           </Link>

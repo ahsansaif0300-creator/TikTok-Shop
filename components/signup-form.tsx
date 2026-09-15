@@ -4,12 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { signupMerchantAction } from "@/lib/actions/signup";
 import { IdCardCapture } from "@/components/id-card-capture";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 const ERRORS: Record<string, string> = {
-  email: "That email already has a TikiTok Shop login.",
+  email: `That email already has a ${BRAND_NAME} login.`,
   password: "Password must be at least 8 characters.",
   mismatch: "Password and confirmation do not match.",
-  setup: "TikiTok Shop could not create a shop right now. Try again after the database is ready.",
+  setup: `${BRAND_NAME} could not create a shop right now. Try again after the database is ready.`,
   invalid: "Fill in shop name, your name, email, password, and country.",
   id: "Upload both the front and back of the ID card.",
   "id-type": "ID photos must be JPEG, PNG, or WebP.",

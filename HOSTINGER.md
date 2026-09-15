@@ -93,7 +93,7 @@ Paste that output as `AUTH_SECRET`. Do not use the example value from `.env.exam
 
 Do **not** set `AUTH_COOKIE_SECURE=false`. The temporary domain is HTTPS, so the login cookie should stay Secure.
 
-Set `APP_BASE_URL` to the same URL people type in the browser (no trailing slash). TikiTok Shop uses it when it prints a shop link such as `https://YOUR-TEMP-DOMAIN.hostingersite.com/s/northline-outfitters`.
+Set `APP_BASE_URL` to the same URL people type in the browser (no trailing slash). TikTok Shop uses it when it prints a shop link such as `https://YOUR-TEMP-DOMAIN.hostingersite.com/s/northline-outfitters`.
 
 After you attach a **custom domain**, change `APP_BASE_URL` to `https://yourdomain.com`. If you also add a wildcard DNS record (`*.yourdomain.com`) pointing at the same app, set `SHOP_BASE_DOMAIN=yourdomain.com` so each shop can be opened as `https://shop-slug.yourdomain.com`. Without wildcard DNS, keep using `/s/shop-slug` on the main domain.
 
@@ -139,7 +139,7 @@ Change these under **Profile** before you invite anyone.
 - **Build failed:** open **Deployments** and read the log. Node must be 20+.
 - **TypeScript errors** (`Cannot find name 'isListedProduct'`, `implicit any` in `lib/ensure-db.ts`): that is an **old GitHub commit**. Latest **`main`** already imports `isListedProduct` and types the SQLite PRAGMA rows. In hPanel, Deploy **`main` again** (do not click “Fix and redeploy” on the failed old build). Then **Restart**. `npm run build` on current `main` completes TypeScript successfully.
 - **Site not reachable / 403:** do not edit `public_html/.htaccess`. Redeploy so Hostinger regenerates it.
-- **“TikiTok Shop could not open the packed demo database”:** Redeploy the latest **`main`** branch (it includes `prisma/demo.sqlite`). Then **Restart**. `DATABASE_URL` can stay `file:./dev.db`; the app copies the packed demo DB into a writable folder automatically.
+- **“TikTok Shop could not open the packed demo database”:** Redeploy the latest **`main`** branch (it includes `prisma/demo.sqlite`). Then **Restart**. `DATABASE_URL` can stay `file:./dev.db`; the app copies the packed demo DB into a writable folder automatically.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
 - **Empty data after every deploy:** SQLite lives in the app folder and can reset on redeploy. Fine for a demo. For real orders, move to a VPS disk or hosted Postgres later.
 - **npm audit / “7 vulnerabilities” after a green Next.js build:** Hostinger is blocking install on `next@16.3.1` and nested Prisma/js-yaml/sharp advisories. Latest **`main`** uses Next.js **16.3.5** and `package.json` overrides. Deploy **`main` again** (do not “Fix and redeploy” the old failed snapshot). Then **Restart**. Do not upgrade Prisma to 7 on Hostinger; SQLite `db push` stays on Prisma 6.

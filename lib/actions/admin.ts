@@ -381,7 +381,7 @@ export async function updateStoreScore(formData: FormData) {
       action: "store:score",
       entity: "Merchant",
       entityId: merchantId,
-      detail: `Set ${store.name} rating ${rating}/10 and credit score ${creditScore}/100`,
+      detail: `Set ${store.name} rating ${rating} and credit score ${creditScore}/100`,
     },
   });
   revalidatePath("/");

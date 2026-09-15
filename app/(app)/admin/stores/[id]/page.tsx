@@ -10,6 +10,7 @@ import { shopAbsoluteUrl, shopPath } from "@/lib/shop-url";
 import { Card, PageHeader, StatusBadge } from "@/components/ui";
 import { StoreIdentityForm } from "@/components/store-identity-form";
 import { StoreScoreForm } from "@/components/store-score-form";
+import { formatStoreRating } from "@/lib/store-score";
 
 export default async function StoreRecordDetailPage({
   params,
@@ -55,7 +56,7 @@ export default async function StoreRecordDetailPage({
       ) : null}
       {error === "score" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          Rating must be 0–10 and credit score must be a whole number 0–100. Negative values are not allowed.
+          Rating must be 0–5.0 and credit score must be a whole number 0–100. Negative values are not allowed.
         </p>
       ) : null}
       <div className="grid gap-6 xl:grid-cols-2">
@@ -72,7 +73,7 @@ export default async function StoreRecordDetailPage({
               ["Country", store.country || "—"],
               ["Address", store.address || "—"],
               ["Plan", store.plan.name],
-              ["Store Rating", `${Number(store.rating).toFixed(1)} / 10`],
+              ["Store Rating", formatStoreRating(store.rating)],
               ["Credit Score", `${Math.round(store.creditScore)} / 100`],
               ["Available", money(store.availableBalance)],
               ["Pending", money(store.pendingBalance)],

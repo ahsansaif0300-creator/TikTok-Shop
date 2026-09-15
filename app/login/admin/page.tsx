@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loginAdminAction } from "@/lib/actions/auth";
 import { RoleLoginForm } from "@/components/role-login-form";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 export default async function SuperAdminLoginPage({
   searchParams,
@@ -11,7 +12,7 @@ export default async function SuperAdminLoginPage({
   return (
     <RoleLoginForm
       title="Super Admin Login"
-      subtitle="Main Backend for TikiTok Shop staff who manage every store, payouts, and system settings."
+      subtitle={`Main Backend for ${BRAND_NAME} staff who manage every store, payouts, and system settings.`}
       action={loginAdminAction}
       error={error}
       footer={

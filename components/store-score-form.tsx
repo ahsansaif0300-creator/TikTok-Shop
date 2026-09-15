@@ -1,6 +1,6 @@
 import { updateStoreScore } from "@/lib/actions/admin";
 import { Button } from "@/components/ui";
-import { formatStoreRating } from "@/lib/store-score";
+import { formatStoreRating, STORE_RATING_MAX, STORE_RATING_MIN } from "@/lib/store-score";
 
 export function StoreScoreForm({
   merchantId,
@@ -25,14 +25,16 @@ export function StoreScoreForm({
           name="rating"
           type="number"
           inputMode="decimal"
-          min={0}
-          max={10}
+          min={STORE_RATING_MIN}
+          max={STORE_RATING_MAX}
           step={0.1}
           required
           defaultValue={formatStoreRating(rating)}
           className="h-11 w-full rounded-xl border border-line px-3"
         />
-        <span className="block text-xs text-muted">0 to 10. Negative values are rejected.</span>
+        <span className="block text-xs text-muted">
+          {STORE_RATING_MIN} to {STORE_RATING_MAX.toFixed(1)}. Negative values are rejected.
+        </span>
       </label>
       <label className="block space-y-1.5 text-sm">
         <span className="font-medium">Credit Score</span>

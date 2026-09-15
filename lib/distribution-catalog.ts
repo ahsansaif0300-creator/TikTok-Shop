@@ -596,7 +596,7 @@ export function pricedDistributionCatalog() {
   return flattenDistributionCatalog().map((draft) => {
     const index = counts[draft.category] ?? 0;
     counts[draft.category] = index + 1;
-    return pricedCatalogRow(draft, index);
+    return rememberCatalogRow(pricedCatalogRow(draft, index));
   });
 }
 
@@ -629,16 +629,31 @@ export const EXTRA_STORE_PRODUCTS: {
   { merchant: 5, category: "Computer accessories", title: "BrightByte USB-C Dock Mini", selling: 139, blurb: "Travel dock archived with the suspended store." },
 ];
 
+const catalogBySku = new Map<string, { sku: string; title: string; category: string }>();
+
+function rememberCatalogRow(row: { sku: string; title: string; category: string }) {
+  catalogBySku.set(row.sku, { sku: row.sku, title: row.title, category: row.category });
+  return row;
+}
+
+export function catalogRowForSku(sku: string) {
+  if (catalogBySku.size === 0) {
+    pricedDistributionCatalog();
+    pricedExtraProducts();
+  }
+  return catalogBySku.get(sku);
+}
+
 export function pricedExtraProducts() {
   return EXTRA_STORE_PRODUCTS.map((item, index) => {
     const sku = `EX-${item.merchant + 1}-${categorySlug(item.title).slice(0, 22)}`;
     const priced = costFromSelling(item.selling, m(index));
-    return {
+    return rememberCatalogRow({
       ...item,
       ...priced,
       sku,
       image: catalogPhotoPath(sku),
       description: `${item.title}. ${item.blurb} Cost, selling price, and listing status share one product record.`,
-    };
+    });
   });
 }

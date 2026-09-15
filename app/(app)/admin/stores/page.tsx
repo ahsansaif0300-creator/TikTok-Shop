@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireSuperAdmin } from "@/lib/auth";
 import { MERCHANT_STATUS } from "@/lib/labels";
 import { Card, Empty, PageHeader, SearchForm, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
+import { formatStoreRating } from "@/lib/store-score";
 
 export default async function StoreRecordsPage({
   searchParams,
@@ -64,7 +65,7 @@ export default async function StoreRecordsPage({
                     </Link>
                     <p className="text-xs text-muted">{store.slug}</p>
                   </Td>
-                  <Td>{Number(store.rating).toFixed(1)} / 10</Td>
+                  <Td>{formatStoreRating(store.rating)}</Td>
                   <Td>{Math.round(store.creditScore)} / 100</Td>
                   <Td>{store.email}</Td>
                   <Td>{store.phone || "—"}</Td>

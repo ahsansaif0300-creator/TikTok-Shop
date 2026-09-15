@@ -17,7 +17,7 @@ async function fillFromCommons(title: string, dest: string) {
     "https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=6&prop=imageinfo&iiprop=url|mime&iiurlwidth=800&gsrsearch=" +
     encodeURIComponent(title);
   const res = await fetch(url, {
-    headers: { "User-Agent": "TikiTokShop/1.0 (catalog photos)", Accept: "application/json" },
+    headers: { "User-Agent": "TikTokShop/1.0 (catalog photos)", Accept: "application/json" },
     signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) return false;

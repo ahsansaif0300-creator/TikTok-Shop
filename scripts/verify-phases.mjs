@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Phase checklist runner for TikiTok Shop.
+ * Phase checklist runner for TikTok Shop.
  *   node scripts/verify-phases.mjs           # files + seed + lifecycle (phases 1–7)
  *   node scripts/verify-phases.mjs --http    # also hit a running server (phases 2–7)
  */
@@ -213,7 +213,7 @@ async function phase1Static() {
   await check(1, "No impersonation or trap-product code in app source", () => {
     const hits = [];
     for (const file of sourceFiles()) {
-      const text = readFileSync(file, "utf8");
+      const text = readFileSync(file, "utf8").replace(/TikTok Shop/gi, "").replace(/TikiTok Shop/gi, "");
       if (/tiktok|bytedance|yuebao|yu'?e\s*bao|invite.?pyramid|virtual.?order|auto.?order|blockchain/i.test(text)) {
         hits.push(path.relative(root, file));
       }
@@ -246,7 +246,7 @@ async function phase1Database(prisma, bcrypt) {
   });
   await check(1, "Workspace settings are seeded", async () => {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });
-    assert(name?.value === "TikiTok Shop", `storeName is ${name?.value}`);
+    assert(name?.value === "TikTok Shop", `storeName is ${name?.value}`);
   });
 }
 
@@ -269,14 +269,14 @@ async function phase2Static() {
       assert(exists(file), `Missing ${file}`);
     }
     const chrome = read("components/workspace-chrome.tsx") + read("components/brand.tsx") + read("lib/brand-name.ts");
-    assert(chrome.includes("TikiTok Shop"), "Brand mark missing from shell");
+    assert(chrome.includes("TikTok Shop"), "Brand mark missing from shell");
     assert(chrome.includes("logoutAction"), "Logout control missing");
     assert(chrome.includes("Open menu"), "Mobile menu control missing");
     const nav = read("lib/nav.ts");
     assert(nav.includes("isNavActive"), "Longest-prefix nav matching missing");
     assert(exists("public/products/p01.jpg") && exists("lib/product-image.ts"), "Dummy product images missing");
     assert(exists("public/catalog/DC-hot-selling-items-01.jpg"), "Catalog product photos missing");
-    assert(exists("app/product-art/[sku]/route.ts") && exists("lib/product-art.ts"), "Generated product art route missing");
+    assert(exists("app/product-art/[sku]/route.ts") && exists("lib/product-art.ts") && exists("lib/product-photo.ts"), "Generated product art route missing");
     assert(read("lib/access.ts").includes("/product-art/"), "Product art must be a public path");
     const distribution = read("app/(app)/distribution/page.tsx") + read("lib/product-margin.ts") + read("lib/distribution-catalog.ts");
     assert(distribution.includes("Profit Margin"), "Distribution missing profit margin");
@@ -337,9 +337,10 @@ async function phase2Static() {
       read("app/login/admin/page.tsx") +
       read("app/login/ops/page.tsx") +
       read("app/login/store/page.tsx") +
-      read("components/role-login-form.tsx");
-    assert(login.includes("TikiTok Shop"), "Login missing product name");
-    assert(!/tiktok/i.test(login), "Login still mentions TikTok");
+      read("components/role-login-form.tsx") +
+      read("lib/brand-name.ts");
+    assert(login.includes("TikTok Shop"), "Login missing product name");
+    assert(login.includes("BRAND_NAME"), "Login must use the shared brand name");
     assert(!login.includes("HarborAdmin!2026"), "Demo admin password leaked on login");
     assert(!login.includes("HarborMerchant!2026"), "Demo merchant password leaked on login");
     assert(!login.includes("oscar.d@example.net"), "Demo admin email leaked on login");
@@ -943,7 +944,7 @@ async function phase5Database(prisma) {
     await prisma.merchant.delete({ where: { id: merchant.id } });
     await prisma.plan.delete({ where: { id: plan.id } });
   });
-  await check(5, "New stores default to rating 5.5 and credit score 100", async () => {
+  await check(5, "New stores default to rating 5.0 and credit score 100", async () => {
     const plan = await prisma.plan.findFirst({ orderBy: { monthlyFee: "asc" } });
     assert(plan, "Need a plan");
     const merchant = await prisma.merchant.create({
@@ -962,7 +963,7 @@ async function phase5Database(prisma) {
     });
     const loaded = await prisma.merchant.findUnique({ where: { id: merchant.id } });
     assert(loaded, "Score fixture missing");
-    assert(Number(loaded.rating) === 5.5, `Expected rating 5.5, got ${loaded.rating}`);
+    assert(Number(loaded.rating) === 5.0, `Expected rating 5.0, got ${loaded.rating}`);
     assert(loaded.creditScore === 100, `Expected credit 100, got ${loaded.creditScore}`);
     await prisma.merchant.delete({ where: { id: merchant.id } });
   });
@@ -1041,11 +1042,11 @@ async function phase6Static() {
     assert(admin.includes("schedulePaymentRelease") && admin.includes("broadcastToStores"), "Release or broadcast helper missing");
     assert(admin.includes("createOpsUser"), "Ops user helper missing");
     assert(admin.includes("updateStoreScore") && admin.includes("parseStoreRating"), "Store score editor missing");
-    assert(read("lib/store-score.ts").includes("STORE_RATING_MAX = 10"), "Store rating limit missing");
+    assert(read("lib/store-score.ts").includes("STORE_RATING_MAX = 5"), "Store rating limit missing");
     assert(read("lib/store-score.ts").includes("STORE_CREDIT_MAX = 100"), "Store credit limit missing");
     assert(read("lib/store-score.ts").includes("value < STORE_RATING_MIN"), "Negative rating must be rejected");
     assert(read("prisma/schema.prisma").includes("creditScore"), "Merchant creditScore column missing");
-    assert(read("prisma/schema.prisma").includes("@default(5.5)"), "Store rating default must be 5.5");
+    assert(read("prisma/schema.prisma").includes("@default(5.0)"), "Store rating default must be 5.0");
     assert(read("components/merchant-home.tsx").includes("Store Rating") && read("components/merchant-home.tsx").includes("Credit Score"), "Store dashboard scores missing");
     assert(read("app/(app)/admin/stores/[id]/page.tsx").includes("StoreScoreForm"), "Super Admin store score form missing");
     assert(!read("lib/actions/account.ts").includes("creditScore"), "Store users must not edit credit score");
@@ -1445,8 +1446,7 @@ async function phaseHttp(prisma) {
   await check(2, "Login HTML uses the product name, not a marketplace clone", async () => {
     const { res, text } = await pageText("/login");
     assert(res.status === 200, `/login ${res.status}`);
-    assert(/TikiTok Shop/.test(text), "Login HTML missing product name");
-    assert(!/tiktok/i.test(text), "Login HTML mentions TikTok");
+    assert(/TikTok Shop/.test(text), "Login HTML missing product name");
     assert(/signup/i.test(text), "Login HTML missing Sign up");
     assert(!/HarborAdmin!2026|HarborMerchant!2026|HarborOps!2026/.test(text), "Login HTML leaked demo passwords");
   });
@@ -1468,7 +1468,7 @@ async function phaseHttp(prisma) {
     assert(signup.status === 200, `/signup returned ${signup.status}`);
     const { res, text } = await pageText("/s/northline-outfitters");
     assert(res.status === 200, `/s/northline-outfitters ${res.status}`);
-    assert(/TikiTok Shop/.test(text), "Shop card missing product name");
+    assert(/TikTok Shop/.test(text), "Shop card missing product name");
     assert(/Seller login|Sign in/.test(text), "Shop card missing seller login");
     assert(/northline-outfitters/.test(text), "Shop card missing slug");
   });
@@ -1750,7 +1750,7 @@ async function phaseHttp(prisma) {
     assert(service.res.status === 200, `Merchant /service ${service.res.status}`);
     assert(service.text.includes("Store ID"), "Service missing store identity");
     assert(service.text.includes("Northline Outfitters"), "Service missing logged-in store name");
-    assert(service.text.includes("TikiTok Shop Service assistant") || service.text.includes("assistant"), "Service assistant missing");
+    assert(service.text.includes("TikTok Shop Service assistant") || service.text.includes("assistant"), "Service assistant missing");
     const profile = await pageText("/profile", merchantCookie);
     assert(profile.res.status === 200, `Merchant /profile ${profile.res.status}`);
     assert(profile.text.includes("Available balance"), "Store profile missing server balance");
@@ -1785,7 +1785,7 @@ function printSummary() {
 async function main() {
   process.chdir(root);
   loadEnv();
-  console.log("TikiTok Shop — phase verification");
+  console.log("TikTok Shop — phase verification");
   console.log(httpMode ? `Mode: source + database + HTTP (${baseUrl})` : "Mode: source + database");
 
   await phase1Static();

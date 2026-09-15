@@ -7,6 +7,7 @@ import { ServiceComposer } from "@/components/service-composer";
 import { ServiceMessageBubble } from "@/components/service-message-bubble";
 import { ServiceTimer } from "@/components/service-timer";
 import { Card, Empty, PageHeader } from "@/components/ui";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 const STATUS_LABEL = {
   INTAKE: "Assistant intake",
@@ -187,7 +188,7 @@ export default async function ServicePage({
     <div className="max-w-3xl">
       <PageHeader
         title="Service"
-        subtitle="TikiTok Shop support assistant. Your store is identified from this login — you do not enter a Store ID."
+        subtitle={`${BRAND_NAME} support assistant. Your store is identified from this login — you do not enter a Store ID.`}
       />
       {error === "empty" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Write a message or attach an image/video.</p>

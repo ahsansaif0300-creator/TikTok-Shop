@@ -8,6 +8,7 @@ import { BrandBar, BrandFooter, HarborMark } from "@/components/brand";
 import { CopyShopLink } from "@/components/copy-shop-link";
 import { ProductThumb } from "@/components/product-thumb";
 import { listedCatalogWhere } from "@/lib/product-listing";
+import { BRAND_NAME } from "@/lib/brand-name";
 
 export default async function PublicShopPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -53,7 +54,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
             <div className="min-w-0">
               <h1 className="truncate text-xl font-semibold">{merchant.name}</h1>
               <p className="text-sm text-muted">
-                {open ? "TikiTok Shop seller" : "This shop is not taking orders right now."}
+                {open ? `${BRAND_NAME} seller` : "This shop is not taking orders right now."}
               </p>
             </div>
           </div>

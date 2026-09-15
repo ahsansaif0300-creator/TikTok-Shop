@@ -1,4 +1,4 @@
-# How to use TikiTok Shop
+# How to use TikTok Shop
 
 This is the day-to-day guide after the app is installed. It is an **operations dashboard** for real merchants, orders, refunds, and bank payouts — not a customer storefront and not a marketplace clone.
 
@@ -98,7 +98,7 @@ After login you land on the dashboard. Use the sidebar (or **Open menu** on a ph
 
 New sellers can open **`/signup`** (linked from Sign in) and create a shop without staff first. Staff can still log inbound applications.
 
-Each shop has a unique public link: **`/s/{shop-slug}`** (for example `/s/northline-outfitters`). After you set `APP_BASE_URL`, TikiTok Shop prints the full URL. With a custom domain and wildcard DNS (`SHOP_BASE_DOMAIN`), that same slug can also be `https://{slug}.yourdomain.com`.
+Each shop has a unique public link: **`/s/{shop-slug}`** (for example `/s/northline-outfitters`). After you set `APP_BASE_URL`, TikTok Shop prints the full URL. With a custom domain and wildcard DNS (`SHOP_BASE_DOMAIN`), that same slug can also be `https://{slug}.yourdomain.com`.
 
 ## 3. Daily loop for operations staff
 
@@ -149,14 +149,14 @@ You cannot open other stores, Team, Settings, global customers, or categories.
 
 ## Make a shop from the admin panel
 
-Sign in as **oscar.d@example.net**. Shops in TikiTok Shop are **Merchants**.
+Sign in as **oscar.d@example.net**. Shops in TikTok Shop are **Merchants**.
 
-Sellers can also self-serve: open `/signup`, pick a shop name, and TikiTok Shop creates an ACTIVE store plus a merchant login and a unique `/s/{slug}` link.
+Sellers can also self-serve: open `/signup`, pick a shop name, and TikTok Shop creates an ACTIVE store plus a merchant login and a unique `/s/{slug}` link.
 
 Staff path:
 
 1. **Applications** → fill **Log inbound seller** (business name, contact, email, country, category) → **Save application**.
-2. On that row click **Approve**. TikiTok Shop creates an ACTIVE store on the Starter plan with a unique slug.
+2. On that row click **Approve**. TikTok Shop creates an ACTIVE store on the Starter plan with a unique slug.
 3. Open **Merchants** → click the store → **Activate** if needed, assign a **Seller plan**. Copy the **Shop link**.
 4. On the same page, **Create store login** (email + password 8+ characters) if the seller did not sign up themselves.
 5. The seller signs in at `/login/store` or the shop card’s **Seller login**, and only sees that shop (products, orders, shipping, payouts).

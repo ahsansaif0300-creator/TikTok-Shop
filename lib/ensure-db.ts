@@ -4,7 +4,8 @@ import { getPrisma, resetPrisma } from "./db";
 import { STORE_CATEGORIES, categorySlug } from "./store-categories";
 import { backfillStoreCodes } from "./store-code";
 import { ensureOpsReferralCodes } from "./referral";
-import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "./store-score";
+import { BRAND_NAME } from "./brand-name";
+import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING, STORE_RATING_MAX } from "./store-score";
 import { bumpGrowthCatalogCap, syncDistributionCatalog } from "./sync-distribution-catalog";
 
 async function backfill() {
@@ -119,6 +120,14 @@ async function backfill() {
       });
       await prisma.setting.create({ data: { key: "storeScoreInitialized", value: "1" } });
     }
+    const scale = await prisma.setting.findUnique({ where: { key: "storeRatingScaleV2" } });
+    if (!scale) {
+      await prisma.merchant.updateMany({
+        where: { rating: { gt: STORE_RATING_MAX } },
+        data: { rating: DEFAULT_STORE_RATING },
+      });
+      await prisma.setting.create({ data: { key: "storeRatingScaleV2", value: "1" } });
+    }
   } catch (error) {
     console.warn("[harbor] store score backfill skipped", error);
   }
@@ -135,10 +144,10 @@ async function backfill() {
     if (northline && northline._count.products < 500) {
       await syncDistributionCatalog(prisma);
     }
-    const photos = await prisma.setting.findUnique({ where: { key: "distributionPhotosV1" } });
+    const photos = await prisma.setting.findUnique({ where: { key: "distributionPhotosV2" } });
     if (!photos) {
       await syncDistributionCatalog(prisma);
-      await prisma.setting.create({ data: { key: "distributionPhotosV1", value: "1" } });
+      await prisma.setting.create({ data: { key: "distributionPhotosV2", value: "1" } });
     }
     const flag = await prisma.setting.findUnique({ where: { key: "distributionCatalogV1" } });
     if (!flag) {
@@ -150,9 +159,9 @@ async function backfill() {
   try {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });
     if (!name) {
-      await prisma.setting.create({ data: { key: "storeName", value: "TikiTok Shop" } });
-    } else if (name.value === "Harbor Commerce") {
-      await prisma.setting.update({ where: { key: "storeName" }, data: { value: "TikiTok Shop" } });
+      await prisma.setting.create({ data: { key: "storeName", value: BRAND_NAME } });
+    } else if (name.value === "Harbor Commerce" || name.value === "TikiTok Shop") {
+      await prisma.setting.update({ where: { key: "storeName" }, data: { value: BRAND_NAME } });
     }
   } catch (error) {
     console.warn("[harbor] storeName backfill skipped", error);
