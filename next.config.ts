@@ -20,7 +20,19 @@ const previewHosts = [
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma"],
   outputFileTracingIncludes: {
-    "/**": ["./prisma/demo.sqlite", "./scripts/copy-demo-db.mjs", "./scripts/bootstrap.mjs"],
+    "/**": ["./prisma/demo.sqlite", "./scripts/copy-demo-db.mjs", "./scripts/bootstrap.mjs", "./public/catalog"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/distribution",
+        headers: [{ key: "Cache-Control", value: "private, no-cache, must-revalidate" }],
+      },
+      {
+        source: "/welcome",
+        headers: [{ key: "Cache-Control", value: "private, no-cache, must-revalidate" }],
+      },
+    ];
   },
   allowedDevOrigins: previewHosts,
     experimental: {

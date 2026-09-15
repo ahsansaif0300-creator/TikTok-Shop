@@ -1,5 +1,6 @@
 import { STORE_CATEGORIES, categorySlug } from "@/lib/store-categories";
-import { catalogArtPath, costFromSelling } from "@/lib/product-margin";
+import { catalogPhotoPath } from "@/lib/catalog-photo";
+import { costFromSelling } from "@/lib/product-margin";
 
 export type CatalogDraft = {
   category: string;
@@ -606,7 +607,7 @@ export function pricedCatalogRow(draft: CatalogDraft, index: number) {
     ...draft,
     ...priced,
     sku,
-    image: catalogArtPath(sku),
+    image: catalogPhotoPath(sku),
     description: `${draft.title}. ${draft.blurb} Cost and selling prices are stored separately so listing status can change without duplicating the SKU.`,
   };
 }
@@ -636,7 +637,7 @@ export function pricedExtraProducts() {
       ...item,
       ...priced,
       sku,
-      image: catalogArtPath(sku),
+      image: catalogPhotoPath(sku),
       description: `${item.title}. ${item.blurb} Cost, selling price, and listing status share one product record.`,
     };
   });

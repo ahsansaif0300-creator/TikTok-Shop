@@ -275,6 +275,7 @@ async function phase2Static() {
     const nav = read("lib/nav.ts");
     assert(nav.includes("isNavActive"), "Longest-prefix nav matching missing");
     assert(exists("public/products/p01.jpg") && exists("lib/product-image.ts"), "Dummy product images missing");
+    assert(exists("public/catalog/DC-hot-selling-items-01.jpg"), "Catalog product photos missing");
     assert(exists("app/product-art/[sku]/route.ts") && exists("lib/product-art.ts"), "Generated product art route missing");
     assert(read("lib/access.ts").includes("/product-art/"), "Product art must be a public path");
     const distribution = read("app/(app)/distribution/page.tsx") + read("lib/product-margin.ts") + read("lib/distribution-catalog.ts");
@@ -873,7 +874,7 @@ async function phase5Database(prisma) {
       assert(product.price - product.cost > 0, `${product.title} has no profit`);
       const margin = (product.price - product.cost) / product.price;
       assert(margin >= 0.229 && margin <= 0.251, `${product.title} margin ${margin}`);
-      assert(product.image.includes("/product-art/"), `${product.title} missing generated art`);
+      assert(product.image.includes("/catalog/") || product.image.includes("/product-art/"), `${product.title} missing catalog image`);
       assert(!titles.has(product.title), `Duplicate title ${product.title}`);
       assert(!images.has(product.image), `Duplicate image ${product.image}`);
       titles.add(product.title);
@@ -1596,7 +1597,7 @@ async function phaseHttp(prisma) {
     assert(text.includes("Northline Outfitters"), "Store name missing from merchant workspace");
     assert(text.includes("Available balance"), "Merchant wallet missing");
     assert(hasHref(text, "/service"), "Merchant dashboard missing Service");
-    assert(text.includes("/product-art/") || text.includes("/products/p"), "Merchant dashboard missing product images");
+    assert(text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant dashboard missing product images");
     assert(hasHref(text, "/distribution"), "Merchant dashboard missing Distribution");
     assert(!hasHref(text, "/merchants"), "Merchant nav leaked Merchants");
     assert(!hasHref(text, "/merchants/applications"), "Merchant nav leaked Applications");
@@ -1614,7 +1615,7 @@ async function phaseHttp(prisma) {
     assert(!text.includes("Cedar &amp; Co") && !text.includes("Cedar & Co. Home"), "Merchant orders leaked Cedar & Co.");
     assert(!text.includes("Lumen Beauty"), "Merchant orders leaked Lumen Beauty");
     assert(text.includes("Click to Pick Up"), "Merchant orders missing pickup control");
-    assert(text.includes("/product-art/") || text.includes("/products/p"), "Merchant orders missing product images");
+    assert(text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant orders missing product images");
   });
   await check(3, "Distribution Center shows listing status on products", async () => {
     const { res, text } = await pageText("/distribution", merchantCookie);

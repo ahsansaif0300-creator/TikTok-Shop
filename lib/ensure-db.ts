@@ -135,6 +135,11 @@ async function backfill() {
     if (northline && northline._count.products < 500) {
       await syncDistributionCatalog(prisma);
     }
+    const photos = await prisma.setting.findUnique({ where: { key: "distributionPhotosV1" } });
+    if (!photos) {
+      await syncDistributionCatalog(prisma);
+      await prisma.setting.create({ data: { key: "distributionPhotosV1", value: "1" } });
+    }
     const flag = await prisma.setting.findUnique({ where: { key: "distributionCatalogV1" } });
     if (!flag) {
       await prisma.setting.create({ data: { key: "distributionCatalogV1", value: "1" } });

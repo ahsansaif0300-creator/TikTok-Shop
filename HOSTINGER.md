@@ -108,7 +108,9 @@ Still do this after GitHub updates:
 1. Confirm hPanel uses branch **`main`**.
 2. Click **Deploy** (so Hostinger pulls GitHub).
 3. When it finishes, click **Restart**.
-4. Open `/welcome` or `/signup` and check the tiny **Release …** text at the bottom. It must change after a real deploy.
+4. Open `/welcome` or `/signup` and check the tiny **Release …** text at the bottom. It must change after a real deploy. Clearing Hostinger or browser cache is **not** enough if GitHub **`main`** does not contain the latest commit.
+
+The store Distribution Center (horizontal categories and product photos) only appears after **`main`** is deployed. Do not deploy an old PR branch snapshot.
 
 First start creates SQLite and the demo accounts if `prisma/dev.db` is missing.
 
