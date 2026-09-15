@@ -5,6 +5,7 @@ import { STORE_CATEGORIES, categorySlug } from "./store-categories";
 import { backfillStoreCodes } from "./store-code";
 import { ensureOpsReferralCodes } from "./referral";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "./store-score";
+import { bumpGrowthCatalogCap, syncDistributionCatalog } from "./sync-distribution-catalog";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -120,6 +121,26 @@ async function backfill() {
     }
   } catch (error) {
     console.warn("[harbor] store score backfill skipped", error);
+  }
+  try {
+    await bumpGrowthCatalogCap(prisma);
+  } catch (error) {
+    console.warn("[harbor] Growth catalog cap skipped", error);
+  }
+  try {
+    const flag = await prisma.setting.findUnique({ where: { key: "distributionCatalogV1" } });
+    const northline = await prisma.merchant.findUnique({
+      where: { slug: "northline-outfitters" },
+      include: { _count: { select: { products: true } } },
+    });
+    if (!flag && northline && northline._count.products < 500) {
+      await syncDistributionCatalog(prisma);
+    }
+    if (!flag) {
+      await prisma.setting.create({ data: { key: "distributionCatalogV1", value: "1" } });
+    }
+  } catch (error) {
+    console.warn("[harbor] distribution catalog backfill skipped", error);
   }
   try {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });

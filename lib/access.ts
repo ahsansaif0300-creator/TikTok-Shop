@@ -10,6 +10,7 @@ export function isPublicPath(pathname: string) {
   if (pathname === "/welcome" || pathname === "/signup") return true;
   if (pathname === "/login" || pathname.startsWith("/login/")) return true;
   if (pathname.startsWith("/s/")) return true;
+  if (pathname.startsWith("/product-art/")) return true;
   return false;
 }
 

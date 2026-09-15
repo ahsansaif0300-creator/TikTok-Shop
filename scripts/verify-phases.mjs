@@ -275,6 +275,12 @@ async function phase2Static() {
     const nav = read("lib/nav.ts");
     assert(nav.includes("isNavActive"), "Longest-prefix nav matching missing");
     assert(exists("public/products/p01.jpg") && exists("lib/product-image.ts"), "Dummy product images missing");
+    assert(exists("app/product-art/[sku]/route.ts") && exists("lib/product-art.ts"), "Generated product art route missing");
+    assert(read("lib/access.ts").includes("/product-art/"), "Product art must be a public path");
+    const distribution = read("app/(app)/distribution/page.tsx") + read("lib/product-margin.ts") + read("lib/distribution-catalog.ts");
+    assert(distribution.includes("Profit Margin"), "Distribution missing profit margin");
+    assert(distribution.includes("costFromSelling"), "Programmatic margin helper missing");
+    assert(distribution.includes("MARGIN_MIN = 0.23") && distribution.includes("MARGIN_MAX = 0.25"), "Margin range missing");
   });
   await check(2, "Nav hides staff/admin items by role", () => {
     const nav = read("lib/nav.ts");
@@ -821,10 +827,62 @@ async function phase5Database(prisma) {
     const categories = await prisma.category.count();
     const reviews = await prisma.review.count();
     const customers = await prisma.customer.count();
-    assert(products >= 10, `Only ${products} products`);
+    assert(products >= 500, `Only ${products} products`);
     assert(categories >= 20, `Only ${categories} categories`);
     assert(reviews >= 5, `Only ${reviews} reviews`);
     assert(customers >= 8, `Only ${customers} customers`);
+  });
+  await check(5, "Northline catalog has 25+ products per store category with 23-25% margin", async () => {
+    const names = [
+      "Hot Selling Items",
+      "Computer accessories",
+      "Home cabinets",
+      "Health Products",
+      "Men's clothing",
+      "Women's clothing",
+      "Snacks and desserts",
+      "Mobile accessories",
+      "Children's toys",
+      "Beverages",
+      "Office supplies",
+      "Digital products",
+      "Beauty and skincare",
+      "Mother and baby products",
+      "Jewelry and watches",
+      "Luxury goods",
+      "Children's clothing",
+      "Men's bags",
+      "Women's bags",
+      "Fitness Equipment",
+    ];
+    const northline = await prisma.merchant.findUnique({ where: { slug: "northline-outfitters" } });
+    assert(northline, "Northline store missing");
+    const products = await prisma.product.findMany({
+      where: { merchantId: northline.id },
+      include: { category: true },
+    });
+    assert(products.length >= 500, `Northline has ${products.length} products`);
+    const titles = new Set();
+    const images = new Set();
+    const byCat = {};
+    for (const product of products) {
+      assert(product.categoryId, `${product.title} missing category`);
+      assert(product.price >= 10 && product.price <= 5000, `${product.title} price ${product.price}`);
+      assert(product.price - product.cost > 0, `${product.title} has no profit`);
+      const margin = (product.price - product.cost) / product.price;
+      assert(margin >= 0.229 && margin <= 0.251, `${product.title} margin ${margin}`);
+      assert(product.image.includes("/product-art/"), `${product.title} missing generated art`);
+      assert(!titles.has(product.title), `Duplicate title ${product.title}`);
+      assert(!images.has(product.image), `Duplicate image ${product.image}`);
+      titles.add(product.title);
+      images.add(product.image);
+      byCat[product.category.name] = (byCat[product.category.name] ?? 0) + 1;
+    }
+    for (const name of names) {
+      assert((byCat[name] ?? 0) >= 25, `${name} has ${byCat[name] ?? 0} products`);
+    }
+    const growth = await prisma.plan.findFirst({ where: { name: "Growth" } });
+    assert(growth && growth.maxProducts >= 500, "Growth plan cannot hold the store catalog");
   });
   await check(5, "Merchant scoping helper forces store id", () => {
     const scope = read("lib/scope.ts");
@@ -1536,7 +1594,7 @@ async function phaseHttp(prisma) {
     assert(text.includes("Northline Outfitters"), "Store name missing from merchant workspace");
     assert(text.includes("Available balance"), "Merchant wallet missing");
     assert(hasHref(text, "/service"), "Merchant dashboard missing Service");
-    assert(text.includes("/products/p"), "Merchant dashboard missing product images");
+    assert(text.includes("/product-art/") || text.includes("/products/p"), "Merchant dashboard missing product images");
     assert(hasHref(text, "/distribution"), "Merchant dashboard missing Distribution");
     assert(!hasHref(text, "/merchants"), "Merchant nav leaked Merchants");
     assert(!hasHref(text, "/merchants/applications"), "Merchant nav leaked Applications");
@@ -1554,14 +1612,15 @@ async function phaseHttp(prisma) {
     assert(!text.includes("Cedar &amp; Co") && !text.includes("Cedar & Co. Home"), "Merchant orders leaked Cedar & Co.");
     assert(!text.includes("Lumen Beauty"), "Merchant orders leaked Lumen Beauty");
     assert(text.includes("Click to Pick Up"), "Merchant orders missing pickup control");
-    assert(text.includes("/products/p"), "Merchant orders missing product images");
+    assert(text.includes("/product-art/") || text.includes("/products/p"), "Merchant orders missing product images");
   });
   await check(3, "Distribution Center shows listing status on products", async () => {
     const { res, text } = await pageText("/distribution", merchantCookie);
     assert(res.status === 200, `/distribution ${res.status}`);
     assert(text.includes("On Shelf"), "Distribution missing On Shelf");
     assert(text.includes("Listed"), "Distribution missing Listed");
-    assert(text.includes("Status"), "Distribution missing Status label");
+    assert(text.includes("Profit Margin"), "Distribution missing profit margin");
+    assert(text.includes("Cost Price"), "Distribution missing cost price");
     assert(text.includes('name="listingStatus"'), "Distribution missing listing status control");
   });
   await check(3, "Order Sender lists stores and listed products", async () => {

@@ -13,6 +13,7 @@ import {
   ShipmentStatus,
 } from "@prisma/client";
 import { STORE_CATEGORIES, categorySlug } from "../lib/store-categories";
+import { GROWTH_MAX_PRODUCTS, ON_SHELF_TITLES, pricedDistributionCatalog, pricedExtraProducts } from "../lib/distribution-catalog";
 
 const prisma = new PrismaClient();
 
@@ -74,7 +75,7 @@ async function main() {
         description: "For established stores with regular order volume.",
         monthlyFee: 79,
         commissionRate: 0.08,
-        maxProducts: 250,
+        maxProducts: GROWTH_MAX_PRODUCTS,
         features: JSON.stringify(["Faster payouts", "Priority support", "Inventory alerts"]),
       },
     }),
@@ -218,68 +219,47 @@ async function main() {
   );
   const categoryByName = Object.fromEntries(categories.map((category) => [category.name, category]));
 
-  const catalog: { merchant: number; category: string; title: string; price: number; cost: number; stock: number }[] = [
-    { merchant: 0, category: "Men's clothing", title: "Trail Fleece Jacket", price: 89, cost: 38, stock: 42 },
-    { merchant: 0, category: "Men's bags", title: "Alpine Daypack 22L", price: 64, cost: 24, stock: 30 },
-    { merchant: 0, category: "Men's clothing", title: "Merino Crew Socks (3-pack)", price: 22, cost: 7, stock: 120 },
-    { merchant: 0, category: "Hot Selling Items", title: "Insulated Water Bottle", price: 34, cost: 11, stock: 80 },
-    { merchant: 0, category: "Computer accessories", title: "Wireless Mouse", price: 10, cost: 5, stock: 140 },
-    { merchant: 0, category: "Women's clothing", title: "Linen Midi Dress", price: 68, cost: 24, stock: 36 },
-    { merchant: 0, category: "Snacks and desserts", title: "Almond Cookie Pack", price: 12, cost: 4, stock: 90 },
-    { merchant: 0, category: "Children's toys", title: "Wooden Puzzle Set", price: 18, cost: 6, stock: 55 },
-    { merchant: 0, category: "Beverages", title: "Sparkling Lemon Drink", price: 9, cost: 3, stock: 110 },
-    { merchant: 0, category: "Office supplies", title: "Desk Organizer Tray", price: 16, cost: 5, stock: 70 },
-    { merchant: 0, category: "Digital products", title: "Portable SSD 1TB", price: 79, cost: 32, stock: 28 },
-    { merchant: 0, category: "Jewelry and watches", title: "Silver Pendant Necklace", price: 54, cost: 18, stock: 22 },
-    { merchant: 0, category: "Luxury goods", title: "Silk Evening Scarf", price: 120, cost: 42, stock: 12 },
-    { merchant: 0, category: "Women's bags", title: "Crossbody Tote", price: 48, cost: 16, stock: 40 },
-    { merchant: 0, category: "Health Products", title: "Daily Multivitamin", price: 22, cost: 7, stock: 85 },
-    { merchant: 1, category: "Home cabinets", title: "Linen Duvet Cover", price: 129, cost: 48, stock: 18 },
-    { merchant: 1, category: "Home cabinets", title: "Stoneware Dinner Set", price: 96, cost: 40, stock: 24 },
-    { merchant: 1, category: "Home cabinets", title: "Oak Serving Board", price: 48, cost: 16, stock: 36 },
-    { merchant: 1, category: "Home cabinets", title: "Woven Throw Blanket", price: 72, cost: 27, stock: 15 },
-    { merchant: 2, category: "Beauty and skincare", title: "Vitamin C Serum", price: 38, cost: 9, stock: 64 },
-    { merchant: 2, category: "Beauty and skincare", title: "Mineral SPF 50", price: 28, cost: 8, stock: 70 },
-    { merchant: 2, category: "Beauty and skincare", title: "Overnight Repair Cream", price: 52, cost: 14, stock: 40 },
-    { merchant: 2, category: "Beauty and skincare", title: "Gentle Cleansing Balm", price: 24, cost: 6, stock: 90 },
-    { merchant: 3, category: "Fitness Equipment", title: "Adjustable Kettlebell", price: 79, cost: 32, stock: 22 },
-    { merchant: 3, category: "Fitness Equipment", title: "Resistance Band Set", price: 29, cost: 8, stock: 100 },
-    { merchant: 3, category: "Fitness Equipment", title: "Yoga Mat Pro", price: 58, cost: 18, stock: 35 },
-    { merchant: 3, category: "Fitness Equipment", title: "Jump Rope Steel", price: 19, cost: 5, stock: 75 },
-    { merchant: 4, category: "Children's clothing", title: "Organic Cotton Onesie", price: 26, cost: 8, stock: 48 },
-    { merchant: 4, category: "Mother and baby products", title: "Silicone Feeding Set", price: 32, cost: 10, stock: 40 },
-    { merchant: 5, category: "Computer accessories", title: "USB-C Hub 7-in-1", price: 45, cost: 16, stock: 55 },
-    { merchant: 5, category: "Mobile accessories", title: "Noise-Cancel Earbuds", price: 89, cost: 34, stock: 28 },
-  ];
-
-  const products = [];
-  for (const [index, item] of catalog.entries()) {
-    const category = categoryByName[item.category];
-    if (!category) throw new Error(`Unknown category ${item.category}`);
-    products.push(
-      await prisma.product.create({
-        data: {
-          merchantId: merchants[item.merchant].id,
-          categoryId: category.id,
-          title: item.title,
-          sku: `HB-${String(index + 1).padStart(4, "0")}`,
-          description: `${item.title} from a verified TikiTok Shop seller. In-stock and ready to ship.`,
-          price: item.price,
-          cost: item.cost,
-          stock: item.stock,
-          status: item.merchant === 5 ? ProductStatus.ARCHIVED : ProductStatus.ACTIVE,
-          listingStatus:
-            item.merchant === 5 ||
-            item.title === "Woven Throw Blanket" ||
-            item.title === "Jump Rope Steel" ||
-            item.title === "Insulated Water Bottle"
-              ? ProductListingStatus.ON_SHELF
-              : ProductListingStatus.LISTED,
-          image: `/products/p${String((index % 20) + 1).padStart(2, "0")}.jpg`,
-        },
-      }),
-    );
+  const productRows = [];
+  for (const row of pricedDistributionCatalog()) {
+    const category = categoryByName[row.category];
+    if (!category) throw new Error(`Unknown category ${row.category}`);
+    productRows.push({
+      merchantId: merchants[0].id,
+      categoryId: category.id,
+      title: row.title,
+      sku: row.sku,
+      description: row.description,
+      price: row.price,
+      cost: row.cost,
+      stock: 28 + (row.sku.length * 7) % 90,
+      status: ProductStatus.ACTIVE,
+      listingStatus: ON_SHELF_TITLES.has(row.title)
+        ? ProductListingStatus.ON_SHELF
+        : ProductListingStatus.LISTED,
+      image: row.image,
+    });
   }
+  for (const row of pricedExtraProducts()) {
+    const category = categoryByName[row.category];
+    if (!category) throw new Error(`Unknown category ${row.category}`);
+    productRows.push({
+      merchantId: merchants[row.merchant].id,
+      categoryId: category.id,
+      title: row.title,
+      sku: row.sku,
+      description: row.description,
+      price: row.price,
+      cost: row.cost,
+      stock: 18 + row.merchant * 4,
+      status: row.merchant === 5 ? ProductStatus.ARCHIVED : ProductStatus.ACTIVE,
+      listingStatus: row.merchant === 5 ? ProductListingStatus.ON_SHELF : ProductListingStatus.LISTED,
+      image: row.image,
+    });
+  }
+  for (let i = 0; i < productRows.length; i += 50) {
+    await prisma.product.createMany({ data: productRows.slice(i, i + 50) });
+  }
+  const products = await prisma.product.findMany();
 
   const customerDefs = [
     ["Elena Vasquez", "Austin"],
@@ -497,7 +477,11 @@ async function main() {
     });
   }
 
-  const pickupProducts = [products[0], products[1]];
+  const pickupProducts = [
+    products.find((product) => product.title === "Trail Fleece Jacket"),
+    products.find((product) => product.title === "Alpine Daypack 22L"),
+  ].filter((product): product is (typeof products)[number] => Boolean(product));
+  if (pickupProducts.length !== 2) throw new Error("Pickup demo products missing");
   let pickupProfit = 0;
   for (const [index, product] of pickupProducts.entries()) {
     const extraQty = index + 1;
