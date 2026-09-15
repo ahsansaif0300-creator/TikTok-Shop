@@ -45,8 +45,8 @@ export function installDemoDb(_root = process.cwd(), { overwrite = false } = {})
     const dir = path.dirname(dest);
     if (!canWrite(dir)) continue;
     try {
-      const missing = !existsSync(dest);
-      const tiny = !missing && statSync(dest).size < MIN_SEEDED_BYTES;
+      const missing = !existsSync(/*turbopackIgnore: true*/ dest);
+      const tiny = !missing && statSync(/*turbopackIgnore: true*/ dest).size < MIN_SEEDED_BYTES;
       if (overwrite || missing || tiny) {
         copyFileSync(demo, dest);
         console.log(`[harbor] Installed demo database at ${dest}`);
@@ -60,7 +60,7 @@ export function installDemoDb(_root = process.cwd(), { overwrite = false } = {})
   throw lastError ?? new Error("No writable directory for SQLite on this host.");
 }
 
-if (fileURLToPath(import.meta.url) === path.resolve(process.argv[1] ?? "")) {
+if (fileURLToPath(import.meta.url) === path.resolve(/*turbopackIgnore: true*/ process.argv[1] ?? "")) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const dest = installDemoDb(root);
   console.log(dest);

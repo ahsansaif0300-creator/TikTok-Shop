@@ -135,6 +135,7 @@ Change these under **Profile** before you invite anyone.
 ### 8. If it fails
 
 - **Build failed:** open **Deployments** and read the log. Node must be 20+.
+- **TypeScript errors** (`Cannot find name 'isListedProduct'`, `implicit any` in `lib/ensure-db.ts`): that is an **old GitHub commit**. Latest **`main`** already imports `isListedProduct` and types the SQLite PRAGMA rows. In hPanel, Deploy **`main` again** (do not click “Fix and redeploy” on the failed old build). Then **Restart**. `npm run build` on current `main` completes TypeScript successfully.
 - **Site not reachable / 403:** do not edit `public_html/.htaccess`. Redeploy so Hostinger regenerates it.
 - **“TikiTok Shop could not open the packed demo database”:** Redeploy the latest **`main`** branch (it includes `prisma/demo.sqlite`). Then **Restart**. `DATABASE_URL` can stay `file:./dev.db`; the app copies the packed demo DB into a writable folder automatically.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
