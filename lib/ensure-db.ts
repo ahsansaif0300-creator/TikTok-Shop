@@ -32,7 +32,7 @@ async function backfill() {
   } catch (error) {
     console.warn("[harbor] storeCode backfill skipped", error);
   }
-  type TableName = "User" | "Merchant" | "MerchantApplication";
+  type TableName = "User" | "Merchant" | "MerchantApplication" | "SupportMessage";
   type ColumnRow = { name: string };
 
   async function tableColumns(table: TableName) {
@@ -40,10 +40,18 @@ async function backfill() {
     return new Set(rows.map((row) => row.name));
   }
 
+  let supportMessageColumns = new Set<string>();
+  try {
+    supportMessageColumns = await tableColumns("SupportMessage");
+  } catch {
+    supportMessageColumns = new Set();
+  }
+
   const columns: Record<TableName, Set<string>> = {
     User: await tableColumns("User"),
     Merchant: await tableColumns("Merchant"),
     MerchantApplication: await tableColumns("MerchantApplication"),
+    SupportMessage: supportMessageColumns,
   };
   const needed: Array<[TableName, string, string]> = [
     ["User", "referralCode", `ALTER TABLE "User" ADD COLUMN "referralCode" TEXT`],
@@ -54,6 +62,10 @@ async function backfill() {
     ["Merchant", "creditScore", `ALTER TABLE "Merchant" ADD COLUMN "creditScore" INTEGER NOT NULL DEFAULT 100`],
     ["MerchantApplication", "referredByUserId", `ALTER TABLE "MerchantApplication" ADD COLUMN "referredByUserId" TEXT`],
     ["MerchantApplication", "referralCode", `ALTER TABLE "MerchantApplication" ADD COLUMN "referralCode" TEXT NOT NULL DEFAULT ''`],
+    ["SupportMessage", "sessionId", `ALTER TABLE "SupportMessage" ADD COLUMN "sessionId" TEXT`],
+    ["SupportMessage", "attachmentKind", `ALTER TABLE "SupportMessage" ADD COLUMN "attachmentKind" TEXT NOT NULL DEFAULT ''`],
+    ["SupportMessage", "attachmentMime", `ALTER TABLE "SupportMessage" ADD COLUMN "attachmentMime" TEXT NOT NULL DEFAULT ''`],
+    ["SupportMessage", "attachmentPath", `ALTER TABLE "SupportMessage" ADD COLUMN "attachmentPath" TEXT NOT NULL DEFAULT ''`],
   ];
   for (const [table, column, sql] of needed) {
     if (columns[table].has(column)) continue;
@@ -62,6 +74,29 @@ async function backfill() {
     } catch (error) {
       console.warn("[harbor] column add skipped", table, column, error);
     }
+  }
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SupportSession" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "threadId" TEXT NOT NULL,
+        "merchantId" TEXT NOT NULL,
+        "startedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "expiresAt" DATETIME NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "welcomeSentAt" DATETIME,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SupportSession_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "SupportThread" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "SupportSession_merchantId_status_idx" ON "SupportSession"("merchantId", "status")`,
+    );
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "SupportSession_threadId_idx" ON "SupportSession"("threadId")`,
+    );
+  } catch (error) {
+    console.warn("[harbor] SupportSession table skipped", error);
   }
   try {
     await prisma.$executeRawUnsafe(

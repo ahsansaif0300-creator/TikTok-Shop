@@ -394,6 +394,11 @@ enum SupportSender {
   AGENT
 }
 
+enum SupportSessionStatus {
+  ACTIVE
+  EXPIRED
+}
+
 model SupportThread {
   id            String               @id @default(cuid())
   merchantId    String               @unique
@@ -407,17 +412,39 @@ model SupportThread {
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
   messages      SupportMessage[]
+  sessions      SupportSession[]
+}
+
+model SupportSession {
+  id            String                @id @default(cuid())
+  threadId      String
+  thread        SupportThread         @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  merchantId    String
+  startedAt     DateTime              @default(now())
+  expiresAt     DateTime
+  status        SupportSessionStatus  @default(ACTIVE)
+  welcomeSentAt DateTime?
+  createdAt     DateTime              @default(now())
+  messages      SupportMessage[]
+
+  @@index([merchantId, status])
+  @@index([threadId])
 }
 
 model SupportMessage {
-  id        String         @id @default(cuid())
-  threadId  String
-  thread    SupportThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  userId    String?
-  user      User?          @relation(fields: [userId], references: [id])
-  sender    SupportSender
-  body      String
-  createdAt DateTime       @default(now())
+  id               String           @id @default(cuid())
+  threadId         String
+  thread           SupportThread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sessionId        String?
+  session          SupportSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId           String?
+  user             User?            @relation(fields: [userId], references: [id])
+  sender           SupportSender
+  body             String           @default("")
+  attachmentKind   String           @default("")
+  attachmentMime   String           @default("")
+  attachmentPath   String           @default("")
+  createdAt        DateTime         @default(now())
 }
 
 model Setting {

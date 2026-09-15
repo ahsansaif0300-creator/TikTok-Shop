@@ -2,8 +2,10 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
-import { ensureServiceWelcome } from "@/lib/service-thread";
+import { expireStaleSupportSessions, formatRemaining, openStoreServiceSession } from "@/lib/service-session";
 import { ServiceComposer } from "@/components/service-composer";
+import { ServiceMessageBubble } from "@/components/service-message-bubble";
+import { ServiceTimer } from "@/components/service-timer";
 import { Card, Empty, PageHeader } from "@/components/ui";
 
 const STATUS_LABEL = {
@@ -12,10 +14,10 @@ const STATUS_LABEL = {
   WITH_AGENT: "With support team",
 };
 
-function senderLabel(sender: string, name?: string | null) {
-  if (sender === "BOT") return "TikiTok Shop Service assistant";
-  if (sender === "AGENT") return `${name ?? "Support"} · team`;
-  return `${name ?? "Store"} · store`;
+function lastPreview(body: string, kind: string) {
+  if (kind === "IMAGE") return body ? `${body} · image` : "Image";
+  if (kind === "VIDEO") return body ? `${body} · video` : "Video";
+  return body || "No messages yet.";
 }
 
 export default async function ServicePage({
@@ -26,70 +28,124 @@ export default async function ServicePage({
   const session = await requireSession();
   const { error } = await searchParams;
   const staff = isStaff(session.role);
+  const now = new Date();
+  await expireStaleSupportSessions(now);
 
   if (staff) {
-    const threads = await prisma.supportThread.findMany({
-      include: {
-        merchant: true,
-        messages: { orderBy: { createdAt: "desc" }, take: 1, include: { user: true } },
-      },
-      orderBy: { updatedAt: "desc" },
-    });
-    const stores = await prisma.merchant.findMany({
-      where: { status: { in: ["ACTIVE", "PENDING"] } },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    });
+    const [active, history] = await Promise.all([
+      prisma.supportSession.findMany({
+        where: { status: "ACTIVE", expiresAt: { gt: now } },
+        include: {
+          thread: { include: { merchant: true } },
+          messages: { orderBy: { createdAt: "desc" }, take: 1, include: { user: true } },
+        },
+        orderBy: { startedAt: "desc" },
+      }),
+      prisma.supportSession.findMany({
+        where: { OR: [{ status: "EXPIRED" }, { expiresAt: { lte: now } }] },
+        include: {
+          thread: { include: { merchant: true } },
+          messages: { orderBy: { createdAt: "desc" }, take: 1 },
+        },
+        orderBy: { expiresAt: "desc" },
+        take: 40,
+      }),
+    ]);
 
     return (
       <div>
         <PageHeader
           title="Service inbox"
-          subtitle="Stores start with the Service assistant, then a team member takes over. Each thread is already tied to a store."
+          subtitle="Active 1-hour store sessions. Expired chats stay in history and are never deleted."
         />
         {error === "store" ? (
           <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Choose a store first.</p>
         ) : null}
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <Card>
-            {threads.length === 0 ? (
-              <Empty title="No conversations yet" body="Open a store from the list when a seller needs help." />
-            ) : (
-              <ul className="divide-y divide-line">
-                {threads.map((thread) => {
-                  const last = thread.messages[0];
-                  return (
-                    <li key={thread.id}>
-                      <Link href={`/service/${thread.merchantId}`} className="block px-5 py-4 hover:bg-soft">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="font-medium text-ink">{thread.merchant.name}</p>
-                          <p className="text-xs text-muted">{format(thread.updatedAt, "MMM d, HH:mm")}</p>
-                        </div>
-                        <p className="mt-1 font-mono text-xs text-muted">Store ID {thread.merchant.id}</p>
-                        <p className="mt-1 text-xs font-medium text-accent">
-                          {STATUS_LABEL[thread.status] ?? thread.status}
-                          {thread.intakeTopic ? ` · ${thread.intakeTopic}` : ""}
-                        </p>
-                        <p className="mt-2 line-clamp-2 text-sm text-muted">
-                          {last
-                            ? `${senderLabel(last.sender, last.user?.name)}: ${last.body}`
-                            : "No messages yet."}
-                        </p>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Card>
+          <div className="space-y-6">
+            <Card>
+              <div className="border-b border-line px-5 py-3">
+                <h2 className="font-medium text-ink">Active Service Sessions</h2>
+              </div>
+              {active.length === 0 ? (
+                <Empty title="No active sessions" body="A store appears here when it opens Service." />
+              ) : (
+                <ul className="divide-y divide-line">
+                  {active.map((item) => {
+                    const last = item.messages[0];
+                    return (
+                      <li key={item.id}>
+                        <Link href={`/service/${item.merchantId}`} className="block px-5 py-4 hover:bg-soft">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-medium text-ink">{item.thread.merchant.name}</p>
+                            <p className="text-xs font-medium text-emerald-800">Active</p>
+                          </div>
+                          <p className="mt-1 font-mono text-xs text-muted">
+                            Store ID {item.thread.merchant.storeCode || item.thread.merchant.id}
+                          </p>
+                          <p className="mt-1 text-xs text-muted">
+                            Started {format(item.startedAt, "MMM d, HH:mm")} · Expires{" "}
+                            {format(item.expiresAt, "HH:mm")} · Remaining {formatRemaining(item.expiresAt.getTime() - now.getTime())}
+                          </p>
+                          <p className="mt-2 line-clamp-2 text-sm text-muted">
+                            {last ? lastPreview(last.body, last.attachmentKind) : "Welcome sent."}
+                          </p>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+            <Card>
+              <div className="border-b border-line px-5 py-3">
+                <h2 className="font-medium text-ink">Chat history</h2>
+              </div>
+              {history.length === 0 ? (
+                <Empty title="No expired sessions" body="Past 1-hour sessions will list here. Messages stay saved." />
+              ) : (
+                <ul className="divide-y divide-line">
+                  {history.map((item) => {
+                    const last = item.messages[0];
+                    return (
+                      <li key={item.id}>
+                        <Link href={`/service/${item.merchantId}`} className="block px-5 py-4 hover:bg-soft">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-medium text-ink">{item.thread.merchant.name}</p>
+                            <p className="text-xs text-muted">Expired</p>
+                          </div>
+                          <p className="mt-1 font-mono text-xs text-muted">
+                            Store ID {item.thread.merchant.storeCode || item.thread.merchant.id}
+                          </p>
+                          <p className="mt-1 text-xs text-muted">
+                            {format(item.startedAt, "MMM d, HH:mm")} → {format(item.expiresAt, "HH:mm")}
+                          </p>
+                          <p className="mt-2 line-clamp-2 text-sm text-muted">
+                            {last ? lastPreview(last.body, last.attachmentKind) : "No messages."}
+                          </p>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+          </div>
           <Card className="h-fit p-5">
             <h2 className="font-medium">Open a store thread</h2>
-            <p className="mt-1 text-sm text-muted">Take over after the assistant has the basics.</p>
+            <p className="mt-1 text-sm text-muted">View history or continue an active hour.</p>
             <ul className="mt-4 space-y-2">
-              {stores.map((store) => (
+              {(
+                await prisma.merchant.findMany({
+                  where: { status: { in: ["ACTIVE", "PENDING"] } },
+                  orderBy: { name: "asc" },
+                  select: { id: true, name: true, storeCode: true },
+                })
+              ).map((store) => (
                 <li key={store.id}>
                   <Link href={`/service/${store.id}`} className="block rounded-xl bg-soft px-3 py-2 text-sm hover:bg-accent-soft">
                     {store.name}
+                    {store.storeCode ? <span className="block font-mono text-[11px] text-muted">{store.storeCode}</span> : null}
                   </Link>
                 </li>
               ))}
@@ -117,28 +173,38 @@ export default async function ServicePage({
     );
   }
 
-  await ensureServiceWelcome(store.id, store.name, store.id, session.name);
-  const thread = await prisma.supportThread.findUnique({ where: { merchantId: store.id } });
-  const messages = thread
-    ? await prisma.supportMessage.findMany({
-        where: { threadId: thread.id },
-        include: { user: true },
-        orderBy: { createdAt: "asc" },
-      })
-    : [];
+  const opened = await openStoreServiceSession(store.id, store.name, store.storeCode || store.id, session.name);
+  const thread = opened.thread;
+  const chatSession = opened.session;
+  const expired = chatSession.status !== "ACTIVE" || chatSession.expiresAt.getTime() <= now.getTime();
+  const messages = await prisma.supportMessage.findMany({
+    where: { threadId: thread.id },
+    include: { user: true },
+    orderBy: { createdAt: "asc" },
+  });
 
   return (
     <div className="max-w-3xl">
       <PageHeader
         title="Service"
-        subtitle="TikiTok Shop support. The assistant asks a few basics, then a team member joins. Your store is identified from this login."
+        subtitle="TikiTok Shop support assistant. Your store is identified from this login — you do not enter a Store ID."
       />
       {error === "empty" ? (
-        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Write a message first.</p>
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Write a message or attach an image/video.</p>
+      ) : null}
+      {error === "type" ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Use a JPG, PNG, WebP, GIF, MP4, WebM, or MOV file.</p>
+      ) : null}
+      {error === "size" ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Images must be under 5 MB and videos under 20 MB.</p>
+      ) : null}
+      {error === "expired" ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">That service hour ended. Start a new session to continue.</p>
       ) : null}
       <Card className="mb-4 space-y-1 p-5 text-sm">
         <p>
-          <span className="text-muted">Store ID</span> <span className="font-mono text-ink">{store.id}</span>
+          <span className="text-muted">Store ID</span>{" "}
+          <span className="font-mono text-ink">{store.storeCode || store.id}</span>
         </p>
         <p>
           <span className="text-muted">Store name</span> <span className="font-medium text-ink">{store.name}</span>
@@ -150,26 +216,31 @@ export default async function ServicePage({
           </span>
         </p>
         <p>
-          <span className="text-muted">Status</span> {STATUS_LABEL[thread?.status ?? "INTAKE"]}
+          <span className="text-muted">Status</span> {expired ? "Expired" : (STATUS_LABEL[thread.status] ?? thread.status)}
+        </p>
+        <p>
+          <span className="text-muted">Session</span> {format(chatSession.startedAt, "HH:mm")} – {format(chatSession.expiresAt, "HH:mm")}
         </p>
       </Card>
+      <div className="mb-4">
+        <ServiceTimer expiresAt={chatSession.expiresAt.toISOString()} />
+      </div>
       <Card className="p-5">
         <div className="space-y-3">
           {messages.map((message) => (
-            <div
+            <ServiceMessageBubble
               key={message.id}
-              className={`rounded-xl px-3 py-2 text-sm ${
-                message.sender === "STORE" ? "bg-accent-soft text-ink" : "bg-soft"
-              }`}
-            >
-              <p className="text-xs text-muted">
-                {senderLabel(message.sender, message.user?.name)} · {format(message.createdAt, "MMM d, HH:mm")}
-              </p>
-              <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
-            </div>
+              id={message.id}
+              sender={message.sender}
+              userName={message.user?.name}
+              body={message.body}
+              createdAt={message.createdAt}
+              attachmentKind={message.attachmentKind}
+              highlight={message.sender === "STORE"}
+            />
           ))}
         </div>
-        <ServiceComposer intakeStep={thread?.intakeStep} status={thread?.status} />
+        <ServiceComposer expiresAt={chatSession.expiresAt.toISOString()} showTopics allowRestart />
       </Card>
     </div>
   );

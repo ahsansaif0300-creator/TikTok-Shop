@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { expireStaleSupportSessions } from "@/lib/service-session";
 
 let running = false;
 
@@ -92,7 +93,9 @@ export function startReleaseScheduler() {
   if (intervalStarted) return;
   intervalStarted = true;
   void processDueReleases();
+  void expireStaleSupportSessions();
   setInterval(() => {
     void processDueReleases();
+    void expireStaleSupportSessions();
   }, 30_000);
 }

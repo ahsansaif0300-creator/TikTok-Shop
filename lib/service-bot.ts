@@ -14,13 +14,8 @@ const FOLLOW_UP: Record<string, string> = {
   "Something else": "In one or two sentences, what do you need the support team to do?",
 };
 
-export function welcomeBody(storeName: string, storeId: string, userName: string) {
-  return [
-    `Hi ${userName} — this is the TikiTok Shop Service assistant.`,
-    `You're already identified as ${storeName}. Store ID ${storeId} is attached to this chat, so you don't need to type your store name or ID.`,
-    "I'll ask a couple of basic questions, then a support team member will take over.",
-    "What do you need help with today?",
-  ].join(" ");
+export function welcomeBody(_storeName?: string, _storeId?: string, _userName?: string) {
+  return "Welcome to our Support Service.\nHow can we help you today?";
 }
 
 export function matchTopic(text: string) {

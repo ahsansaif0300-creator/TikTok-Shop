@@ -26,6 +26,7 @@ function pick<T>(items: T[], index: number) {
 
 async function main() {
   await prisma.supportMessage.deleteMany();
+  await prisma.supportSession.deleteMany();
   await prisma.supportThread.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.notification.deleteMany();

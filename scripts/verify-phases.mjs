@@ -185,6 +185,7 @@ async function phase1Static() {
       "pendingBalance",
       "paymentPasswordHash",
       "SupportThread",
+      "SupportSession",
       "model PaymentRelease",
       "walletReleased",
       "cnicNumber",
@@ -930,6 +931,9 @@ async function phase6Static() {
       "lib/actions/support.ts",
       "lib/actions/account.ts",
       "lib/service-bot.ts",
+      "lib/service-session.ts",
+      "lib/support-media.ts",
+      "app/(app)/service/media/[messageId]/route.ts",
     ]) {
       assert(exists(file), `Missing ${file}`);
     }
@@ -985,6 +989,15 @@ async function phase6Static() {
     assert(read("app/(app)/admin/stores/[id]/page.tsx").includes("StoreScoreForm"), "Super Admin store score form missing");
     assert(!read("lib/actions/account.ts").includes("creditScore"), "Store users must not edit credit score");
     assert(!read("lib/actions/account.ts").includes("rating"), "Store users must not edit store rating");
+    const serviceSession = read("lib/service-session.ts") + read("lib/service-bot.ts") + read("lib/actions/support.ts") + read("lib/support-media.ts");
+    assert(serviceSession.includes("SERVICE_SESSION_MS"), "1-hour service session missing");
+    assert(serviceSession.includes("Welcome to our Support Service"), "Service welcome copy missing");
+    assert(serviceSession.includes("welcomeSentAt"), "Welcome-once flag missing");
+    assert(serviceSession.includes("expireStaleSupportSessions"), "Server-side session expiry missing");
+    assert(serviceSession.includes("saveSupportUpload"), "Support upload helper missing");
+    assert(read("lib/support-media.ts").includes("SUPPORT_UPLOAD_ROOT"), "Private upload root missing");
+    assert(read("app/(app)/service/page.tsx").includes("Active Service Sessions"), "Agent active session list missing");
+    assert(read("components/service-composer.tsx").includes("Upload Image/Video"), "Service media picker missing");
     assert(read("lib/process-releases.ts").includes('status: "SCHEDULED"'), "Release job must only pick scheduled rows");
     assert(read("lib/auth.ts").includes("requireSuperAdmin"), "requireSuperAdmin missing");
     assert(read("app/(app)/admin/layout.tsx").includes("requireSuperAdmin"), "Admin layout is not gated");
@@ -1015,6 +1028,38 @@ async function phase6Database(prisma) {
     const shelf = await prisma.product.count({ where: { listingStatus: "ON_SHELF" } });
     assert(listed > 0, "No listed products");
     assert(shelf > 0, "No on-shelf products");
+  });
+
+  await check(6, "Expired service sessions leave chat history in place", async () => {
+    const merchant = await prisma.merchant.findFirst();
+    assert(merchant, "Need a store");
+    const thread = await prisma.supportThread.upsert({
+      where: { merchantId: merchant.id },
+      update: {},
+      create: { merchantId: merchant.id },
+    });
+    const row = await prisma.supportSession.create({
+      data: {
+        threadId: thread.id,
+        merchantId: merchant.id,
+        startedAt: new Date(Date.now() - 3_600_000),
+        expiresAt: new Date(Date.now() - 1_000),
+        status: "ACTIVE",
+      },
+    });
+    await prisma.supportMessage.create({
+      data: { threadId: thread.id, sessionId: row.id, sender: "BOT", body: "Welcome to our Support Service." },
+    });
+    await prisma.supportSession.updateMany({
+      where: { status: "ACTIVE", expiresAt: { lte: new Date() } },
+      data: { status: "EXPIRED" },
+    });
+    const expired = await prisma.supportSession.findUnique({ where: { id: row.id } });
+    const kept = await prisma.supportMessage.count({ where: { sessionId: row.id } });
+    assert(expired.status === "EXPIRED", "Session should expire server-side");
+    assert(kept === 1, "Chat history must remain after expiry");
+    await prisma.supportMessage.deleteMany({ where: { sessionId: row.id } });
+    await prisma.supportSession.delete({ where: { id: row.id } });
   });
 
   await check(6, "Isolated payout: request then mark paid decrements available", async () => {
