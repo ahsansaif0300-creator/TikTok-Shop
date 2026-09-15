@@ -631,7 +631,7 @@ export const EXTRA_STORE_PRODUCTS: {
 
 const catalogBySku = new Map<string, { sku: string; title: string; category: string }>();
 
-function rememberCatalogRow(row: { sku: string; title: string; category: string }) {
+function rememberCatalogRow<T extends { sku: string; title: string; category: string }>(row: T): T {
   catalogBySku.set(row.sku, { sku: row.sku, title: row.title, category: row.category });
   return row;
 }
