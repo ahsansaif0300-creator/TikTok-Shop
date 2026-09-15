@@ -13,7 +13,8 @@ export function ProductThumb({
   size?: number;
 }) {
   const resolved = productImageSrc(src, alt);
-  const sku = typeof src === "string" ? src.split("/").pop()?.replace(/\.[a-z]+$/i, "") : "";
+  const file = typeof src === "string" ? src.split("?")[0]?.split("/").pop() : "";
+  const sku = file?.replace(/\.[a-z]+$/i, "") ?? "";
   const fallback = sku ? catalogPhotoFallback(decodeURIComponent(sku)) : productImageSrc("", alt);
   return (
     // eslint-disable-next-line @next/next/no-img-element

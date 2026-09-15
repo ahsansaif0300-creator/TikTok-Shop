@@ -4,6 +4,8 @@ import { SignupForm } from "@/components/signup-form";
 import { buildStamp } from "@/lib/build-stamp";
 import { BRAND_NAME } from "@/lib/brand-name";
 
+export const dynamic = "force-dynamic";
+
 export default async function SignupPage({
   searchParams,
 }: {

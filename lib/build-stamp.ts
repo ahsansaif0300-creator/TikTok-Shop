@@ -1,12 +1,14 @@
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 
+export const RELEASE_LABEL = "tiktok-shop-5";
+
 export function buildStamp() {
   try {
     const file = path.join(process.cwd(), ".next", "BUILD_ID");
-    if (!existsSync(file)) return "dev";
-    return readFileSync(file, "utf8").trim().slice(0, 10);
+    if (!existsSync(file)) return `${RELEASE_LABEL}-dev`;
+    return `${RELEASE_LABEL}-${readFileSync(file, "utf8").trim().slice(0, 10)}`;
   } catch {
-    return "dev";
+    return `${RELEASE_LABEL}-dev`;
   }
 }

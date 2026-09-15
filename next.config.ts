@@ -32,6 +32,14 @@ const nextConfig: NextConfig = {
         source: "/welcome",
         headers: [{ key: "Cache-Control", value: "private, no-cache, must-revalidate" }],
       },
+      {
+        source: "/signup",
+        headers: [{ key: "Cache-Control", value: "private, no-cache, must-revalidate" }],
+      },
+      {
+        source: "/catalog/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
+      },
     ];
   },
   allowedDevOrigins: previewHosts,

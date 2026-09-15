@@ -4,6 +4,8 @@ import { LOGIN } from "@/lib/access";
 import { buildStamp } from "@/lib/build-stamp";
 import { BRAND_NAME } from "@/lib/brand-name";
 
+export const dynamic = "force-dynamic";
+
 export default function WelcomePage() {
   const stamp = buildStamp();
   return (
