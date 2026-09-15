@@ -1,6 +1,6 @@
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
 export const MAX_LOGO_BYTES = 1_500_000;
-export const MAX_ID_BYTES = 1_000_000;
+export const MAX_ID_BYTES = 2_000_000;
 
 export function logoError(file: File | null) {
   if (!file || file.size === 0) return "missing";
@@ -11,7 +11,8 @@ export function logoError(file: File | null) {
 
 export function idCardError(file: File | null) {
   if (!file || file.size === 0) return "missing";
-  if (!ALLOWED.has(file.type)) return "type";
+  const type = (file.type || "image/jpeg").toLowerCase();
+  if (type && !ALLOWED.has(type)) return "type";
   if (file.size > MAX_ID_BYTES) return "size";
   return null;
 }

@@ -9,6 +9,7 @@ import { MERCHANT_STATUS } from "@/lib/labels";
 import { shopAbsoluteUrl, shopPath } from "@/lib/shop-url";
 import { updateStoreRecord } from "@/lib/actions/admin";
 import { Button, Card, PageHeader, StatusBadge } from "@/components/ui";
+import { IdCardCapture } from "@/components/id-card-capture";
 
 export default async function StoreRecordDetailPage({
   params,
@@ -154,14 +155,8 @@ export default async function StoreRecordDetailPage({
                 className="h-11 w-full rounded-xl border border-line px-3"
               />
             </label>
-            <label className="block space-y-1.5 text-sm">
-              <span className="font-medium">Replace front</span>
-              <input name="cnicImageFront" type="file" accept="image/jpeg,image/png,image/webp" className="w-full text-sm" />
-            </label>
-            <label className="block space-y-1.5 text-sm">
-              <span className="font-medium">Replace back</span>
-              <input name="cnicImageBack" type="file" accept="image/jpeg,image/png,image/webp" className="w-full text-sm" />
-            </label>
+            <IdCardCapture name="cnicImageFront" label="Replace front" />
+            <IdCardCapture name="cnicImageBack" label="Replace back" />
             <Button type="submit">Save identity fields</Button>
           </form>
         </Card>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signupMerchantAction } from "@/lib/actions/signup";
 import { AuthFrame } from "@/components/auth-frame";
+import { IdCardCapture } from "@/components/id-card-capture";
 
 export default async function SignupPage({
   searchParams,
@@ -24,7 +25,7 @@ export default async function SignupPage({
                 : error === "id-type"
                   ? "ID photos must be JPEG, PNG, or WebP."
                   : error === "id-size"
-                    ? "Each ID photo must be 1 MB or smaller."
+                    ? "Each ID photo must be 2 MB or smaller. Use Gallery or Camera on this page; large phone photos are compressed automatically."
                     : error === "referral"
                       ? "That referral code is not valid for a Normal Backend user."
                       : null;
@@ -120,27 +121,17 @@ export default async function SignupPage({
             />
           </label>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">ID card front</span>
-            <input
-              name="idFront"
-              type="file"
-              required
-              accept="image/jpeg,image/png,image/webp"
-              className="w-full text-sm"
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">ID card back</span>
-            <input
-              name="idBack"
-              type="file"
-              required
-              accept="image/jpeg,image/png,image/webp"
-              className="w-full text-sm"
-            />
-          </label>
+        <div className="space-y-3 rounded-2xl border border-line bg-soft/60 p-3">
+          <div>
+            <p className="text-sm font-semibold text-ink">ID card photos</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Super Admin keeps these on the store record. Use Gallery or Camera. Camera needs HTTPS and permission.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <IdCardCapture name="idFront" label="ID card front" required />
+            <IdCardCapture name="idBack" label="ID card back" required />
+          </div>
         </div>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Referral code (optional)</span>

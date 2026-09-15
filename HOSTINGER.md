@@ -99,7 +99,7 @@ After you attach a **custom domain**, change `APP_BASE_URL` to `https://yourdoma
 
 ### 6. Deploy
 
-Click **Deploy**. Wait until the build is green and the process badge is **Running**.
+Click **Deploy**. Wait until the build is green and the process badge is **Running**. After every GitHub deploy, click **Restart** on the Node app. Opening the site without Restart keeps the previous build on phones.
 
 First start creates SQLite and the demo accounts if `prisma/dev.db` is missing.
 
