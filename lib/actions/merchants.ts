@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { uniqueMerchantSlug } from "@/lib/slug";
 import { allocateStoreCode } from "@/lib/store-code";
+import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
 
 export async function setMerchantStatus(merchantId: string, status: MerchantStatus) {
   const session = await requireSession();
@@ -139,6 +140,8 @@ export async function reviewApplication(formData: FormData) {
         address: "Onboarding — address pending",
         status: "ACTIVE",
         planId: starter.id,
+        rating: DEFAULT_STORE_RATING,
+        creditScore: DEFAULT_STORE_CREDIT,
         referredByUserId: application.referredByUserId,
         referralCodeUsed: application.referralCode,
       },

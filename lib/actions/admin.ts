@@ -10,6 +10,7 @@ import { processDueReleases } from "@/lib/process-releases";
 import { dummyProductImage } from "@/lib/product-image";
 import { isListedProduct } from "@/lib/product-listing";
 import { allocateReferralCode } from "@/lib/referral";
+import { parseStoreCreditScore, parseStoreRating } from "@/lib/store-score";
 
 function fail(path: string, code: string): never {
   redirect(`${path}?error=${code}`);
@@ -352,4 +353,39 @@ export async function updateStoreRecord(formData: FormData) {
   });
   revalidatePath(`/admin/stores/${merchantId}`);
   redirect(`/admin/stores/${merchantId}?saved=1`);
+}
+
+export async function updateStoreScore(formData: FormData) {
+  const session = await requireSuperAdmin();
+  const merchantId = String(formData.get("merchantId") ?? "");
+  if (!merchantId) fail("/admin/stores", "store");
+  const rating = parseStoreRating(formData.get("rating"));
+  const creditScore = parseStoreCreditScore(formData.get("creditScore"));
+  if (rating === null || creditScore === null) {
+    fail(`/admin/stores/${merchantId}`, "score");
+  }
+
+  const store = await prisma.merchant.findUnique({
+    where: { id: merchantId },
+    select: { id: true, name: true },
+  });
+  if (!store) fail("/admin/stores", "store");
+
+  await prisma.merchant.update({
+    where: { id: merchantId },
+    data: { rating, creditScore },
+  });
+  await prisma.auditLog.create({
+    data: {
+      userId: session.userId,
+      action: "store:score",
+      entity: "Merchant",
+      entityId: merchantId,
+      detail: `Set ${store.name} rating ${rating}/10 and credit score ${creditScore}/100`,
+    },
+  });
+  revalidatePath("/");
+  revalidatePath("/admin/stores");
+  revalidatePath(`/admin/stores/${merchantId}`);
+  redirect(`/admin/stores/${merchantId}?saved=score`);
 }

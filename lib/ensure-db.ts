@@ -4,6 +4,7 @@ import { getPrisma, resetPrisma } from "./db";
 import { STORE_CATEGORIES, categorySlug } from "./store-categories";
 import { backfillStoreCodes } from "./store-code";
 import { ensureOpsReferralCodes } from "./referral";
+import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "./store-score";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -50,6 +51,7 @@ async function backfill() {
     ["Merchant", "cnicImageBack", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageBack" TEXT NOT NULL DEFAULT ''`],
     ["Merchant", "referralCodeUsed", `ALTER TABLE "Merchant" ADD COLUMN "referralCodeUsed" TEXT NOT NULL DEFAULT ''`],
     ["Merchant", "referredByUserId", `ALTER TABLE "Merchant" ADD COLUMN "referredByUserId" TEXT`],
+    ["Merchant", "creditScore", `ALTER TABLE "Merchant" ADD COLUMN "creditScore" INTEGER NOT NULL DEFAULT 100`],
     ["MerchantApplication", "referredByUserId", `ALTER TABLE "MerchantApplication" ADD COLUMN "referredByUserId" TEXT`],
     ["MerchantApplication", "referralCode", `ALTER TABLE "MerchantApplication" ADD COLUMN "referralCode" TEXT NOT NULL DEFAULT ''`],
   ];
@@ -72,6 +74,17 @@ async function backfill() {
     await ensureOpsReferralCodes();
   } catch (error) {
     console.warn("[harbor] referral code backfill skipped", error);
+  }
+  try {
+    const flag = await prisma.setting.findUnique({ where: { key: "storeScoreInitialized" } });
+    if (!flag) {
+      await prisma.merchant.updateMany({
+        data: { rating: DEFAULT_STORE_RATING, creditScore: DEFAULT_STORE_CREDIT },
+      });
+      await prisma.setting.create({ data: { key: "storeScoreInitialized", value: "1" } });
+    }
+  } catch (error) {
+    console.warn("[harbor] store score backfill skipped", error);
   }
   try {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });

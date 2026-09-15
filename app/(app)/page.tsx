@@ -5,6 +5,7 @@ import { getDashboardData } from "@/lib/dashboard";
 import { money } from "@/lib/utils";
 import { ORDER_STATUS } from "@/lib/labels";
 import { shopAbsoluteUrl } from "@/lib/shop-url";
+import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
 import { MerchantHome } from "@/components/merchant-home";
 import { Card, Empty, PageHeader, StatCard, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 import { RevenueChart } from "@/components/charts";
@@ -66,6 +67,8 @@ export default async function DashboardPage({
           todaySales={data.todaySales}
           availableBalance={data.store?.availableBalance ?? 0}
           pendingBalance={data.store?.pendingBalance ?? 0}
+          storeRating={data.store?.rating ?? DEFAULT_STORE_RATING}
+          creditScore={data.store?.creditScore ?? DEFAULT_STORE_CREDIT}
           attention={attention}
         />
         <Card className="mt-6">

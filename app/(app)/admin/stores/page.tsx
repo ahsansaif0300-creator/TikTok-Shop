@@ -21,6 +21,7 @@ export default async function StoreRecordsPage({
             { city: { contains: q } },
             { country: { contains: q } },
             { slug: { contains: q } },
+            { storeCode: { contains: q } },
             { cnicNumber: { contains: q } },
             { legalName: { contains: q } },
           ],
@@ -44,6 +45,8 @@ export default async function StoreRecordsPage({
             <thead>
               <tr>
                 <Th>Store</Th>
+                <Th>Rating</Th>
+                <Th>Credit</Th>
                 <Th>Email</Th>
                 <Th>Phone</Th>
                 <Th>City</Th>
@@ -61,6 +64,8 @@ export default async function StoreRecordsPage({
                     </Link>
                     <p className="text-xs text-muted">{store.slug}</p>
                   </Td>
+                  <Td>{Number(store.rating).toFixed(1)} / 10</Td>
+                  <Td>{Math.round(store.creditScore)} / 100</Td>
                   <Td>{store.email}</Td>
                   <Td>{store.phone || "—"}</Td>
                   <Td>{store.city || "—"}</Td>

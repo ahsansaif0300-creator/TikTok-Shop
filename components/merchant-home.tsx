@@ -14,6 +14,7 @@ import {
 import { money } from "@/lib/utils";
 import { CopyShopLink } from "@/components/copy-shop-link";
 import { Card } from "@/components/ui";
+import { formatStoreRating } from "@/lib/store-score";
 
 type Shortcut = {
   href: string;
@@ -50,6 +51,8 @@ export function MerchantHome({
   todaySales,
   availableBalance,
   pendingBalance,
+  storeRating,
+  creditScore,
   attention,
   storeStatus,
   pendingApproval,
@@ -62,6 +65,8 @@ export function MerchantHome({
   todaySales: number;
   availableBalance: number;
   pendingBalance: number;
+  storeRating: number;
+  creditScore: number;
   attention: { href: string; label: string }[];
   storeStatus?: string;
   pendingApproval?: boolean;
@@ -97,6 +102,16 @@ export function MerchantHome({
           <p className="text-xs text-white/80">Today&apos;s sales</p>
           <p className="mt-2 text-2xl font-semibold">{money(todaySales)}</p>
         </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <Card className="p-4">
+          <p className="text-xs text-muted">Store Rating</p>
+          <p className="mt-1 text-lg font-semibold text-ink">{formatStoreRating(storeRating)} / 10</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted">Credit Score</p>
+          <p className="mt-1 text-lg font-semibold text-ink">{Math.round(creditScore)} / 100</p>
+        </Card>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <Card className="p-4">

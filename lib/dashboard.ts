@@ -60,7 +60,16 @@ export async function getDashboardData(session: SessionUser) {
     isMerchant && session.merchantId
       ? prisma.merchant.findUnique({
           where: { id: session.merchantId },
-          select: { name: true, slug: true, storeCode: true, availableBalance: true, pendingBalance: true, status: true },
+          select: {
+            name: true,
+            slug: true,
+            storeCode: true,
+            availableBalance: true,
+            pendingBalance: true,
+            status: true,
+            rating: true,
+            creditScore: true,
+          },
         })
       : Promise.resolve(null),
     prisma.order.findMany({

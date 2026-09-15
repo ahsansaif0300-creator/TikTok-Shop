@@ -135,7 +135,8 @@ model Merchant {
   plan             Plan                   @relation(fields: [planId], references: [id])
   availableBalance Float                  @default(0)
   pendingBalance   Float                  @default(0)
-  rating           Float                  @default(5)
+  rating           Float                  @default(5.5)
+  creditScore      Int                    @default(100)
   reviewCount      Int                    @default(0)
   bankName         String?
   bankAccountLast4 String?

@@ -881,6 +881,29 @@ async function phase5Database(prisma) {
     await prisma.merchant.delete({ where: { id: merchant.id } });
     await prisma.plan.delete({ where: { id: plan.id } });
   });
+  await check(5, "New stores default to rating 5.5 and credit score 100", async () => {
+    const plan = await prisma.plan.findFirst({ orderBy: { monthlyFee: "asc" } });
+    assert(plan, "Need a plan");
+    const merchant = await prisma.merchant.create({
+      data: {
+        name: "VERIFY Score Store",
+        slug: `verify-score-${Date.now()}`,
+        legalName: "VERIFY Score LLC",
+        email: "verify-score@example.test",
+        phone: "+1-555-0011",
+        country: "US",
+        city: "Test",
+        address: "11 Verify Way",
+        status: "ACTIVE",
+        planId: plan.id,
+      },
+    });
+    const loaded = await prisma.merchant.findUnique({ where: { id: merchant.id } });
+    assert(loaded, "Score fixture missing");
+    assert(Number(loaded.rating) === 5.5, `Expected rating 5.5, got ${loaded.rating}`);
+    assert(loaded.creditScore === 100, `Expected credit 100, got ${loaded.creditScore}`);
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -952,6 +975,16 @@ async function phase6Static() {
     assert(admin.includes("placeStaffOrder") && admin.includes("addStoreFunds"), "Staff order or funds helper missing");
     assert(admin.includes("schedulePaymentRelease") && admin.includes("broadcastToStores"), "Release or broadcast helper missing");
     assert(admin.includes("createOpsUser"), "Ops user helper missing");
+    assert(admin.includes("updateStoreScore") && admin.includes("parseStoreRating"), "Store score editor missing");
+    assert(read("lib/store-score.ts").includes("STORE_RATING_MAX = 10"), "Store rating limit missing");
+    assert(read("lib/store-score.ts").includes("STORE_CREDIT_MAX = 100"), "Store credit limit missing");
+    assert(read("lib/store-score.ts").includes("value < STORE_RATING_MIN"), "Negative rating must be rejected");
+    assert(read("prisma/schema.prisma").includes("creditScore"), "Merchant creditScore column missing");
+    assert(read("prisma/schema.prisma").includes("@default(5.5)"), "Store rating default must be 5.5");
+    assert(read("components/merchant-home.tsx").includes("Store Rating") && read("components/merchant-home.tsx").includes("Credit Score"), "Store dashboard scores missing");
+    assert(read("app/(app)/admin/stores/[id]/page.tsx").includes("StoreScoreForm"), "Super Admin store score form missing");
+    assert(!read("lib/actions/account.ts").includes("creditScore"), "Store users must not edit credit score");
+    assert(!read("lib/actions/account.ts").includes("rating"), "Store users must not edit store rating");
     assert(read("lib/process-releases.ts").includes('status: "SCHEDULED"'), "Release job must only pick scheduled rows");
     assert(read("lib/auth.ts").includes("requireSuperAdmin"), "requireSuperAdmin missing");
     assert(read("app/(app)/admin/layout.tsx").includes("requireSuperAdmin"), "Admin layout is not gated");

@@ -9,6 +9,7 @@ import { MERCHANT_STATUS } from "@/lib/labels";
 import { shopAbsoluteUrl, shopPath } from "@/lib/shop-url";
 import { Card, PageHeader, StatusBadge } from "@/components/ui";
 import { StoreIdentityForm } from "@/components/store-identity-form";
+import { StoreScoreForm } from "@/components/store-score-form";
 
 export default async function StoreRecordDetailPage({
   params,
@@ -39,7 +40,11 @@ export default async function StoreRecordDetailPage({
         subtitle={store.legalName}
         actions={<StatusBadge value={store.status} labels={MERCHANT_STATUS} />}
       />
-      {saved ? (
+      {saved === "score" ? (
+        <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          Rating and credit score saved. The store dashboard will show the new values.
+        </p>
+      ) : saved ? (
         <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Store record saved.</p>
       ) : null}
       {error === "cnic" ? (
@@ -47,6 +52,11 @@ export default async function StoreRecordDetailPage({
       ) : null}
       {error === "image" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Upload a JPG, PNG, or WebP under 1.5 MB.</p>
+      ) : null}
+      {error === "score" ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          Rating must be 0–10 and credit score must be a whole number 0–100. Negative values are not allowed.
+        </p>
       ) : null}
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="p-5 text-sm">
@@ -62,6 +72,8 @@ export default async function StoreRecordDetailPage({
               ["Country", store.country || "—"],
               ["Address", store.address || "—"],
               ["Plan", store.plan.name],
+              ["Store Rating", `${Number(store.rating).toFixed(1)} / 10`],
+              ["Credit Score", `${Math.round(store.creditScore)} / 100`],
               ["Available", money(store.availableBalance)],
               ["Pending", money(store.pendingBalance)],
               ["Bank", store.bankName ? `${store.bankName} •${store.bankAccountLast4}` : "Not on file"],
@@ -144,6 +156,20 @@ export default async function StoreRecordDetailPage({
             </div>
           </div>
           <StoreIdentityForm merchantId={store.id} cnicNumber={store.cnicNumber} />
+        </Card>
+        <Card className="p-5 xl:col-span-2">
+          <h2 className="font-medium">Store Rating and Credit Score</h2>
+          <p className="mt-1 text-sm text-muted">
+            Only Super Admin can change these. Store logins cannot edit them.
+          </p>
+          <div className="mt-4 max-w-md">
+            <StoreScoreForm
+              merchantId={store.id}
+              storeName={store.name}
+              rating={store.rating}
+              creditScore={store.creditScore}
+            />
+          </div>
         </Card>
       </div>
     </div>

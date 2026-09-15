@@ -9,6 +9,7 @@ import { uniqueMerchantSlug } from "@/lib/slug";
 import { allocateStoreCode } from "@/lib/store-code";
 import { fileToDataUrl, idCardError } from "@/lib/logo";
 import { findOpsByReferralCode, normalizeReferralCode } from "@/lib/referral";
+import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
 
 export async function signupMerchantAction(formData: FormData) {
   const storeName = String(formData.get("storeName") ?? "").trim();
@@ -81,6 +82,8 @@ export async function signupMerchantAction(formData: FormData) {
       address: "Address pending",
       status: needsApproval ? "PENDING" : "ACTIVE",
       planId: starter.id,
+      rating: DEFAULT_STORE_RATING,
+      creditScore: DEFAULT_STORE_CREDIT,
       cnicImage: frontUrl,
       cnicImageFront: frontUrl,
       cnicImageBack: backUrl,
