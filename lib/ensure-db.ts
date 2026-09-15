@@ -31,14 +31,20 @@ async function backfill() {
   } catch (error) {
     console.warn("[harbor] storeCode backfill skipped", error);
   }
-  const columns = {
-    User: new Set((await prisma.$queryRawUnsafe(`PRAGMA table_info("User")`)).map((row) => row.name)),
-    Merchant: new Set((await prisma.$queryRawUnsafe(`PRAGMA table_info("Merchant")`)).map((row) => row.name)),
-    MerchantApplication: new Set(
-      (await prisma.$queryRawUnsafe(`PRAGMA table_info("MerchantApplication")`)).map((row) => row.name),
-    ),
+  type TableName = "User" | "Merchant" | "MerchantApplication";
+  type ColumnRow = { name: string };
+
+  async function tableColumns(table: TableName) {
+    const rows = await prisma.$queryRawUnsafe<ColumnRow[]>(`PRAGMA table_info("${table}")`);
+    return new Set(rows.map((row) => row.name));
+  }
+
+  const columns: Record<TableName, Set<string>> = {
+    User: await tableColumns("User"),
+    Merchant: await tableColumns("Merchant"),
+    MerchantApplication: await tableColumns("MerchantApplication"),
   };
-  const needed = [
+  const needed: Array<[TableName, string, string]> = [
     ["User", "referralCode", `ALTER TABLE "User" ADD COLUMN "referralCode" TEXT`],
     ["Merchant", "cnicImageFront", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageFront" TEXT NOT NULL DEFAULT ''`],
     ["Merchant", "cnicImageBack", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageBack" TEXT NOT NULL DEFAULT ''`],

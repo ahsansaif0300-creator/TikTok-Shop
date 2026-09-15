@@ -8,6 +8,7 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { requestOrigin } from "@/lib/shop-url";
 import { processDueReleases } from "@/lib/process-releases";
 import { dummyProductImage } from "@/lib/product-image";
+import { isListedProduct } from "@/lib/product-listing";
 import { allocateReferralCode } from "@/lib/referral";
 
 function fail(path: string, code: string): never {
