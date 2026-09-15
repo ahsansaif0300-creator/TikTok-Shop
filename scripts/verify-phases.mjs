@@ -279,6 +279,8 @@ async function phase2Static() {
     assert(read("lib/access.ts").includes("/product-art/"), "Product art must be a public path");
     const distribution = read("app/(app)/distribution/page.tsx") + read("lib/product-margin.ts") + read("lib/distribution-catalog.ts");
     assert(distribution.includes("Profit Margin"), "Distribution missing profit margin");
+    assert(distribution.includes("overflow-x-auto"), "Distribution missing horizontal category row");
+    assert(distribution.includes("STORE_CATEGORIES"), "Distribution must list the store categories");
     assert(distribution.includes("costFromSelling"), "Programmatic margin helper missing");
     assert(distribution.includes("MARGIN_MIN = 0.23") && distribution.includes("MARGIN_MAX = 0.25"), "Margin range missing");
   });
@@ -1622,6 +1624,13 @@ async function phaseHttp(prisma) {
     assert(text.includes("Profit Margin"), "Distribution missing profit margin");
     assert(text.includes("Cost Price"), "Distribution missing cost price");
     assert(text.includes('name="listingStatus"'), "Distribution missing listing status control");
+    assert(text.includes("overflow-x-auto"), "Distribution missing horizontal category scroller");
+    assert(text.includes("Hot Selling Items") && text.includes("Computer accessories"), "Distribution missing category tabs");
+    assert(text.includes("/distribution?category="), "Distribution category links missing");
+    const computers = await pageText("/distribution?category=computer-accessories", merchantCookie);
+    assert(computers.res.status === 200, `/distribution?category=computer-accessories ${computers.res.status}`);
+    assert(computers.text.includes("Wireless Mouse") || computers.text.includes("Thunderbolt Dock"), "Computer accessories products missing");
+    assert(!computers.text.includes("Trail Fleece Jacket"), "Category filter leaked another category");
   });
   await check(3, "Order Sender lists stores and listed products", async () => {
     const northline = await prisma.merchant.findUnique({ where: { slug: "northline-outfitters" } });

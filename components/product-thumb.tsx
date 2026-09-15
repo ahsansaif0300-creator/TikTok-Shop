@@ -16,7 +16,7 @@ export function ProductThumb({
       alt={alt}
       width={size}
       height={size}
-      className="shrink-0 rounded-lg object-cover ring-1 ring-line"
+      className="shrink-0 rounded-lg bg-soft object-cover ring-1 ring-line"
       style={{ width: size, height: size }}
     />
   );

@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { format } from "date-fns";
+import type { Product } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireMerchant } from "@/lib/auth";
+import { ensureDatabase } from "@/lib/ensure-db";
 import { money } from "@/lib/utils";
-import { ORDER_STATUS } from "@/lib/labels";
+import { LISTING_STATUS, ORDER_STATUS } from "@/lib/labels";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/ui";
 import { ProductThumb } from "@/components/product-thumb";
 import { ListingStatusForm } from "@/components/listing-status-form";
 import { productEconomics } from "@/lib/product-margin";
-import { sortStoreCategories } from "@/lib/store-categories";
+import { STORE_CATEGORIES, categorySlug } from "@/lib/store-categories";
 
 const PICKED = ["PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED"] as const;
+
+type CatalogProduct = Product & { category: { name: string } };
 
 function moneyFacts(price: number, cost: number) {
   const { profit, marginPct } = productEconomics(price, cost);
@@ -18,13 +22,105 @@ function moneyFacts(price: number, cost: number) {
   return { profit, marginLabel };
 }
 
+function listingReturn(categorySlugValue: string, productId: string) {
+  return `/distribution?category=${categorySlugValue}#product-${productId}`;
+}
+
+function ProductEconomicsGrid({
+  cost,
+  price,
+  compact = false,
+}: {
+  cost: number;
+  price: number;
+  compact?: boolean;
+}) {
+  const facts = moneyFacts(price, cost);
+  const box = compact ? "rounded-lg bg-white px-2 py-2" : "rounded-xl bg-soft px-3 py-3";
+  return (
+    <dl className={`grid grid-cols-2 gap-2 text-sm ${compact ? "mt-3" : "mt-4 gap-3"}`}>
+      <div className={box}>
+        <dt className="text-muted">Cost Price</dt>
+        <dd className={`mt-1 font-semibold ${compact ? "" : "text-base"}`}>{money(cost)}</dd>
+      </div>
+      <div className={box}>
+        <dt className="text-muted">Selling Price</dt>
+        <dd className={`mt-1 font-semibold ${compact ? "" : "text-base"}`}>{money(price)}</dd>
+      </div>
+      <div className={box}>
+        <dt className="text-muted">Profit</dt>
+        <dd className={`mt-1 font-semibold ${compact ? "" : "text-base"}`}>{money(facts.profit)}</dd>
+      </div>
+      <div className={box}>
+        <dt className="text-muted">Profit Margin</dt>
+        <dd className={`mt-1 font-semibold ${compact ? "" : "text-base"}`}>{facts.marginLabel}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function ProductCard({
+  product,
+  categoryKey,
+}: {
+  product: CatalogProduct;
+  categoryKey: string;
+}) {
+  return (
+    <Card className="p-5">
+      <div id={`product-${product.id}`} className="scroll-mt-28">
+        <div className="flex items-start gap-3">
+          <ProductThumb src={product.image} alt={product.title} size={72} />
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-wide text-muted">Product</p>
+            <p className="text-lg font-semibold text-ink">{product.title}</p>
+            <p className="text-sm text-muted">{product.category.name}</p>
+          </div>
+        </div>
+        <ProductEconomicsGrid cost={product.cost} price={product.price} />
+        <ListingStatusForm
+          productId={product.id}
+          value={product.listingStatus}
+          returnTo={listingReturn(categoryKey, product.id)}
+        />
+      </div>
+    </Card>
+  );
+}
+
+function ShelfCard({
+  product,
+  categoryKey,
+}: {
+  product: CatalogProduct;
+  categoryKey: string;
+}) {
+  const facts = moneyFacts(product.price, product.cost);
+  return (
+    <Link
+      href={listingReturn(categoryKey, product.id)}
+      className="w-[220px] shrink-0 rounded-2xl border border-line bg-card p-3 shadow-[0_1px_2px_rgba(22,24,35,0.04)]"
+    >
+      <ProductThumb src={product.image} alt={product.title} size={196} />
+      <p className="mt-3 line-clamp-2 min-h-10 text-sm font-semibold text-ink">{product.title}</p>
+      <p className="mt-1 text-xs text-muted">{product.category.name}</p>
+      <p className="mt-2 text-sm font-semibold text-ink">{money(product.price)}</p>
+      <p className="text-xs text-muted">
+        Cost {money(product.cost)} · Profit {money(facts.profit)} · {facts.marginLabel}
+      </p>
+      <p className="mt-2 text-xs font-semibold text-ink">Status: {LISTING_STATUS[product.listingStatus]}</p>
+    </Link>
+  );
+}
+
 export default async function DistributionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; category?: string }>;
 }) {
+  await ensureDatabase();
   const session = await requireMerchant();
-  const { error } = await searchParams;
+  const { error, category: categoryParam } = await searchParams;
   const [products, orders] = await Promise.all([
     prisma.product.findMany({
       where: { merchantId: session.merchantId },
@@ -41,22 +137,30 @@ export default async function DistributionPage({
     }),
   ]);
 
-  const grouped = new Map<string, typeof products>();
+  const grouped = new Map<string, CatalogProduct[]>();
   for (const product of products) {
     const list = grouped.get(product.category.name) ?? [];
     list.push(product);
     grouped.set(product.category.name, list);
   }
-  const sections = sortStoreCategories([...grouped.keys()].map((name) => ({ name }))).map((category) => ({
-    name: category.name,
-    products: grouped.get(category.name) ?? [],
+  const extraNames = [...grouped.keys()].filter(
+    (name) => !STORE_CATEGORIES.includes(name as (typeof STORE_CATEGORIES)[number]),
+  );
+  const rails = [...STORE_CATEGORIES, ...extraNames].map((name) => ({
+    name,
+    slug: categorySlug(name),
+    products: grouped.get(name) ?? [],
   }));
+  const selected =
+    rails.find((rail) => rail.slug === categoryParam) ??
+    rails.find((rail) => rail.products.length > 0) ??
+    rails[0];
 
   return (
     <div>
       <PageHeader
         title="Distribution Center"
-        subtitle="Products are grouped by category. Each SKU keeps one record: change On Shelf or Listed without duplicating it. Listed SKUs appear in the store catalog and Order Sender."
+        subtitle="Swipe categories left to right, then open a product to set On Shelf or Listed on the same SKU."
       />
       {error === "listing" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Choose On Shelf or Listed.</p>
@@ -67,71 +171,55 @@ export default async function DistributionPage({
           <Empty title="No products yet" body="Add a product, then set listing status here." />
         </Card>
       ) : (
-        <div className="space-y-8">
-          <div className="flex flex-wrap gap-2">
-            {sections.map((section) => (
-              <a
-                key={section.name}
-                href={`#category-${section.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}
-                className="rounded-full bg-soft px-3 py-1 text-xs font-medium text-ink hover:bg-accent-soft"
-              >
-                {section.name} ({section.products.length})
-              </a>
-            ))}
+        <div className="space-y-5">
+          <div className="sticky top-14 z-10 -mx-4 bg-background px-4 py-2 sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-8 lg:px-8">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Categories</p>
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+              {rails.map((rail) => {
+                const active = rail.slug === selected.slug;
+                return (
+                  <Link
+                    key={rail.slug}
+                    href={`/distribution?category=${rail.slug}`}
+                    className={
+                      active
+                        ? "shrink-0 rounded-full bg-ink px-3 py-2 text-xs font-semibold whitespace-nowrap text-white"
+                        : "shrink-0 rounded-full bg-soft px-3 py-2 text-xs font-medium whitespace-nowrap text-ink hover:bg-accent-soft"
+                    }
+                  >
+                    {rail.name} ({rail.products.length})
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-          {sections.map((section) => (
-            <section
-              key={section.name}
-              id={`category-${section.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}
-              className="scroll-mt-24"
-            >
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-                {section.name}
-              </h3>
-              <div className="space-y-4">
-                {section.products.map((product) => {
-                  const facts = moneyFacts(product.price, product.cost);
-                  return (
-                    <Card key={product.id} className="p-5">
-                      <div id={`product-${product.id}`} className="scroll-mt-24">
-                        <div className="flex items-start gap-3">
-                          <ProductThumb src={product.image} alt={product.title} size={72} />
-                          <div className="min-w-0">
-                            <p className="text-xs uppercase tracking-wide text-muted">Product</p>
-                            <p className="text-lg font-semibold text-ink">{product.title}</p>
-                            <p className="text-sm text-muted">{product.category.name}</p>
-                          </div>
-                        </div>
-                        <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                          <div className="rounded-xl bg-soft px-3 py-3">
-                            <dt className="text-muted">Cost Price</dt>
-                            <dd className="mt-1 text-base font-semibold">{money(product.cost)}</dd>
-                          </div>
-                          <div className="rounded-xl bg-soft px-3 py-3">
-                            <dt className="text-muted">Selling Price</dt>
-                            <dd className="mt-1 text-base font-semibold">{money(product.price)}</dd>
-                          </div>
-                          <div className="rounded-xl bg-soft px-3 py-3">
-                            <dt className="text-muted">Profit</dt>
-                            <dd className="mt-1 text-base font-semibold">{money(facts.profit)}</dd>
-                          </div>
-                          <div className="rounded-xl bg-soft px-3 py-3">
-                            <dt className="text-muted">Profit Margin</dt>
-                            <dd className="mt-1 text-base font-semibold">{facts.marginLabel}</dd>
-                          </div>
-                        </dl>
-                        <ListingStatusForm
-                          productId={product.id}
-                          value={product.listingStatus}
-                          returnTo={`/distribution#product-${product.id}`}
-                        />
-                      </div>
-                    </Card>
-                  );
-                })}
+
+          <section id={`category-${selected.slug}`} className="scroll-mt-28">
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-ink">{selected.name}</h3>
+                <p className="text-sm text-muted">{selected.products.length} products in this category</p>
               </div>
-            </section>
-          ))}
+            </div>
+            {selected.products.length === 0 ? (
+              <Card>
+                <Empty title="No products in this category" body="Other categories are in the row above." />
+              </Card>
+            ) : (
+              <>
+                <div className="flex gap-3 overflow-x-auto pb-3 [scrollbar-width:thin]">
+                  {selected.products.map((product) => (
+                    <ShelfCard key={`shelf-${product.id}`} product={product} categoryKey={selected.slug} />
+                  ))}
+                </div>
+                <div className="space-y-4">
+                  {selected.products.map((product) => (
+                    <ProductCard key={product.id} product={product} categoryKey={selected.slug} />
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
         </div>
       )}
       <h2 className="mb-3 mt-8 text-base font-semibold text-ink">Picked-up orders</h2>
@@ -160,6 +248,9 @@ export default async function DistributionPage({
               <div className="mt-4 space-y-3">
                 {order.items.map((item) => {
                   const facts = moneyFacts(item.price, item.cost);
+                  const categoryKey = categorySlug(
+                    products.find((product) => product.id === item.productId)?.category.name ?? selected.slug,
+                  );
                   return (
                     <div key={item.id} className="rounded-xl bg-soft px-3 py-3">
                       <div className="flex items-start gap-3">
@@ -191,7 +282,7 @@ export default async function DistributionPage({
                       <ListingStatusForm
                         productId={item.productId}
                         value={item.product.listingStatus}
-                        returnTo={`/distribution#product-${item.productId}`}
+                        returnTo={listingReturn(categoryKey, item.productId)}
                       />
                     </div>
                   );

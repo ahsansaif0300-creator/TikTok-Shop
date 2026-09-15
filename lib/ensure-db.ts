@@ -128,14 +128,14 @@ async function backfill() {
     console.warn("[harbor] Growth catalog cap skipped", error);
   }
   try {
-    const flag = await prisma.setting.findUnique({ where: { key: "distributionCatalogV1" } });
     const northline = await prisma.merchant.findUnique({
       where: { slug: "northline-outfitters" },
       include: { _count: { select: { products: true } } },
     });
-    if (!flag && northline && northline._count.products < 500) {
+    if (northline && northline._count.products < 500) {
       await syncDistributionCatalog(prisma);
     }
+    const flag = await prisma.setting.findUnique({ where: { key: "distributionCatalogV1" } });
     if (!flag) {
       await prisma.setting.create({ data: { key: "distributionCatalogV1", value: "1" } });
     }
