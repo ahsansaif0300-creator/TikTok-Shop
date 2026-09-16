@@ -108,7 +108,7 @@ Still do this after GitHub updates:
 1. Confirm hPanel uses branch **`main`** (not an old PR branch).
 2. Click **Deploy** so Hostinger **pulls GitHub** (a cache clear does not download new commits).
 3. When the build is green, click **Restart**.
-4. Open `/welcome`. The title must be **TikTok Shop** and the footer must include **Release tiktok-shop-5-…**. If you still see TikiTok Shop or a Release line without `tiktok-shop-5`, Hostinger did not pull current **`main`**. Deploy **`main` again**. Do not click “Fix and redeploy” on an old snapshot.
+4. Open `/welcome`. The title must be **TikTok Shop** and the footer must include **Release tiktok-shop-photos-…**. If you still see TikiTok Shop or a Release line without `tiktok-shop-photos`, Hostinger did not pull current **`main`**. Deploy **`main` again**. Do not click “Fix and redeploy” on an old snapshot.
 
 The store Distribution Center (horizontal categories and product photos) only appears after **`main`** is deployed. Do not deploy an old PR branch snapshot.
 
