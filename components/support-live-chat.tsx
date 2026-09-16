@@ -31,7 +31,11 @@ export function SupportLiveChat({
   const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
+    const box = scroller.current;
+    if (!box) return;
+    box.scrollTo({ top: box.scrollHeight });
+    const pane = box.parentElement?.closest(".overflow-y-auto");
+    pane?.scrollTo({ top: pane.scrollHeight });
   }, [messages.length, typing]);
 
   useEffect(() => {
