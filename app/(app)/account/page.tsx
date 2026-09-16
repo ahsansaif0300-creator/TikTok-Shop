@@ -18,10 +18,8 @@ const ERRORS: Record<string, string> = {
   paypass: "Set a payment password before picking up orders.",
   "pay-length": "New payment password must be at least 8 characters.",
   "pay-mismatch": "New payment password and confirmation do not match.",
-  "pay-current": "Current payment password is incorrect.",
   "login-length": "New login password must be at least 8 characters.",
   "login-mismatch": "New login password and confirmation do not match.",
-  "login-current": "Current login password is incorrect.",
 };
 
 export default async function AccountPage({
@@ -102,16 +100,8 @@ export default async function AccountPage({
 
       <Card className="p-5">
         <h2 className="font-medium">Change payment password</h2>
-        <p className="mt-1 text-sm text-muted">
-          Required to pick up orders. {user?.paymentPasswordHash ? "Enter the current password to replace it." : "Set one now."}
-        </p>
+        <p className="mt-1 text-sm text-muted">Required to pick up orders. Enter a new password to save it.</p>
         <form action={changePaymentPassword} className="mt-4 space-y-3">
-          <Field
-            name="currentPassword"
-            label="Current payment password"
-            type="password"
-            required={Boolean(user?.paymentPasswordHash)}
-          />
           <Field name="newPassword" label="New payment password" type="password" required />
           <Field name="confirmPassword" label="Confirm new payment password" type="password" required />
           <Button type="submit">Save payment password</Button>
@@ -120,8 +110,8 @@ export default async function AccountPage({
 
       <Card className="p-5">
         <h2 className="font-medium">Change login password</h2>
+        <p className="mt-1 text-sm text-muted">Enter a new login password to save it.</p>
         <form action={changeLoginPassword} className="mt-4 space-y-3">
-          <Field name="currentPassword" label="Current login password" type="password" required />
           <Field name="newPassword" label="New login password" type="password" required />
           <Field name="confirmPassword" label="Confirm new login password" type="password" required />
           <Button type="submit">Save login password</Button>

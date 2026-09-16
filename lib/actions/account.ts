@@ -51,19 +51,10 @@ export async function updateStoreLogo(formData: FormData) {
 
 export async function changePaymentPassword(formData: FormData) {
   const session = await requireMerchant();
-  const current = String(formData.get("currentPassword") ?? "");
   const next = String(formData.get("newPassword") ?? "");
   const confirm = String(formData.get("confirmPassword") ?? "");
   if (next.length < 8) redirect("/account?error=pay-length");
   if (next !== confirm) redirect("/account?error=pay-mismatch");
-
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (!user) redirect("/account?error=invalid");
-  if (user.paymentPasswordHash) {
-    if (!current || !(await bcrypt.compare(current, user.paymentPasswordHash))) {
-      redirect("/account?error=pay-current");
-    }
-  }
 
   await prisma.user.update({
     where: { id: session.userId },
@@ -74,16 +65,10 @@ export async function changePaymentPassword(formData: FormData) {
 
 export async function changeLoginPassword(formData: FormData) {
   const session = await requireMerchant();
-  const current = String(formData.get("currentPassword") ?? "");
   const next = String(formData.get("newPassword") ?? "");
   const confirm = String(formData.get("confirmPassword") ?? "");
   if (next.length < 8) redirect("/account?error=login-length");
   if (next !== confirm) redirect("/account?error=login-mismatch");
-
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (!user || !(await bcrypt.compare(current, user.passwordHash))) {
-    redirect("/account?error=login-current");
-  }
 
   await prisma.user.update({
     where: { id: session.userId },

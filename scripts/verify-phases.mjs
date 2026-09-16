@@ -295,6 +295,7 @@ async function phase2Static() {
     assert(nav.includes("/merchants") && nav.includes("staffOnly"), "Merchants is not staff-only");
     assert(nav.includes("merchantOnly") && nav.includes("/distribution") && nav.includes("/withdraw"), "Store-only nav missing");
     assert(nav.includes("/support-desk") && nav.includes("Support Service"), "Support Service backend nav missing");
+    assert(nav.includes('{ href: "/support-desk", label: "Support Service", icon: Headset, adminOnly: true }'), "Support Service must be Super Admin only in the main nav");
   });
   await check(2, "Dashboard is role-aware", () => {
     const page = read("app/(app)/page.tsx") + read("components/merchant-home.tsx");
@@ -331,9 +332,9 @@ async function phase2Static() {
     assert(signupPage.includes("referralCode"), "Signup form missing referral code");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-order-sender"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-ops-nav-passwords"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-order-sender"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-ops-nav-passwords"), "public/release.txt missing live deploy stamp");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {
@@ -1078,6 +1079,9 @@ async function phase6Static() {
     assert(read("app/(app)/admin/stores/[id]/page.tsx").includes("StoreScoreForm"), "Super Admin store score form missing");
     assert(!read("lib/actions/account.ts").includes("creditScore"), "Store users must not edit credit score");
     assert(!read("lib/actions/account.ts").includes("rating"), "Store users must not edit store rating");
+    assert(!read("app/(app)/account/page.tsx").includes("Current payment password"), "Store profile still asks for current payment password");
+    assert(!read("app/(app)/account/page.tsx").includes("Current login password"), "Store profile still asks for current login password");
+    assert(!read("lib/actions/account.ts").includes("currentPassword"), "Store password change still checks the current password");
     const serviceSession = read("lib/service-session.ts") + read("lib/service-bot.ts") + read("lib/actions/support.ts") + read("lib/support-media.ts");
     assert(serviceSession.includes("SERVICE_SESSION_MS"), "1-hour service session missing");
     assert(serviceSession.includes("Welcome to our Support Service"), "Service welcome copy missing");
@@ -1612,7 +1616,7 @@ async function phaseHttp(prisma) {
     const { text } = await pageText("/", opsCookie);
     assert(text.includes("Operations overview"), "Ops dashboard title missing");
     assert(hasHref(text, "/merchants"), "Ops nav missing Merchants");
-    assert(hasHref(text, "/support-desk"), "Ops nav missing Support Service");
+    assert(!hasHref(text, "/support-desk"), "Ops nav leaked Support Service");
     assert(!hasHref(text, "/service"), "Ops nav leaked store Service");
     assert(!hasHref(text, "/users"), "Ops nav leaked Team");
     assert(!hasHref(text, "/settings"), "Ops nav leaked Settings");
@@ -1868,6 +1872,12 @@ async function phaseHttp(prisma) {
     const profile = await pageText("/profile", merchantCookie);
     assert(profile.res.status === 200, `Merchant /profile ${profile.res.status}`);
     assert(profile.text.includes("Available balance"), "Store profile missing server balance");
+    const accountPage = await pageText("/account", merchantCookie);
+    assert(accountPage.res.status === 200, `Merchant /account ${accountPage.res.status}`);
+    assert(accountPage.text.includes("Change payment password"), "Store account missing payment password form");
+    assert(accountPage.text.includes("Change login password"), "Store account missing login password form");
+    assert(!accountPage.text.includes("Current payment password"), "Store account still shows current payment password");
+    assert(!accountPage.text.includes("Current login password"), "Store account still shows current login password");
     const adminProfile = await getWithCookie("/profile", adminCookie);
     assert(adminProfile.status === 200, `/profile ${adminProfile.status}`);
     const notes = await getWithCookie("/notifications", adminCookie);
