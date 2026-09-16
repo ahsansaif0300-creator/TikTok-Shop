@@ -165,9 +165,9 @@ export function OrderSenderBoard({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
-      <aside className="xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:self-start xl:overflow-y-auto">
-        <Card className="p-5">
+    <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
+      <aside className="xl:sticky xl:top-24 xl:self-start">
+        <Card className="overflow-visible p-5">
           <h2 className="font-medium">Search Store</h2>
           <p className="mt-1 text-sm text-muted">Type a name, Store ID, city, or email. Suggestions appear as you type.</p>
           <div ref={box} className="relative mt-3">
@@ -192,7 +192,7 @@ export function OrderSenderBoard({
               <ul
                 id="store-suggestions"
                 role="listbox"
-                className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-line bg-white py-1 shadow-lg"
+                className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-line bg-white py-1 shadow-lg"
               >
                 {suggestions.length === 0 ? (
                   <li className="px-3 py-2 text-sm text-muted">No matching stores.</li>
