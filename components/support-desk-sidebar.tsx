@@ -85,27 +85,31 @@ export function SupportDeskSidebar({
   useEffect(() => {
     let stop = false;
     async function pull() {
-      const res = await fetch("/api/support/live?inbox=1", { cache: "no-store" });
-      if (!res.ok || stop) return;
-      const ctype = res.headers.get("content-type") || "";
-      if (!ctype.includes("application/json")) return;
-      const json = (await res.json()) as {
-        inbox?: {
-          active: SupportDeskListItem[];
-          history: SupportDeskListItem[];
-          stores: { id: string; name: string; storeCode: string | null }[];
+      try {
+        const res = await fetch("/api/support/live?inbox=1", { cache: "no-store" });
+        if (!res.ok || stop) return;
+        const ctype = res.headers.get("content-type") || "";
+        if (!ctype.includes("application/json")) return;
+        const json = (await res.json()) as {
+          inbox?: {
+            active: SupportDeskListItem[];
+            history: SupportDeskListItem[];
+            stores: { id: string; name: string; storeCode: string | null }[];
+          };
         };
-      };
-      if (stop || !json.inbox) return;
-      setActive(json.inbox.active);
-      setHistory(json.inbox.history);
-      setStores(json.inbox.stores);
+        if (stop || !json.inbox) return;
+        setActive(json.inbox.active);
+        setHistory(json.inbox.history);
+        setStores(json.inbox.stores);
+      } catch {
+        return;
+      }
     }
     void pull();
     const id = setInterval(() => {
       if (document.hidden) return;
       void pull();
-    }, 1500);
+    }, 1000);
     return () => {
       stop = true;
       clearInterval(id);

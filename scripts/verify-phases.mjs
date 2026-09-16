@@ -1090,6 +1090,7 @@ async function phase6Static() {
     assert(read("app/login/support/page.tsx").includes("loginSupportAction"), "Support desk login action missing");
     assert(read("app/support-desk/layout.tsx").includes("requireSupportDesk"), "Support desk is not staff-gated");
     assert(read("components/support-live-chat.tsx").includes("/api/support/live"), "Live support poll missing");
+    assert(read("components/support-desk-sidebar.tsx").includes("/api/support/live?inbox=1"), "Support desk inbox poll missing");
     assert(read("components/service-composer.tsx").includes("is typing") || read("components/support-live-chat.tsx").includes("is typing"), "Typing indicator missing");
     assert(read("app/api/support/live/route.ts").includes("setSupportTyping"), "Typing ping missing");
     assert(read("components/service-composer.tsx").includes("Upload Image/Video"), "Service media picker missing");
@@ -1843,6 +1844,72 @@ async function phaseHttp(prisma) {
     assert(adminProfile.status === 200, `/profile ${adminProfile.status}`);
     const notes = await getWithCookie("/notifications", adminCookie);
     assert(notes.status === 200, `/notifications ${notes.status}`);
+  });
+  await check(3, "Support live API delivers store messages and typing without a page reload", async () => {
+    const northline = await prisma.merchant.findFirst({ where: { name: "Northline Outfitters" } });
+    assert(northline, "Northline store missing");
+    const marker = `LIVE-${Date.now()}`;
+    const form = new FormData();
+    form.set("merchantId", northline.id);
+    form.set("body", marker);
+    const send = await fetch(`${baseUrl}/api/support/live`, {
+      method: "POST",
+      headers: { cookie: merchantCookie },
+      body: form,
+    });
+    assert(send.status === 200, `Store live send ${send.status}`);
+    const sendJson = await send.json();
+    assert(sendJson.ok && sendJson.message?.body === marker, "Store live send did not return the message");
+
+    const typing = await fetch(`${baseUrl}/api/support/live`, {
+      method: "POST",
+      headers: { cookie: merchantCookie, "content-type": "application/json" },
+      body: JSON.stringify({ merchantId: northline.id, typing: true }),
+    });
+    assert(typing.status === 200, `Store typing ping ${typing.status}`);
+
+    const inbox = await fetch(`${baseUrl}/api/support/live?inbox=1`, {
+      headers: { cookie: adminCookie, accept: "application/json" },
+    });
+    assert(inbox.status === 200, `Support inbox live ${inbox.status}`);
+    const inboxJson = await inbox.json();
+    const row = (inboxJson.inbox?.active || []).find((item) => item.merchantId === northline.id);
+    assert(row, "Support inbox live poll missing the store after send");
+    assert(String(row.lastPreview || "").includes(marker), "Support inbox did not receive the live store message");
+    assert(row.typing, "Support inbox missing store typing indicator");
+
+    const thread = await fetch(`${baseUrl}/api/support/live?merchantId=${encodeURIComponent(northline.id)}`, {
+      headers: { cookie: adminCookie, accept: "application/json" },
+    });
+    assert(thread.status === 200, `Support thread live ${thread.status}`);
+    const threadJson = await thread.json();
+    assert(
+      threadJson.thread?.messages?.some((item) => item.body === marker),
+      "Support thread live poll missing the store message",
+    );
+    assert(threadJson.thread?.typing?.store, "Support thread missing store typing indicator");
+
+    const agentForm = new FormData();
+    agentForm.set("merchantId", northline.id);
+    agentForm.set("body", `AGENT-${marker}`);
+    const reply = await fetch(`${baseUrl}/api/support/live`, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: agentForm,
+    });
+    assert(reply.status === 200, `Agent live reply ${reply.status}`);
+    const replyJson = await reply.json();
+    assert(replyJson.ok && replyJson.message?.body === `AGENT-${marker}`, "Agent live reply failed");
+
+    const storeThread = await fetch(`${baseUrl}/api/support/live?merchantId=${encodeURIComponent(northline.id)}`, {
+      headers: { cookie: merchantCookie, accept: "application/json" },
+    });
+    assert(storeThread.status === 200, `Store live poll ${storeThread.status}`);
+    const storeJson = await storeThread.json();
+    assert(
+      storeJson.thread?.messages?.some((item) => item.body === `AGENT-${marker}`),
+      "Store live poll missing the agent reply",
+    );
   });
 }
 

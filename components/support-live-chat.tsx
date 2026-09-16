@@ -37,30 +37,34 @@ export function SupportLiveChat({
   useEffect(() => {
     let stop = false;
     async function pull() {
-      const res = await fetch(`/api/support/live?merchantId=${encodeURIComponent(merchantId)}`, { cache: "no-store" });
-      if (!res.ok || stop) return;
-      const ctype = res.headers.get("content-type") || "";
-      if (!ctype.includes("application/json")) return;
-      const json = (await res.json()) as {
-        thread?: {
-          messages: LiveSupportMessage[];
-          expired: boolean;
-          expiresAt: string | null;
-          typing: { store: string | null; agent: string | null };
+      try {
+        const res = await fetch(`/api/support/live?merchantId=${encodeURIComponent(merchantId)}`, { cache: "no-store" });
+        if (!res.ok || stop) return;
+        const ctype = res.headers.get("content-type") || "";
+        if (!ctype.includes("application/json")) return;
+        const json = (await res.json()) as {
+          thread?: {
+            messages: LiveSupportMessage[];
+            expired: boolean;
+            expiresAt: string | null;
+            typing: { store: string | null; agent: string | null };
+          };
         };
-      };
-      if (stop || !json.thread) return;
-      setMessages(json.thread.messages);
-      setLiveExpiresAt(json.thread.expiresAt ?? undefined);
-      setLiveLocked(json.thread.expired);
-      const other = storeMode ? json.thread.typing.agent : json.thread.typing.store;
-      setTyping(other);
+        if (stop || !json.thread) return;
+        setMessages(json.thread.messages);
+        setLiveExpiresAt(json.thread.expiresAt ?? undefined);
+        setLiveLocked(json.thread.expired);
+        const other = storeMode ? json.thread.typing.agent : json.thread.typing.store;
+        setTyping(other);
+      } catch {
+        return;
+      }
     }
     void pull();
     const id = setInterval(() => {
       if (document.hidden) return;
       void pull();
-    }, 1200);
+    }, 800);
     return () => {
       stop = true;
       clearInterval(id);

@@ -41,7 +41,7 @@ export function ServiceComposer({
   async function pingTyping() {
     if (!live) return;
     const now = Date.now();
-    if (now - lastTyping.current < 700) return;
+    if (now - lastTyping.current < 400) return;
     lastTyping.current = now;
     await fetch("/api/support/live", {
       method: "POST",
