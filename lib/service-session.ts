@@ -112,7 +112,7 @@ export async function notifyServiceCounterpart(
         userId: user.id,
         title: staffSender ? "Service reply" : "Store waiting for Service",
         body: preview.slice(0, 160),
-        href: staffSender ? "/service" : user.role === "SUPER_ADMIN" ? `/admin/support/${merchantId}` : `/service/${merchantId}`,
+        href: staffSender ? "/service" : `/support-desk/${merchantId}`,
       })),
   });
 }

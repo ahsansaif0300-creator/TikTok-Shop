@@ -152,6 +152,7 @@ async function phase1Static() {
     "app/login/admin/page.tsx",
     "app/login/ops/page.tsx",
     "app/login/store/page.tsx",
+    "app/login/support/page.tsx",
     "app/welcome/page.tsx",
     "next.config.ts",
   ];
@@ -206,7 +207,7 @@ async function phase1Static() {
   await check(1, "proxy.ts redirects anonymous users to the matching login", () => {
     const proxy = read("proxy.ts") + read("lib/access.ts");
     assert(proxy.includes("loginPathForRequest"), "Login redirect helper missing");
-    assert(proxy.includes("/login/admin") && proxy.includes("/login/store") && proxy.includes("/login/ops"), "Separate login paths missing");
+    assert(proxy.includes("/login/admin") && proxy.includes("/login/store") && proxy.includes("/login/ops") && proxy.includes("/login/support"), "Separate login paths missing");
     assert(proxy.includes("harbor_session"), "Session cookie not read");
     assert(proxy.includes("canAccessPath"), "Role path gate missing");
   });
@@ -293,7 +294,7 @@ async function phase2Static() {
     assert(nav.includes("/settings") && nav.includes("adminOnly"), "Settings is not admin-only");
     assert(nav.includes("/merchants") && nav.includes("staffOnly"), "Merchants is not staff-only");
     assert(nav.includes("merchantOnly") && nav.includes("/distribution") && nav.includes("/withdraw"), "Store-only nav missing");
-    assert(nav.includes("/admin/support") && nav.includes("Support Service") && nav.includes("hideForAdmin"), "Support Service backend nav missing");
+    assert(nav.includes("/support-desk") && nav.includes("Support Service"), "Support Service backend nav missing");
   });
   await check(2, "Dashboard is role-aware", () => {
     const page = read("app/(app)/page.tsx") + read("components/merchant-home.tsx");
@@ -330,9 +331,9 @@ async function phase2Static() {
     assert(signupPage.includes("referralCode"), "Signup form missing referral code");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-support-desk"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-support-login"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-support-desk"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-support-login"), "public/release.txt missing live deploy stamp");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {
@@ -341,10 +342,14 @@ async function phase2Static() {
       read("app/login/admin/page.tsx") +
       read("app/login/ops/page.tsx") +
       read("app/login/store/page.tsx") +
+      read("app/login/support/page.tsx") +
       read("components/role-login-form.tsx") +
       read("lib/brand-name.ts");
     assert(login.includes("TikTok Shop"), "Login missing product name");
     assert(login.includes("BRAND_NAME"), "Login must use the shared brand name");
+    assert(read("app/login/support/page.tsx").includes("Support Desk Login"), "Support desk login missing");
+    assert(!read("app/welcome/page.tsx").includes("/login/support"), "Welcome must not advertise Support Desk login");
+    assert(!read("app/login/page.tsx").includes("/login/support"), "Public login index must not advertise Support Desk login");
     assert(!login.includes("HarborAdmin!2026"), "Demo admin password leaked on login");
     assert(!login.includes("HarborMerchant!2026"), "Demo merchant password leaked on login");
     assert(!login.includes("oscar.d@example.net"), "Demo admin email leaked on login");
@@ -1037,8 +1042,13 @@ async function phase6Static() {
       "app/(app)/admin/stores/[id]/page.tsx",
       "app/(app)/admin/support/page.tsx",
       "app/(app)/admin/support/[merchantId]/page.tsx",
+      "app/support-desk/page.tsx",
+      "app/support-desk/[merchantId]/page.tsx",
+      "app/login/support/page.tsx",
       "components/support-backend-inbox.tsx",
       "components/support-store-details.tsx",
+      "components/support-desk-chrome.tsx",
+      "components/support-desk-sidebar.tsx",
       "lib/support-inbox.ts",
       "lib/support-paths.ts",
       "lib/actions/admin.ts",
@@ -1068,12 +1078,13 @@ async function phase6Static() {
     assert(serviceSession.includes("expireStaleSupportSessions"), "Server-side session expiry missing");
     assert(serviceSession.includes("saveSupportUpload"), "Support upload helper missing");
     assert(read("lib/support-media.ts").includes("SUPPORT_UPLOAD_ROOT"), "Private upload root missing");
-    assert(read("components/support-backend-inbox.tsx").includes("Active Service Sessions"), "Agent active session list missing");
+    assert(read("components/support-desk-sidebar.tsx").includes("Active Service Sessions"), "Agent active session list missing");
     assert(read("app/(app)/service/page.tsx").includes("storeMode"), "Store Service must use the no-timer composer");
     assert(!read("app/(app)/service/page.tsx").includes("ServiceTimer"), "Store Service must not show the countdown");
-    assert(read("app/(app)/admin/support/[merchantId]/page.tsx").includes("ServiceTimer"), "Support backend chat missing timer");
-    assert(read("app/(app)/admin/support/[merchantId]/page.tsx").includes("SupportStoreDetails"), "Support backend chat missing store details");
-    assert(read("app/(app)/admin/support/page.tsx").includes("requireSuperAdmin"), "Support Service inbox is not admin-gated");
+    assert(read("app/support-desk/[merchantId]/page.tsx").includes("ServiceTimer"), "Support backend chat missing timer");
+    assert(read("app/support-desk/[merchantId]/page.tsx").includes("SupportStoreDetails"), "Support backend chat missing store details");
+    assert(read("app/login/support/page.tsx").includes("loginSupportAction"), "Support desk login action missing");
+    assert(read("app/support-desk/layout.tsx").includes("requireSupportDesk"), "Support desk is not staff-gated");
     assert(read("components/service-composer.tsx").includes("Upload Image/Video"), "Service media picker missing");
     assert(read("lib/process-releases.ts").includes('status: "SCHEDULED"'), "Release job must only pick scheduled rows");
     assert(read("lib/auth.ts").includes("requireSuperAdmin"), "requireSuperAdmin missing");
@@ -1466,10 +1477,22 @@ async function phaseHttp(prisma) {
     assert(!/HarborAdmin!2026|HarborMerchant!2026|HarborOps!2026/.test(text), "Login HTML leaked demo passwords");
   });
   await check(2, "Role login URLs are separate and unauthenticated admin routes use Super Admin login", async () => {
-    for (const pathname of ["/login/admin", "/login/ops", "/login/store", "/welcome"]) {
+    for (const pathname of ["/login/admin", "/login/ops", "/login/store", "/login/support", "/welcome"]) {
       const res = await fetchManual(`${baseUrl}${pathname}`);
       assert(res.status === 200, `${pathname} returned ${res.status}`);
     }
+    const welcome = await pageText("/welcome");
+    assert(welcome.res.status === 200, `/welcome ${welcome.res.status}`);
+    assert(hasHref(welcome.text, "/login/store"), "Welcome missing Store Login");
+    assert(hasHref(welcome.text, "/login/ops"), "Welcome missing Normal Backend Login");
+    assert(hasHref(welcome.text, "/login/admin"), "Welcome missing Super Admin Login");
+    assert(!hasHref(welcome.text, "/login/support"), "Welcome leaked Support Desk login");
+    assert(!welcome.text.includes("Support Desk"), "Welcome leaked Support Desk");
+    const loginIndex = await pageText("/login");
+    assert(!hasHref(loginIndex.text, "/login/support"), "Login index leaked Support Desk login");
+    const supportGate = await getWithCookie("/support-desk");
+    assert([301, 302, 303, 307, 308].includes(supportGate.status), `/support-desk was ${supportGate.status}`);
+    assert(locationPath(supportGate) === "/login/support", `/support-desk redirected to ${locationPath(supportGate)}`);
     const adminGate = await getWithCookie("/admin/place-order");
     assert([301, 302, 303, 307, 308].includes(adminGate.status), `/admin/place-order was ${adminGate.status}`);
     assert(locationPath(adminGate) === "/login/admin", `Admin gate redirected to ${locationPath(adminGate)}`);
@@ -1515,6 +1538,7 @@ async function phaseHttp(prisma) {
     "/notifications",
     "/profile",
     "/service",
+    "/support-desk",
   ];
   const adminRoutes = [
     "/users",
@@ -1525,14 +1549,13 @@ async function phaseHttp(prisma) {
     "/admin/users",
     "/admin/broadcast",
     "/admin/stores",
-    "/admin/support",
   ];
   await check(7, "Super admin can open every operations route", async () => {
     for (const pathname of [...staffRoutes, ...adminRoutes]) {
       if (pathname === "/service") {
         const res = await getWithCookie(pathname, adminCookie);
         assert([301, 302, 303, 307, 308].includes(res.status), `/service was ${res.status} for admin`);
-        assert(locationPath(res) === "/admin/support", `/service redirected admin to ${locationPath(res)}`);
+        assert(locationPath(res) === "/support-desk", `/service redirected admin to ${locationPath(res)}`);
         continue;
       }
       const res = await getWithCookie(pathname, adminCookie);
@@ -1541,6 +1564,12 @@ async function phaseHttp(prisma) {
   });
   await check(2, "Ops can open staff pages but not Team or Settings", async () => {
     for (const pathname of staffRoutes) {
+      if (pathname === "/service") {
+        const res = await getWithCookie(pathname, opsCookie);
+        assert([301, 302, 303, 307, 308].includes(res.status), `/service was ${res.status} for ops`);
+        assert(locationPath(res) === "/support-desk", `/service redirected ops to ${locationPath(res)}`);
+        continue;
+      }
       const res = await getWithCookie(pathname, opsCookie);
       assert(res.status === 200, `${pathname} returned ${res.status} for ops`);
     }
@@ -1559,19 +1588,22 @@ async function phaseHttp(prisma) {
     assert(hasHref(text, "/admin/place-order"), "Admin nav missing Place order");
     assert(text.includes("Order Sender"), "Admin nav missing Order Sender label");
     assert(hasHref(text, "/admin/funds"), "Admin nav missing Add funds");
-    assert(hasHref(text, "/admin/support"), "Admin nav missing Support Service");
+    assert(hasHref(text, "/support-desk"), "Admin nav missing Support Service");
     assert(!hasHref(text, "/service"), "Admin nav leaked store Service");
+    assert(!hasHref(text, "/login/support"), "Admin nav leaked Support Desk login");
     assert(text.includes("Needs attention"), "Admin attention queue missing");
   });
   await check(2, "Ops dashboard HTML omits Team and Settings", async () => {
     const { text } = await pageText("/", opsCookie);
     assert(text.includes("Operations overview"), "Ops dashboard title missing");
     assert(hasHref(text, "/merchants"), "Ops nav missing Merchants");
-    assert(hasHref(text, "/service"), "Ops nav missing Service");
+    assert(hasHref(text, "/support-desk"), "Ops nav missing Support Service");
+    assert(!hasHref(text, "/service"), "Ops nav leaked store Service");
     assert(!hasHref(text, "/users"), "Ops nav leaked Team");
     assert(!hasHref(text, "/settings"), "Ops nav leaked Settings");
     assert(!hasHref(text, "/admin/place-order"), "Ops nav leaked Place order");
-    assert(!hasHref(text, "/admin/support"), "Ops nav leaked Support Service");
+    assert(!hasHref(text, "/admin/support"), "Ops nav leaked Super Admin support path");
+    assert(!hasHref(text, "/login/support"), "Ops nav leaked Support Desk login");
   });
 
   const merchantAllowed = [
@@ -1606,6 +1638,7 @@ async function phaseHttp(prisma) {
     "/admin/broadcast",
     "/admin/stores",
     "/admin/support",
+    "/support-desk",
   ];
   await check(2, "Merchant can open store pages and is blocked from staff pages", async () => {
     for (const pathname of merchantAllowed) {
@@ -1625,6 +1658,8 @@ async function phaseHttp(prisma) {
     assert(text.includes("Available balance"), "Merchant wallet missing");
     assert(hasHref(text, "/service"), "Merchant dashboard missing Service");
     assert(!hasHref(text, "/admin/support"), "Merchant nav leaked Support Service");
+    assert(!hasHref(text, "/support-desk"), "Merchant nav leaked Support Desk");
+    assert(!hasHref(text, "/login/support"), "Merchant nav leaked Support Desk login");
     assert(text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant dashboard missing product images");
     assert(hasHref(text, "/distribution"), "Merchant dashboard missing Distribution");
     assert(!hasHref(text, "/merchants"), "Merchant nav leaked Merchants");
@@ -1780,18 +1815,20 @@ async function phaseHttp(prisma) {
     assert(service.text.includes("Northline Outfitters"), "Service missing logged-in store name");
     assert(service.text.includes("TikTok Shop Service assistant") || service.text.includes("assistant"), "Service assistant missing");
     assert(!service.text.includes("Time Remaining"), "Store Service must not show the countdown");
-    const supportInbox = await pageText("/admin/support", adminCookie);
-    assert(supportInbox.res.status === 200, `Admin /admin/support ${supportInbox.res.status}`);
+    const supportInbox = await pageText("/support-desk", adminCookie);
+    assert(supportInbox.res.status === 200, `Admin /support-desk ${supportInbox.res.status}`);
     assert(supportInbox.text.includes("Active Service Sessions"), "Support Service inbox missing active list");
     assert(supportInbox.text.includes("Northline Outfitters"), "Support Service inbox missing store name");
     assert(supportInbox.text.includes("Store ID"), "Support Service inbox missing Store ID");
     const northline = await prisma.merchant.findFirst({ where: { name: "Northline Outfitters" } });
     assert(northline, "Northline store missing");
-    const supportThread = await pageText(`/admin/support/${northline.id}`, adminCookie);
+    const supportThread = await pageText(`/support-desk/${northline.id}`, adminCookie);
     assert(supportThread.res.status === 200, `Admin support thread ${supportThread.res.status}`);
-    assert(supportThread.text.includes("Time Remaining") || supportThread.text.includes("Service Session Expired"), "Support backend chat missing timer");
+    assert(supportThread.text.includes("Time Remaining") || supportThread.text.includes("TIME REMAINING") || supportThread.text.includes("Service Session Expired"), "Support backend chat missing timer");
     assert(supportThread.text.includes("Northline Outfitters"), "Support backend chat missing store name");
     assert(supportThread.text.includes("Store ID"), "Support backend chat missing Store ID");
+    const opsDesk = await getWithCookie("/support-desk", opsCookie);
+    assert(opsDesk.status === 200, `Ops /support-desk ${opsDesk.status}`);
     const profile = await pageText("/profile", merchantCookie);
     assert(profile.res.status === 200, `Merchant /profile ${profile.res.status}`);
     assert(profile.text.includes("Available balance"), "Store profile missing server balance");

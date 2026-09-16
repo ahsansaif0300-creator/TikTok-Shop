@@ -42,8 +42,8 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     title: "Overview",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/service", label: "Service", icon: Headset, hideForAdmin: true },
-      { href: "/admin/support", label: "Support Service", icon: Headset, adminOnly: true },
+      { href: "/service", label: "Service", icon: Headset, merchantOnly: true },
+      { href: "/support-desk", label: "Support Service", icon: Headset, staffOnly: true },
       { href: "/notifications", label: "Notifications", icon: Bell },
     ],
   },

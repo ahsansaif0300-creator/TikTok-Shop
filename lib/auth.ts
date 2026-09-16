@@ -106,6 +106,15 @@ export async function requireStaff() {
   return session;
 }
 
+export async function requireSupportDesk() {
+  const session = await getSession();
+  if (!session) redirect(LOGIN.support);
+  if (session.role !== "SUPER_ADMIN" && session.role !== "OPS") {
+    redirect("/");
+  }
+  return session;
+}
+
 export async function requireSuperAdmin() {
   const session = await getSession();
   if (!session) redirect(LOGIN.admin);

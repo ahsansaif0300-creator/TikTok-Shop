@@ -96,6 +96,8 @@ Use the login URL that matches the account. Do **not** share one form for every 
 
 After login you land on the dashboard. Use the sidebar (or **Open menu** on a phone). Merchants also get a bottom bar: Home, Products, Orders, Payouts, Profile.
 
+**Private Support Desk (not listed on `/welcome`):** open **`/login/support`**. Super Admin and Operations accounts can sign in there. After login they land on **`/support-desk`**, where every store chat, Store ID, and the 1-hour timer stay on one screen. Do not put this URL on the public welcome page.
+
 New sellers can open **`/signup`** (linked from Sign in) and create a shop without staff first. Staff can still log inbound applications.
 
 Each shop has a unique public link: **`/s/{shop-slug}`** (for example `/s/northline-outfitters`). After you set `APP_BASE_URL`, TikTok Shop prints the full URL. With a custom domain and wildcard DNS (`SHOP_BASE_DOMAIN`), that same slug can also be `https://{slug}.yourdomain.com`.

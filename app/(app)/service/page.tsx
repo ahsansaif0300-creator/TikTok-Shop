@@ -2,10 +2,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { openStoreServiceSession } from "@/lib/service-session";
-import { loadSupportInbox } from "@/lib/support-inbox";
 import { ServiceComposer } from "@/components/service-composer";
 import { ServiceMessageBubble } from "@/components/service-message-bubble";
-import { SupportBackendInbox } from "@/components/support-backend-inbox";
 import { Card, PageHeader } from "@/components/ui";
 import { BRAND_NAME } from "@/lib/brand-name";
 
@@ -22,24 +20,7 @@ export default async function ServicePage({
 }) {
   const session = await requireSession();
   const { error } = await searchParams;
-  if (session.role === "SUPER_ADMIN") redirect("/admin/support");
-  const staff = isStaff(session.role);
-
-  if (staff) {
-    const inbox = await loadSupportInbox();
-    return (
-      <SupportBackendInbox
-        title="Service inbox"
-        subtitle="Store chats land here with name and Store ID. The 1-hour timer lives on the open chat. Expired chats leave Active and stay in history."
-        threadBase="/service"
-        active={inbox.active}
-        history={inbox.history}
-        stores={inbox.stores}
-        now={inbox.now}
-        error={error}
-      />
-    );
-  }
+  if (isStaff(session.role)) redirect("/support-desk");
 
   if (!session.merchantId) {
     return (

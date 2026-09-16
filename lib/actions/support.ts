@@ -93,8 +93,10 @@ export async function sendSupportMessage(formData: FormData) {
 
   revalidatePath("/", "layout");
   revalidatePath("/service");
+  revalidatePath("/support-desk");
   revalidatePath("/admin/support");
   revalidatePath(`/service/${merchantId}`);
+  revalidatePath(`/support-desk/${merchantId}`);
   revalidatePath(`/admin/support/${merchantId}`);
   redirect(next);
 }
@@ -106,7 +108,9 @@ export async function startServiceSession() {
   if (!merchant) redirect("/");
   await openStoreServiceSession(merchant.id, merchant.name, merchant.storeCode || merchant.id, session.name);
   revalidatePath("/service");
+  revalidatePath("/support-desk");
   revalidatePath("/admin/support");
+  revalidatePath(`/support-desk/${merchant.id}`);
   revalidatePath(`/admin/support/${merchant.id}`);
   redirect("/service");
 }
@@ -133,7 +137,9 @@ export async function requestRecharge(formData: FormData) {
   await markStoreWaiting(opened.thread.id, merchant.id, body);
   revalidatePath("/", "layout");
   revalidatePath("/service");
+  revalidatePath("/support-desk");
   revalidatePath("/admin/support");
+  revalidatePath(`/support-desk/${merchant.id}`);
   revalidatePath(`/admin/support/${merchant.id}`);
   redirect("/recharge?sent=1");
 }

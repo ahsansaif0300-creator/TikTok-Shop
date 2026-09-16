@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ensureDatabase } from "@/lib/ensure-db";
-import { clearSession, createSession, getSession, requireSession } from "@/lib/auth";
+import { clearSession, createSession, getSession, isStaff, requireSession } from "@/lib/auth";
 import { LOGIN, loginPathForRole } from "@/lib/access";
 
 async function loginWithRole(formData: FormData, expectedRole: Role, failPath: string) {
@@ -63,6 +63,55 @@ export async function loginOpsAction(formData: FormData) {
 
 export async function loginStoreAction(formData: FormData) {
   await loginWithRole(formData, "MERCHANT", LOGIN.store);
+}
+
+export async function loginSupportAction(formData: FormData) {
+  const identifier = String(formData.get("email") ?? formData.get("identifier") ?? "")
+    .trim()
+    .toLowerCase();
+  const password = String(formData.get("password") ?? "");
+
+  try {
+    await ensureDatabase();
+  } catch (error) {
+    console.error("[harbor] support login database failed", error);
+    redirect(`${LOGIN.support}?error=setup`);
+  }
+
+  let user: Awaited<ReturnType<typeof prisma.user.findFirst>> | null = null;
+  try {
+    user = await prisma.user.findFirst({
+      where: identifier ? { OR: [{ email: identifier }, { username: identifier }] } : { id: "__none__" },
+    });
+    if (!user || !isStaff(user.role) || !(await bcrypt.compare(password, user.passwordHash))) {
+      user = null;
+    }
+  } catch (error) {
+    console.error("[harbor] support login query failed", error);
+    redirect(`${LOGIN.support}?error=setup`);
+  }
+
+  if (!user) redirect(`${LOGIN.support}?error=1`);
+
+  try {
+    await createSession({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      merchantId: user.merchantId,
+    });
+  } catch (error) {
+    console.error("[harbor] support login session failed", error);
+    redirect(`${LOGIN.support}?error=setup`);
+  }
+
+  redirect("/support-desk");
+}
+
+export async function logoutSupportAction() {
+  await clearSession();
+  redirect(LOGIN.support);
 }
 
 /** @deprecated Use a role-specific login action. Kept so old forms fail closed. */

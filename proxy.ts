@@ -26,7 +26,7 @@ export async function proxy(request: NextRequest) {
 
   if (session && (pathname === "/welcome" || pathname === "/signup" || pathname === "/login" || pathname.startsWith("/login/"))) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = pathname === "/login/support" && session.role !== "MERCHANT" ? "/support-desk" : "/";
     url.search = "";
     return NextResponse.redirect(url);
   }

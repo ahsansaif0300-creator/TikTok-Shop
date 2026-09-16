@@ -4,6 +4,7 @@ export const LOGIN = {
   admin: "/login/admin",
   ops: "/login/ops",
   store: "/login/store",
+  support: "/login/support",
 } as const;
 
 export function isPublicPath(pathname: string) {
@@ -15,11 +16,16 @@ export function isPublicPath(pathname: string) {
 }
 
 export function loginPathForRequest(pathname: string) {
+  if (isSupportDeskPath(pathname)) return LOGIN.support;
   if (isSuperAdminPath(pathname)) return LOGIN.admin;
   if (isStaffPath(pathname)) return LOGIN.ops;
   if (isMerchantOnlyPath(pathname)) return LOGIN.store;
   if (pathname === "/") return "/welcome";
   return LOGIN.store;
+}
+
+export function isSupportDeskPath(pathname: string) {
+  return pathname === "/support-desk" || pathname.startsWith("/support-desk/");
 }
 
 export function isSuperAdminPath(pathname: string) {
@@ -58,6 +64,7 @@ export function isMerchantOnlyPath(pathname: string) {
 }
 
 export function canAccessPath(role: Role, pathname: string) {
+  if (isSupportDeskPath(pathname)) return role === "SUPER_ADMIN" || role === "OPS";
   if (isSuperAdminPath(pathname)) return role === "SUPER_ADMIN";
   if (isStaffPath(pathname)) return role === "SUPER_ADMIN" || role === "OPS";
   if (isMerchantOnlyPath(pathname)) return role === "MERCHANT";
