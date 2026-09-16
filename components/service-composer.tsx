@@ -11,12 +11,14 @@ export function ServiceComposer({
   showTopics,
   allowRestart,
   locked,
+  storeMode,
 }: {
   merchantId?: string;
   expiresAt?: string;
   showTopics?: boolean;
   allowRestart?: boolean;
   locked?: boolean;
+  storeMode?: boolean;
 }) {
   const [expired, setExpired] = useState(
     () => Boolean(locked) || (expiresAt ? new Date(expiresAt).getTime() <= Date.now() : false),
@@ -44,11 +46,13 @@ export function ServiceComposer({
     return (
       <div className="mt-4 space-y-3">
         <p className="text-sm text-muted">
-          This service session has expired. History stays saved. The store is no longer in the active queue.
+          {storeMode
+            ? "This support chat has ended. Your messages stay saved."
+            : "This service hour ended. The store left the active list. Chat history stays saved."}
         </p>
         {allowRestart ? (
           <form action={startServiceSession}>
-            <Button type="submit">Start new session</Button>
+            <Button type="submit">Start new chat</Button>
           </form>
         ) : null}
       </div>

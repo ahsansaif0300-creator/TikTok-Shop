@@ -99,10 +99,10 @@ export async function notifyServiceCounterpart(
   preview: string,
 ) {
   const recipients = staffSender
-    ? await prisma.user.findMany({ where: { merchantId, role: "MERCHANT" }, select: { id: true } })
+    ? await prisma.user.findMany({ where: { merchantId, role: "MERCHANT" }, select: { id: true, role: true } })
     : await prisma.user.findMany({
         where: { role: { in: ["SUPER_ADMIN", "OPS"] } },
-        select: { id: true },
+        select: { id: true, role: true },
       });
   if (recipients.length === 0) return;
   await prisma.notification.createMany({
@@ -112,7 +112,7 @@ export async function notifyServiceCounterpart(
         userId: user.id,
         title: staffSender ? "Service reply" : "Store waiting for Service",
         body: preview.slice(0, 160),
-        href: staffSender ? "/service" : `/service/${merchantId}`,
+        href: staffSender ? "/service" : user.role === "SUPER_ADMIN" ? `/admin/support/${merchantId}` : `/service/${merchantId}`,
       })),
   });
 }

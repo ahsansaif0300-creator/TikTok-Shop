@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { money } from "@/lib/utils";
 import { saveSupportUpload, supportMediaError } from "@/lib/support-media";
+import { supportInboxPath, supportThreadPath } from "@/lib/support-paths";
 import {
   activeSessionForMerchant,
   expireStaleSupportSessions,
@@ -25,12 +26,12 @@ export async function sendSupportMessage(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   const file = formData.get("media");
   const merchantIdRaw = session.role === "MERCHANT" ? session.merchantId : String(formData.get("merchantId") ?? "");
-  const next = session.role === "MERCHANT" ? "/service" : `/service/${merchantIdRaw}`;
-  if (!merchantIdRaw) fail("/service", "store");
+  const next = supportThreadPath(session.role, merchantIdRaw || "");
+  if (!merchantIdRaw) fail(supportInboxPath(session.role), "store");
   const merchantId = merchantIdRaw;
 
   const merchant = await prisma.merchant.findUnique({ where: { id: merchantId } });
-  if (!merchant) fail("/service", "store");
+  if (!merchant) fail(supportInboxPath(session.role), "store");
   if (session.role === "MERCHANT" && session.merchantId !== merchantId) fail("/service", "store");
 
   const upload = file instanceof File && file.size > 0 ? file : null;
@@ -91,6 +92,10 @@ export async function sendSupportMessage(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
+  revalidatePath("/service");
+  revalidatePath("/admin/support");
+  revalidatePath(`/service/${merchantId}`);
+  revalidatePath(`/admin/support/${merchantId}`);
   redirect(next);
 }
 
@@ -101,6 +106,8 @@ export async function startServiceSession() {
   if (!merchant) redirect("/");
   await openStoreServiceSession(merchant.id, merchant.name, merchant.storeCode || merchant.id, session.name);
   revalidatePath("/service");
+  revalidatePath("/admin/support");
+  revalidatePath(`/admin/support/${merchant.id}`);
   redirect("/service");
 }
 
@@ -125,5 +132,8 @@ export async function requestRecharge(formData: FormData) {
   await postSupportMessage(opened.thread.id, "STORE", body, session.userId, { sessionId: opened.session.id });
   await markStoreWaiting(opened.thread.id, merchant.id, body);
   revalidatePath("/", "layout");
+  revalidatePath("/service");
+  revalidatePath("/admin/support");
+  revalidatePath(`/admin/support/${merchant.id}`);
   redirect("/recharge?sent=1");
 }

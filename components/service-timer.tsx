@@ -3,17 +3,23 @@
 import { useEffect, useState } from "react";
 import { formatRemaining } from "@/lib/service-time";
 
-export function ServiceTimer({ expiresAt }: { expiresAt: string }) {
+export function ServiceTimer({ expiresAt, reloadOnExpire }: { expiresAt: string; reloadOnExpire?: boolean }) {
   const [remaining, setRemaining] = useState(() => new Date(expiresAt).getTime() - Date.now());
 
   useEffect(() => {
+    let reloaded = false;
     function tick() {
-      setRemaining(new Date(expiresAt).getTime() - Date.now());
+      const next = new Date(expiresAt).getTime() - Date.now();
+      setRemaining(next);
+      if (reloadOnExpire && next <= 0 && !reloaded) {
+        reloaded = true;
+        window.location.reload();
+      }
     }
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [expiresAt]);
+  }, [expiresAt, reloadOnExpire]);
 
   if (remaining <= 0) {
     return (

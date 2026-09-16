@@ -34,6 +34,7 @@ export type NavItem = {
   staffOnly?: boolean;
   adminOnly?: boolean;
   merchantOnly?: boolean;
+  hideForAdmin?: boolean;
 };
 
 export const NAV: { title: string; items: NavItem[] }[] = [
@@ -41,7 +42,8 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     title: "Overview",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/service", label: "Service", icon: Headset },
+      { href: "/service", label: "Service", icon: Headset, hideForAdmin: true },
+      { href: "/admin/support", label: "Support Service", icon: Headset, adminOnly: true },
       { href: "/notifications", label: "Notifications", icon: Bell },
     ],
   },
@@ -101,6 +103,7 @@ export function visibleNav(role: Role) {
     ...group,
     items: group.items.filter((item) => {
       if (item.adminOnly && role !== "SUPER_ADMIN") return false;
+      if (item.hideForAdmin && role === "SUPER_ADMIN") return false;
       if (item.staffOnly && role === "MERCHANT") return false;
       if (item.merchantOnly && role !== "MERCHANT") return false;
       return true;
