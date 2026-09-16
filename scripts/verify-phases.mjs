@@ -332,9 +332,9 @@ async function phase2Static() {
     assert(signupPage.includes("referralCode"), "Signup form missing referral code");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-ops-nav-passwords"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-catalog-c4"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-ops-nav-passwords"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt missing live deploy stamp");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {
@@ -885,7 +885,7 @@ async function phase5Database(prisma) {
       assert(product.price - product.cost > 0, `${product.title} has no profit`);
       const margin = (product.price - product.cost) / product.price;
       assert(margin >= 0.229 && margin <= 0.251, `${product.title} margin ${margin}`);
-      assert(product.image.includes("/catalog/") || product.image.includes("/product-art/"), `${product.title} missing catalog image`);
+      assert(product.image.includes("/c4/") || product.image.includes("/catalog/") || product.image.includes("/product-art/"), `${product.title} missing catalog image`);
       assert(!titles.has(product.title), `Duplicate title ${product.title}`);
       assert(!images.has(product.image), `Duplicate image ${product.image}`);
       titles.add(product.title);
@@ -1679,7 +1679,7 @@ async function phaseHttp(prisma) {
     assert(!hasHref(text, "/admin/support"), "Merchant nav leaked Support Service");
     assert(!hasHref(text, "/support-desk"), "Merchant nav leaked Support Desk");
     assert(!hasHref(text, "/login/support"), "Merchant nav leaked Support Desk login");
-    assert(text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant dashboard missing product images");
+    assert(text.includes("/c4/") || text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant dashboard missing product images");
     assert(hasHref(text, "/distribution"), "Merchant dashboard missing Distribution");
     assert(!hasHref(text, "/merchants"), "Merchant nav leaked Merchants");
     assert(!hasHref(text, "/merchants/applications"), "Merchant nav leaked Applications");
@@ -1697,7 +1697,7 @@ async function phaseHttp(prisma) {
     assert(!text.includes("Cedar &amp; Co") && !text.includes("Cedar & Co. Home"), "Merchant orders leaked Cedar & Co.");
     assert(!text.includes("Lumen Beauty"), "Merchant orders leaked Lumen Beauty");
     assert(text.includes("Click to Pick Up"), "Merchant orders missing pickup control");
-    assert(text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant orders missing product images");
+    assert(text.includes("/c4/") || text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant orders missing product images");
   });
   await check(3, "Distribution Center shows listing status on products", async () => {
     const { res, text } = await pageText("/distribution", merchantCookie);

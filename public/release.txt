@@ -1,6 +1,9 @@
+tiktok-shop-catalog-c4
 tiktok-shop-catalog-photos
+tiktok-shop-ops-nav-passwords
 TikTok Shop
 rating-5.0
+catalog-photos-c4
 catalog-photos-title-match
 support-live-chat
 order-sender-layout

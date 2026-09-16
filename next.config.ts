@@ -20,7 +20,7 @@ const previewHosts = [
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma"],
   outputFileTracingIncludes: {
-    "/**": ["./prisma/demo.sqlite", "./scripts/copy-demo-db.mjs", "./scripts/bootstrap.mjs", "./public/catalog"],
+    "/**": ["./prisma/demo.sqlite", "./scripts/copy-demo-db.mjs", "./scripts/bootstrap.mjs", "./public/catalog", "./public/c4"],
   },
   async headers() {
     return [
@@ -38,7 +38,11 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/catalog/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
+        headers: [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }],
+      },
+      {
+        source: "/c4/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }],
       },
     ];
   },

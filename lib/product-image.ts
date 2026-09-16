@@ -10,6 +10,9 @@ export function dummyProductImage(key: string) {
   return DUMMY_PRODUCT_IMAGES[hash];
 }
 
+import { rewriteCatalogImage } from "@/lib/catalog-photo";
+
 export function productImageSrc(image?: string | null, key = "") {
-  return image && image.length > 0 ? image : dummyProductImage(key);
+  const src = image && image.length > 0 ? image : dummyProductImage(key);
+  return rewriteCatalogImage(src);
 }
