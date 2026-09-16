@@ -20,27 +20,15 @@ export function ServiceComposer({
   locked?: boolean;
   storeMode?: boolean;
 }) {
-  const [expired, setExpired] = useState(
-    () => Boolean(locked) || (expiresAt ? new Date(expiresAt).getTime() <= Date.now() : false),
-  );
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    if (locked) {
-      setExpired(true);
-      return;
-    }
-    if (!expiresAt) {
-      setExpired(false);
-      return;
-    }
-    const end = expiresAt;
-    function tick() {
-      setExpired(new Date(end).getTime() <= Date.now());
-    }
-    tick();
-    const id = setInterval(tick, 1000);
+    if (locked || !expiresAt) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(id);
   }, [expiresAt, locked]);
+
+  const expired = Boolean(locked) || (expiresAt ? new Date(expiresAt).getTime() <= nowMs : false);
 
   if (expired) {
     return (
