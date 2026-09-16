@@ -1,7 +1,7 @@
-tiktok-shop-ops-nav-passwords
+tiktok-shop-catalog-photos
 TikTok Shop
 rating-5.0
-catalog-photos-white-studio
+catalog-photos-title-match
 support-live-chat
 order-sender-layout
 ops-nav-store-passwords

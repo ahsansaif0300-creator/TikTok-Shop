@@ -45,6 +45,7 @@ yarn-error.log*
 
 # generated catalog render list
 /scripts/catalog-index.json
+/scripts/catalog-photo-report.json
 
 # vercel
 .vercel
