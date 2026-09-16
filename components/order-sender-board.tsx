@@ -244,7 +244,7 @@ export function OrderSenderBoard({
             customers.length === 0 ? (
               <p className="mt-4 text-sm text-muted">No demo customers are in the database.</p>
             ) : (
-              <form action={placeStaffOrder} onSubmit={onSubmit} className="mt-5 space-y-4">
+              <form action={placeStaffOrder} onSubmit={onSubmit} className="mt-5 space-y-3">
                 <input type="hidden" name="merchantId" value={store.id} />
                 {[...picked].map((id) => (
                   <input key={id} type="hidden" name="productId" value={id} />
@@ -288,9 +288,9 @@ export function OrderSenderBoard({
                     ))}
                   </select>
                 </label>
-                <div className="grid gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <Button type="submit" name="intent" value="selected" disabled={sending || products.length === 0}>
-                    {sending ? "Distributing…" : `Distribute${picked.size ? ` (${picked.size})` : ""}`}
+                    {sending ? "Sending…" : `Distribute${picked.size ? ` (${picked.size})` : ""}`}
                   </Button>
                   <Button type="submit" name="intent" value="all" variant="secondary" disabled={sending || products.length === 0}>
                     Distribute All
