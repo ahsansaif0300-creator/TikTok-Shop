@@ -331,9 +331,9 @@ async function phase2Static() {
     assert(signupPage.includes("referralCode"), "Signup form missing referral code");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-support-login"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-support-live"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-support-login"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-support-live"), "public/release.txt missing live deploy stamp");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {
@@ -1049,6 +1049,10 @@ async function phase6Static() {
       "components/support-store-details.tsx",
       "components/support-desk-chrome.tsx",
       "components/support-desk-sidebar.tsx",
+      "components/support-live-chat.tsx",
+      "lib/support-live.ts",
+      "lib/support-deliver.ts",
+      "app/api/support/live/route.ts",
       "lib/support-inbox.ts",
       "lib/support-paths.ts",
       "lib/actions/admin.ts",
@@ -1085,6 +1089,9 @@ async function phase6Static() {
     assert(read("app/support-desk/[merchantId]/page.tsx").includes("SupportStoreDetails"), "Support backend chat missing store details");
     assert(read("app/login/support/page.tsx").includes("loginSupportAction"), "Support desk login action missing");
     assert(read("app/support-desk/layout.tsx").includes("requireSupportDesk"), "Support desk is not staff-gated");
+    assert(read("components/support-live-chat.tsx").includes("/api/support/live"), "Live support poll missing");
+    assert(read("components/service-composer.tsx").includes("is typing") || read("components/support-live-chat.tsx").includes("is typing"), "Typing indicator missing");
+    assert(read("app/api/support/live/route.ts").includes("setSupportTyping"), "Typing ping missing");
     assert(read("components/service-composer.tsx").includes("Upload Image/Video"), "Service media picker missing");
     assert(read("lib/process-releases.ts").includes('status: "SCHEDULED"'), "Release job must only pick scheduled rows");
     assert(read("lib/auth.ts").includes("requireSuperAdmin"), "requireSuperAdmin missing");

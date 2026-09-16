@@ -1,5 +1,5 @@
-tiktok-shop-support-login
+tiktok-shop-support-live
 TikTok Shop
 rating-5.0
 catalog-photos-white-studio
-support-backend-inbox
+support-live-chat

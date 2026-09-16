@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isStaff, requireSession } from "@/lib/auth";
 import { openStoreServiceSession } from "@/lib/service-session";
-import { ServiceComposer } from "@/components/service-composer";
-import { ServiceMessageBubble } from "@/components/service-message-bubble";
+import { SupportLiveChat } from "@/components/support-live-chat";
+import { serializeSupportMessage } from "@/lib/support-live";
 import { Card, PageHeader } from "@/components/ui";
 import { BRAND_NAME } from "@/lib/brand-name";
 
@@ -87,21 +87,16 @@ export default async function ServicePage({
         </p>
       </Card>
       <Card className="p-5">
-        <div className="space-y-3">
-          {messages.map((message) => (
-            <ServiceMessageBubble
-              key={message.id}
-              id={message.id}
-              sender={message.sender}
-              userName={message.user?.name}
-              body={message.body}
-              createdAt={message.createdAt}
-              attachmentKind={message.attachmentKind}
-              highlight={message.sender === "STORE"}
-            />
-          ))}
-        </div>
-        <ServiceComposer expiresAt={chatSession.expiresAt.toISOString()} showTopics allowRestart storeMode />
+        <SupportLiveChat
+          key={store.id}
+          merchantId={store.id}
+          initialMessages={messages.map(serializeSupportMessage)}
+          expiresAt={chatSession.expiresAt.toISOString()}
+          locked={expired}
+          storeMode
+          showTopics
+          allowRestart
+        />
       </Card>
     </div>
   );

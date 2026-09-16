@@ -3,19 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { isStaff, requireSession } from "@/lib/auth";
+import { requireSession } from "@/lib/auth";
 import { money } from "@/lib/utils";
-import { saveSupportUpload, supportMediaError } from "@/lib/support-media";
 import { supportInboxPath, supportThreadPath } from "@/lib/support-paths";
-import {
-  activeSessionForMerchant,
-  expireStaleSupportSessions,
-  markStoreWaiting,
-  notifyServiceCounterpart,
-  openStoreServiceSession,
-  postSupportMessage,
-  threadForMerchant,
-} from "@/lib/service-session";
+import { deliverSupportMessage } from "@/lib/support-deliver";
+import { openStoreServiceSession, postSupportMessage, markStoreWaiting } from "@/lib/service-session";
 
 function fail(path: string, code: string): never {
   redirect(`${path}?error=${code}`);
@@ -30,66 +22,13 @@ export async function sendSupportMessage(formData: FormData) {
   if (!merchantIdRaw) fail(supportInboxPath(session.role), "store");
   const merchantId = merchantIdRaw;
 
-  const merchant = await prisma.merchant.findUnique({ where: { id: merchantId } });
-  if (!merchant) fail(supportInboxPath(session.role), "store");
-  if (session.role === "MERCHANT" && session.merchantId !== merchantId) fail("/service", "store");
-
-  const upload = file instanceof File && file.size > 0 ? file : null;
-  if (!body && !upload) fail(next, "empty");
-  if (upload) {
-    const mediaProblem = supportMediaError(upload);
-    if (mediaProblem) fail(next, mediaProblem);
-  }
-
-  await expireStaleSupportSessions();
-  const staff = isStaff(session.role);
-  let chatSession = await activeSessionForMerchant(merchantId);
-  if (!chatSession && session.role === "MERCHANT") {
-    const opened = await openStoreServiceSession(merchant.id, merchant.name, merchant.storeCode || merchant.id, session.name);
-    chatSession = opened.session;
-  }
-  if (!chatSession) fail(next, "expired");
-
-  let attachment:
-    | { attachmentKind: string; attachmentMime: string; attachmentPath: string }
-    | undefined;
-  if (upload) {
-    const saved = await saveSupportUpload(merchantId, upload);
-    if ("error" in saved) {
-      fail(next, saved.error ?? "type");
-    } else {
-      attachment = {
-        attachmentKind: saved.kind,
-        attachmentMime: saved.mime,
-        attachmentPath: saved.relative,
-      };
-    }
-  }
-
-  const thread = await threadForMerchant(merchantId);
-  await postSupportMessage(thread.id, staff ? "AGENT" : "STORE", body, session.userId, {
-    sessionId: chatSession.id,
-    ...attachment,
+  const result = await deliverSupportMessage({
+    session,
+    merchantId,
+    body,
+    file: file instanceof File ? file : null,
   });
-
-  if (staff) {
-    await prisma.supportThread.update({
-      where: { id: thread.id },
-      data: {
-        status: "WITH_AGENT",
-        agentId: session.userId,
-        agentJoinedAt: thread.agentJoinedAt ?? new Date(),
-        updatedAt: new Date(),
-      },
-    });
-    await notifyServiceCounterpart(merchantId, session.userId, true, body || "Sent a file");
-  } else {
-    await prisma.supportThread.update({
-      where: { id: thread.id },
-      data: { updatedAt: new Date() },
-    });
-    await markStoreWaiting(thread.id, merchant.id, body || `${merchant.name} sent a file`);
-  }
+  if (!result.ok) fail(next, result.error);
 
   revalidatePath("/", "layout");
   revalidatePath("/service");

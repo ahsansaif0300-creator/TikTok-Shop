@@ -20,14 +20,14 @@ export function ServiceMessageBubble({
   sender: string;
   userName?: string | null;
   body: string;
-  createdAt: Date;
+  createdAt: Date | string;
   attachmentKind?: string;
   highlight?: boolean;
 }) {
   return (
     <div className={`rounded-xl px-3 py-2 text-sm ${highlight ? "bg-accent-soft text-ink" : "bg-soft"}`}>
       <p className="text-xs text-muted">
-        {senderLabel(sender, userName)} · {format(createdAt, "MMM d, HH:mm")}
+        {senderLabel(sender, userName)} · {format(typeof createdAt === "string" ? new Date(createdAt) : createdAt, "MMM d, HH:mm")}
       </p>
       {body ? <p className="mt-1 whitespace-pre-wrap">{body}</p> : null}
       {attachmentKind === "IMAGE" ? (

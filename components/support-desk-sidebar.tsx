@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { formatRemaining } from "@/lib/service-time";
@@ -11,6 +12,7 @@ export type SupportDeskListItem = {
   expiresAt: string;
   waiting: boolean;
   lastPreview: string;
+  typing?: string | null;
   store: {
     name: string;
     storeCode: string | null;
@@ -57,16 +59,18 @@ function Row({
           {[item.store.city, item.store.email, item.store.phone].filter(Boolean).join(" · ")}
         </p>
         <p className="mt-1 text-[11px] text-muted">{lastLine(item, expired)}</p>
-        <p className="mt-1 line-clamp-2 text-sm text-muted">{item.lastPreview}</p>
+        <p className="mt-1 line-clamp-2 text-sm text-muted">
+          {item.typing ? `${item.typing} is typing…` : item.lastPreview}
+        </p>
       </Link>
     </li>
   );
 }
 
 export function SupportDeskSidebar({
-  active,
-  history,
-  stores,
+  active: initialActive,
+  history: initialHistory,
+  stores: initialStores,
 }: {
   active: SupportDeskListItem[];
   history: SupportDeskListItem[];
@@ -74,6 +78,39 @@ export function SupportDeskSidebar({
 }) {
   const pathname = usePathname();
   const selected = pathname.startsWith("/support-desk/") ? pathname.split("/")[2] : "";
+  const [active, setActive] = useState(initialActive);
+  const [history, setHistory] = useState(initialHistory);
+  const [stores, setStores] = useState(initialStores);
+
+  useEffect(() => {
+    let stop = false;
+    async function pull() {
+      const res = await fetch("/api/support/live?inbox=1", { cache: "no-store" });
+      if (!res.ok || stop) return;
+      const ctype = res.headers.get("content-type") || "";
+      if (!ctype.includes("application/json")) return;
+      const json = (await res.json()) as {
+        inbox?: {
+          active: SupportDeskListItem[];
+          history: SupportDeskListItem[];
+          stores: { id: string; name: string; storeCode: string | null }[];
+        };
+      };
+      if (stop || !json.inbox) return;
+      setActive(json.inbox.active);
+      setHistory(json.inbox.history);
+      setStores(json.inbox.stores);
+    }
+    void pull();
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      void pull();
+    }, 1500);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, []);
   return (
     <aside className={`border-r border-line bg-card ${selected ? "hidden lg:block" : "block"}`}>
       <div className="border-b border-line px-4 py-3">

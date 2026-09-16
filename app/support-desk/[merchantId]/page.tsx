@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSupportDesk } from "@/lib/auth";
 import { expireStaleSupportSessions } from "@/lib/service-session";
-import { ServiceComposer } from "@/components/service-composer";
-import { ServiceMessageBubble } from "@/components/service-message-bubble";
 import { ServiceTimer } from "@/components/service-timer";
 import { SupportStoreDetails } from "@/components/support-store-details";
+import { SupportLiveChat } from "@/components/support-live-chat";
+import { serializeSupportMessage } from "@/lib/support-live";
 
 export default async function SupportDeskThreadPage({
   params,
@@ -70,24 +70,15 @@ export default async function SupportDeskThreadPage({
             <ServiceTimer expiresAt={chatSession.expiresAt.toISOString()} reloadOnExpire />
           </div>
         ) : null}
-        <div className="space-y-3 rounded-2xl border border-line bg-card p-5">
-          {messages.length === 0 ? (
-            <p className="text-sm text-muted">No messages yet. They appear here as soon as the store writes in Service.</p>
-          ) : (
-            messages.map((message) => (
-              <ServiceMessageBubble
-                key={message.id}
-                id={message.id}
-                sender={message.sender}
-                userName={message.user?.name}
-                body={message.body}
-                createdAt={message.createdAt}
-                attachmentKind={message.attachmentKind}
-                highlight={message.sender === "AGENT" && message.userId === session.userId}
-              />
-            ))
-          )}
-          <ServiceComposer merchantId={store.id} expiresAt={chatSession?.expiresAt.toISOString()} locked={expired} />
+        <div className="rounded-2xl border border-line bg-card p-5">
+          <SupportLiveChat
+            key={store.id}
+            merchantId={store.id}
+            initialMessages={messages.map(serializeSupportMessage)}
+            expiresAt={chatSession?.expiresAt.toISOString()}
+            locked={expired}
+            selfUserId={session.userId}
+          />
         </div>
       </div>
     </section>
