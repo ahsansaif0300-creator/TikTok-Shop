@@ -331,9 +331,9 @@ async function phase2Static() {
     assert(signupPage.includes("referralCode"), "Signup form missing referral code");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-support-live"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-order-sender"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-support-live"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-order-sender"), "public/release.txt missing live deploy stamp");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {
@@ -1055,6 +1055,9 @@ async function phase6Static() {
       "app/api/support/live/route.ts",
       "lib/support-inbox.ts",
       "lib/support-paths.ts",
+      "components/order-sender-board.tsx",
+      "lib/order-sender.ts",
+      "app/api/admin/stores/search/route.ts",
       "lib/actions/admin.ts",
       "lib/process-releases.ts",
     ]) {
@@ -1102,7 +1105,11 @@ async function phase6Static() {
     const listing = read("prisma/schema.prisma") + read("app/(app)/distribution/page.tsx") + read("lib/actions/catalog.ts");
     assert(listing.includes("ProductListingStatus") && listing.includes("ON_SHELF") && listing.includes("LISTED"), "Listing status missing");
     assert(listing.includes("setProductListingStatus"), "Listing status action missing");
-    assert(read("app/(app)/admin/place-order/page.tsx").includes("Search Store"), "Order Sender store search missing");
+    assert(read("app/(app)/admin/place-order/page.tsx").includes("Search Store") || read("components/order-sender-board.tsx").includes("Search Store"), "Order Sender store search missing");
+    assert(read("components/order-sender-board.tsx").includes("/api/admin/stores/search"), "Order Sender typeahead missing");
+    assert(read("components/order-sender-board.tsx").includes("Distribute All"), "Order Sender distribute-all missing");
+    assert(read("components/order-sender-board.tsx").includes("Select all"), "Order Sender select-all missing");
+    assert(read("lib/actions/admin.ts").includes('intent === "all"'), "Order Sender batch distribute missing");
     assert(read("lib/actions/admin.ts").includes("isListedProduct"), "Order Sender must use listed products");
     assert(read("lib/actions/auth.ts").includes("username"), "Login does not accept username");
     assert(!/virtual.?order|auto.?order/i.test(admin), "Forbidden order-generation terms in admin actions");
@@ -1707,13 +1714,34 @@ async function phaseHttp(prisma) {
   await check(3, "Order Sender lists stores and listed products", async () => {
     const northline = await prisma.merchant.findUnique({ where: { slug: "northline-outfitters" } });
     assert(northline, "Northline store missing");
+    const blank = await pageText("/admin/place-order", adminCookie);
+    assert(blank.res.status === 200, `/admin/place-order ${blank.res.status}`);
+    assert(blank.text.includes("Order Sender"), "Order Sender title missing");
+    assert(blank.text.includes("Search Store"), "Search Store missing");
+    assert(!blank.text.includes("Cedar &amp; Co") && !blank.text.includes("Cedar & Co. Home"), "Order Sender listed all stores without a search");
     const { res, text } = await pageText(`/admin/place-order?merchantId=${northline.id}`, adminCookie);
     assert(res.status === 200, `/admin/place-order ${res.status}`);
     assert(text.includes("Order Sender"), "Order Sender title missing");
     assert(text.includes("Search Store"), "Search Store missing");
-    assert(text.includes("Northline Outfitters"), "Store list missing Northline");
+    assert(text.includes("Northline Outfitters"), "Selected store missing Northline");
     assert(text.includes("Trail Fleece Jacket") || text.includes("Alpine Daypack"), "Listed Northline products missing");
     assert(!text.includes("Insulated Water Bottle"), "On-shelf product leaked into Order Sender");
+    assert(text.includes("Distribute"), "Distribute action missing");
+    assert(text.includes("Select all"), "Select all missing");
+    assert(text.includes("Order details"), "Sticky order details missing");
+    const search = await fetch(`${baseUrl}/api/admin/stores/search?q=north`, {
+      headers: { cookie: adminCookie, accept: "application/json" },
+    });
+    assert(search.status === 200, `Store search ${search.status}`);
+    const searchJson = await search.json();
+    assert(
+      (searchJson.stores || []).some((item) => item.name === "Northline Outfitters"),
+      "Store search suggestions missing Northline",
+    );
+    const blocked = await fetch(`${baseUrl}/api/admin/stores/search?q=north`, {
+      headers: { cookie: merchantCookie, accept: "application/json" },
+    });
+    assert([401, 403].includes(blocked.status), `Merchant store search was ${blocked.status}`);
   });
   await check(3, "Admin /orders HTML includes multiple merchants", async () => {
     const { text } = await pageText("/orders", adminCookie);

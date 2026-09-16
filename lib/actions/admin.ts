@@ -8,7 +8,7 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { requestOrigin } from "@/lib/shop-url";
 import { processDueReleases } from "@/lib/process-releases";
 import { dummyProductImage } from "@/lib/product-image";
-import { isListedProduct } from "@/lib/product-listing";
+import { isListedProduct, listedCatalogWhere } from "@/lib/product-listing";
 import { allocateReferralCode } from "@/lib/referral";
 import { parseStoreCreditScore, parseStoreRating } from "@/lib/store-score";
 
@@ -27,111 +27,134 @@ async function notifyStore(merchantId: string, title: string, body: string, href
   });
 }
 
+function failPlace(code: string, merchantId?: string): never {
+  const query = new URLSearchParams({ error: code });
+  if (merchantId) query.set("merchantId", merchantId);
+  redirect(`/admin/place-order?${query.toString()}`);
+}
+
 export async function placeStaffOrder(formData: FormData) {
   const session = await requireSuperAdmin();
   const merchantId = String(formData.get("merchantId") ?? "");
-  const productId = String(formData.get("productId") ?? "");
   const customerId = String(formData.get("customerId") ?? "");
+  const intent = String(formData.get("intent") ?? "selected");
   const quantity = Number(formData.get("quantity") ?? 1);
   const orderTimeRaw = String(formData.get("orderTime") ?? "").trim();
-  if (!merchantId || !productId || !customerId) fail("/admin/place-order", "invalid");
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) fail("/admin/place-order", "qty");
+  if (!merchantId || !customerId) failPlace("invalid", merchantId);
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) failPlace("qty", merchantId);
 
-  const [merchant, product, customer] = await Promise.all([
+  const [merchant, customer] = await Promise.all([
     prisma.merchant.findUnique({ where: { id: merchantId }, include: { plan: true } }),
-    prisma.product.findUnique({ where: { id: productId } }),
     prisma.customer.findUnique({ where: { id: customerId } }),
   ]);
-  if (!merchant || merchant.status === "SUSPENDED") fail("/admin/place-order", "store");
-  if (!product || product.merchantId !== merchant.id || !isListedProduct(product)) {
-    fail("/admin/place-order", "product");
-  }
-  if (!customer) fail("/admin/place-order", "customer");
-  if (product.stock < quantity) fail("/admin/place-order", "stock");
+  if (!merchant || merchant.status === "SUSPENDED") failPlace("store", merchantId);
+  if (!customer) failPlace("customer", merchantId);
+
+  const requestedIds = [...new Set(formData.getAll("productId").map((value) => String(value)).filter(Boolean))];
+  const listed = await prisma.product.findMany({
+    where: { merchantId: merchant.id, ...listedCatalogWhere },
+  });
+  const products = intent === "all" ? listed : listed.filter((product) => requestedIds.includes(product.id));
+  if (intent !== "all" && requestedIds.length === 0) failPlace("select", merchant.id);
+  if (products.length === 0) failPlace("product", merchant.id);
+  if (intent !== "all" && products.length !== requestedIds.length) failPlace("product", merchant.id);
+  if (products.some((product) => !isListedProduct(product))) failPlace("product", merchant.id);
+  const sendable = intent === "all" ? products.filter((product) => product.stock >= quantity) : products;
+  if (sendable.length === 0 || sendable.some((product) => product.stock < quantity)) failPlace("stock", merchant.id);
 
   const createdAt = orderTimeRaw ? new Date(orderTimeRaw) : new Date();
-  if (Number.isNaN(createdAt.getTime())) fail("/admin/place-order", "time");
+  if (Number.isNaN(createdAt.getTime())) failPlace("time", merchant.id);
 
-  const subtotal = Number((product.price * quantity).toFixed(2));
-  const shippingFee = subtotal > 75 ? 0 : 6.95;
-  const tax = Number((subtotal * 0.07).toFixed(2));
-  const total = Number((subtotal + shippingFee + tax).toFixed(2));
-  const cost = Number((product.cost * quantity).toFixed(2));
-  const platformFee = Number((subtotal * merchant.plan.commissionRate).toFixed(2));
-  const profit = Number((subtotal - cost - platformFee).toFixed(2));
   const now = new Date();
-  const orderNumber = `HB-${createdAt.getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
+  const stamp = Date.now().toString(36).toUpperCase();
+  const numbers: string[] = [];
 
   await prisma.$transaction(async (tx) => {
-    await tx.order.create({
-      data: {
-        orderNumber,
-        merchantId: merchant.id,
-        customerId: customer.id,
-        status: "PROCESSING",
-        subtotal,
-        shippingFee,
-        tax,
-        total,
-        cost,
-        profit,
-        platformFee,
-        notes: "Placed by super admin",
-        walletReleased: false,
-        placedByUserId: session.userId,
-        paidAt: createdAt,
-        createdAt,
-        updatedAt: now,
-        items: {
-          create: {
-            productId: product.id,
-            title: product.title,
-            sku: product.sku,
-            quantity,
-            price: product.price,
-            cost: product.cost,
-            image: product.image || dummyProductImage(product.sku),
+    let pending = 0;
+    for (const [index, product] of sendable.entries()) {
+      const subtotal = Number((product.price * quantity).toFixed(2));
+      const shippingFee = subtotal > 75 ? 0 : 6.95;
+      const tax = Number((subtotal * 0.07).toFixed(2));
+      const total = Number((subtotal + shippingFee + tax).toFixed(2));
+      const cost = Number((product.cost * quantity).toFixed(2));
+      const platformFee = Number((subtotal * merchant.plan.commissionRate).toFixed(2));
+      const profit = Number((subtotal - cost - platformFee).toFixed(2));
+      const orderNumber = `HB-${createdAt.getFullYear()}-${stamp}${index.toString(36).toUpperCase()}`;
+      numbers.push(orderNumber);
+      pending += profit;
+      await tx.order.create({
+        data: {
+          orderNumber,
+          merchantId: merchant.id,
+          customerId: customer.id,
+          status: "PROCESSING",
+          subtotal,
+          shippingFee,
+          tax,
+          total,
+          cost,
+          profit,
+          platformFee,
+          notes: "Placed by super admin",
+          walletReleased: false,
+          placedByUserId: session.userId,
+          paidAt: createdAt,
+          createdAt,
+          updatedAt: now,
+          items: {
+            create: {
+              productId: product.id,
+              title: product.title,
+              sku: product.sku,
+              quantity,
+              price: product.price,
+              cost: product.cost,
+              image: product.image || dummyProductImage(product.sku),
+            },
           },
         },
-      },
-    });
-    await tx.product.update({
-      where: { id: product.id },
-      data: { stock: { decrement: quantity } },
-    });
+      });
+      await tx.product.update({
+        where: { id: product.id },
+        data: { stock: { decrement: quantity } },
+      });
+      await tx.ledgerEntry.create({
+        data: {
+          merchantId: merchant.id,
+          type: "SALE",
+          amount: profit,
+          reference: orderNumber,
+          note: "Pending settlement for staff-placed order",
+          createdAt,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          userId: session.userId,
+          action: "order:place",
+          entity: "Order",
+          entityId: orderNumber,
+          detail: `Placed ${orderNumber} on ${merchant.name} for ${customer.name}`,
+        },
+      });
+    }
     await tx.merchant.update({
       where: { id: merchant.id },
-      data: { pendingBalance: { increment: profit } },
-    });
-    await tx.ledgerEntry.create({
-      data: {
-        merchantId: merchant.id,
-        type: "SALE",
-        amount: profit,
-        reference: orderNumber,
-        note: "Pending settlement for staff-placed order",
-        createdAt,
-      },
-    });
-    await tx.auditLog.create({
-      data: {
-        userId: session.userId,
-        action: "order:place",
-        entity: "Order",
-        entityId: orderNumber,
-        detail: `Placed ${orderNumber} on ${merchant.name} for ${customer.name}`,
-      },
+      data: { pendingBalance: { increment: pending } },
     });
   });
 
+  const first = sendable[0];
   await notifyStore(
     merchant.id,
-    "New order",
-    `${orderNumber} for ${product.title} × ${quantity} is ready to fulfill.`,
+    numbers.length === 1 ? "New order" : "New orders",
+    numbers.length === 1
+      ? `${numbers[0]} for ${first?.title ?? "a product"} × ${quantity} is ready to fulfill.`
+      : `${numbers.length} orders are ready to fulfill.`,
     "/orders",
   );
   revalidatePath("/", "layout");
-  redirect(`/admin/place-order?placed=${encodeURIComponent(orderNumber)}&merchantId=${merchant.id}`);
+  redirect(`/admin/place-order?placed=${encodeURIComponent(numbers.join(","))}&merchantId=${merchant.id}`);
 }
 
 export async function addStoreFunds(formData: FormData) {

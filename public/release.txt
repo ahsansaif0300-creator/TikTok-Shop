@@ -1,5 +1,6 @@
-tiktok-shop-support-live
+tiktok-shop-order-sender
 TikTok Shop
 rating-5.0
 catalog-photos-white-studio
 support-live-chat
+order-sender-layout
