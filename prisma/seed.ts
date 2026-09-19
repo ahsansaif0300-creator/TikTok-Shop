@@ -484,7 +484,6 @@ async function main() {
     products.find((product) => product.title === "Alpine Daypack 22L"),
   ].filter((product): product is (typeof products)[number] => Boolean(product));
   if (pickupProducts.length !== 2) throw new Error("Pickup demo products missing");
-  let pickupProfit = 0;
   for (const [index, product] of pickupProducts.entries()) {
     const extraQty = index + 1;
     const extraSubtotal = product.price * extraQty;
@@ -493,14 +492,13 @@ async function main() {
     const extraCost = product.cost * extraQty;
     const extraFee = Number((extraSubtotal * growth.commissionRate).toFixed(2));
     const extraProfit = Number((extraSubtotal - extraCost - extraFee).toFixed(2));
-    pickupProfit += extraProfit;
     const orderNumber = `HB-2026-PICKUP-0${index + 1}`;
     await prisma.order.create({
       data: {
         orderNumber,
         merchantId: merchants[0].id,
         customerId: customers[index].id,
-        status: OrderStatus.PAID,
+        status: OrderStatus.PENDING_PAYMENT,
         subtotal: extraSubtotal,
         shippingFee: 0,
         tax: extraTax,
@@ -508,7 +506,7 @@ async function main() {
         cost: extraCost,
         profit: extraProfit,
         platformFee: extraFee,
-        paidAt: daysAgo(0, 2 + index),
+        paidAt: null,
         items: {
           create: {
             productId: product.id,
@@ -522,20 +520,10 @@ async function main() {
         },
       },
     });
-    await prisma.ledgerEntry.create({
-      data: {
-        merchantId: merchants[0].id,
-        type: LedgerType.SALE,
-        amount: extraProfit,
-        reference: orderNumber,
-        note: "Pending settlement",
-      },
-    });
   }
   await prisma.merchant.update({
     where: { id: merchants[0].id },
     data: {
-      pendingBalance: { increment: pickupProfit },
       availableBalance: { increment: 5000 },
     },
   });

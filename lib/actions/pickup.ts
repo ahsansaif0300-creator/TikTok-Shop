@@ -30,8 +30,13 @@ export async function pickUpOrder(formData: FormData) {
   try {
     await prisma.$transaction(async (tx) => {
       const claimed = await tx.order.updateMany({
-        where: { id: orderId, merchantId: session.merchantId, status: "PAID" },
-        data: { status: "PROCESSING", pickedAt: new Date(), pickupHold: existing.total },
+        where: { id: orderId, merchantId: session.merchantId, status: "PENDING_PAYMENT" },
+        data: {
+          status: "PAID",
+          paidAt: existing.paidAt ?? new Date(),
+          pickedAt: new Date(),
+          pickupHold: existing.total,
+        },
       });
       if (claimed.count !== 1) {
         throw new Error("already");
@@ -44,8 +49,22 @@ export async function pickUpOrder(formData: FormData) {
 
       await tx.merchant.update({
         where: { id: session.merchantId },
-        data: { availableBalance: { decrement: existing.total } },
+        data: {
+          availableBalance: { decrement: existing.total },
+          ...(existing.paidAt ? {} : { pendingBalance: { increment: existing.profit } }),
+        },
       });
+      if (!existing.paidAt) {
+        await tx.ledgerEntry.create({
+          data: {
+            merchantId: session.merchantId,
+            type: "SALE",
+            amount: existing.profit,
+            reference: existing.orderNumber,
+            note: "Pending settlement for paid order",
+          },
+        });
+      }
       await tx.ledgerEntry.create({
         data: {
           merchantId: session.merchantId,
@@ -77,5 +96,6 @@ export async function pickUpOrder(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
+  revalidatePath("/orders");
   redirect("/orders?picked=1");
 }

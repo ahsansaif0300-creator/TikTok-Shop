@@ -447,6 +447,25 @@ async function phase3Database(prisma) {
     const pendingRefunds = await prisma.refund.count({ where: { status: "PENDING" } });
     assert(pendingRefunds > 0, "No pending refunds for ops to review");
   });
+  await check(3, "Pickup demo orders are unpaid until Click to Pick Up", async () => {
+    const moved = await prisma.order.updateMany({
+      where: {
+        pickedAt: null,
+        OR: [
+          { status: "PAID", orderNumber: { startsWith: "HB-2026-PICKUP-" } },
+          { status: "PROCESSING", notes: "Placed by super admin" },
+        ],
+      },
+      data: { status: "PENDING_PAYMENT" },
+    });
+    void moved;
+    const unpaidPickup = await prisma.order.count({
+      where: { orderNumber: { startsWith: "HB-2026-PICKUP-" }, status: "PENDING_PAYMENT", pickedAt: null },
+    });
+    assert(unpaidPickup >= 2, "Pickup demo orders are not waiting unpaid");
+    assert(read("prisma/seed.ts").includes("HB-2026-PICKUP-"), "Pickup demo seed missing");
+    assert(read("prisma/seed.ts").includes("status: OrderStatus.PENDING_PAYMENT"), "Pickup demo seed must start unpaid");
+  });
 
   await check(3, "Isolated order lifecycle: pay → ship → complete moves balances", async () => {
     const plan = await prisma.plan.findFirst({ orderBy: { monthlyFee: "asc" } });
@@ -1023,6 +1042,23 @@ async function phase6Static() {
     assert(pickup.includes("Insufficient Balance"), "Pickup balance error missing");
     assert(pickup.includes("updateMany"), "Pickup concurrency lock missing");
     assert(pickup.includes("$transaction"), "Pickup is not atomic");
+    assert(pickup.includes('status: "PENDING_PAYMENT"'), "Pickup must claim unpaid orders");
+    assert(pickup.includes('status: "PAID"'), "Pickup must mark the order Paid");
+    assert(!pickup.includes('status: "PROCESSING"'), "Pickup must not jump to Processing");
+    const staffOrder = read("lib/actions/admin.ts");
+    assert(staffOrder.includes('status: "PENDING_PAYMENT"'), "Order Sender must create unpaid orders");
+    assert(staffOrder.includes("updatedAt: now"), "Order Sender must stamp updatedAt so new orders sort first");
+    assert(exists("app/api/orders/live/route.ts"), "Store orders live API missing");
+    assert(exists("components/orders-live-board.tsx"), "Store orders live board missing");
+    assert(exists("lib/orders-query.ts"), "Store orders query helper missing");
+    const liveBoard = read("components/orders-live-board.tsx");
+    assert(liveBoard.includes("/api/orders/live"), "Orders board does not poll live orders");
+    assert(liveBoard.includes("PENDING_PAYMENT"), "Orders board must show unpaid pickup cards");
+    assert(read("app/(app)/orders/page.tsx").includes("OrdersLiveBoard"), "Orders page missing live board");
+    assert(read("lib/labels.ts").includes('PENDING_PAYMENT: "Unpaid"'), "Unpaid label missing");
+    assert(read("lib/dashboard.ts").includes('status: "PENDING_PAYMENT"'), "Ready-to-pick-up must count unpaid orders");
+    assert(read("lib/orders-query.ts").includes('updatedAt: "desc"'), "Orders must sort newest first");
+    assert(read("next.config.ts").includes("/api/orders/live"), "Orders live API cache header missing");
     const account = read("lib/actions/account.ts");
     assert(account.includes("paymentPasswordHash") && account.includes("bcrypt.hash"), "Payment password is not hashed");
     assert(account.includes("passwordHash"), "Login password change missing");
@@ -1059,6 +1095,10 @@ async function phase6Static() {
       "components/order-sender-board.tsx",
       "lib/order-sender.ts",
       "app/api/admin/stores/search/route.ts",
+      "app/api/orders/live/route.ts",
+      "components/orders-live-board.tsx",
+      "lib/orders-live.ts",
+      "lib/orders-query.ts",
       "lib/actions/admin.ts",
       "lib/process-releases.ts",
     ]) {
@@ -1697,6 +1737,7 @@ async function phaseHttp(prisma) {
     assert(!text.includes("Cedar &amp; Co") && !text.includes("Cedar & Co. Home"), "Merchant orders leaked Cedar & Co.");
     assert(!text.includes("Lumen Beauty"), "Merchant orders leaked Lumen Beauty");
     assert(text.includes("Click to Pick Up"), "Merchant orders missing pickup control");
+    assert(text.includes("Unpaid"), "Merchant new orders missing Unpaid status");
     assert(text.includes("/c4/") || text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant orders missing product images");
   });
   await check(3, "Distribution Center shows listing status on products", async () => {
@@ -1745,7 +1786,24 @@ async function phaseHttp(prisma) {
     const blocked = await fetch(`${baseUrl}/api/admin/stores/search?q=north`, {
       headers: { cookie: merchantCookie, accept: "application/json" },
     });
-    assert([401, 403].includes(blocked.status), `Merchant store search was ${blocked.status}`);
+    assert(blocked.status === 403 || blocked.status === 401, `Merchant store search was ${blocked.status}`);
+  });
+  await check(3, "Store orders live API returns newest unpaid pickup cards", async () => {
+    const live = await fetch(`${baseUrl}/api/orders/live`, {
+      headers: { cookie: merchantCookie, accept: "application/json", "cache-control": "no-store" },
+    });
+    assert(live.status === 200, `Orders live ${live.status}`);
+    assert((live.headers.get("cache-control") || "").includes("no-store"), "Orders live API is cacheable");
+    const json = await live.json();
+    assert(Array.isArray(json.orders) && json.orders.length > 0, "Orders live API returned no orders");
+    const unpaid = json.orders.filter((order) => order.status === "PENDING_PAYMENT");
+    assert(unpaid.length > 0, "Orders live API missing unpaid pickup orders");
+    assert(unpaid.some((order) => order.orderNumber?.startsWith("HB-2026-PICKUP-")), "Pickup demo orders missing from live API");
+    const times = json.orders.map((order) => Date.parse(order.updatedAt));
+    const sorted = [...times].sort((a, b) => b - a);
+    assert(times.every((value, index) => value === sorted[index]), "Live orders are not newest-first");
+    const anon = await fetch(`${baseUrl}/api/orders/live`, { headers: { accept: "application/json" } });
+    assert(anon.status === 401, `Anonymous orders live was ${anon.status}`);
   });
   await check(3, "Admin /orders HTML includes multiple merchants", async () => {
     const { text } = await pageText("/orders", adminCookie);

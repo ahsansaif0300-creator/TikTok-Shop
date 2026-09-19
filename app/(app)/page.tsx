@@ -24,7 +24,7 @@ export default async function DashboardPage({
     merchant
       ? [
           data.readyToPickUp
-            ? { href: "/orders?status=PAID", label: `${data.readyToPickUp} orders ready to pick up` }
+            ? { href: "/orders?status=PENDING_PAYMENT", label: `${data.readyToPickUp} orders ready to pick up` }
             : null,
           data.pendingRefunds
             ? { href: "/refunds", label: `${data.pendingRefunds} refunds waiting on ops` }

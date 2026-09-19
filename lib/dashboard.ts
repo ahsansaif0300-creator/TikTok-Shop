@@ -55,7 +55,7 @@ export async function getDashboardData(session: SessionUser) {
       where: { ...scope, status: { in: ["PAID", "PROCESSING"] } },
     }),
     prisma.order.count({
-      where: { ...scope, status: "PAID" },
+      where: { ...scope, status: "PENDING_PAYMENT" },
     }),
     isMerchant && session.merchantId
       ? prisma.merchant.findUnique({
@@ -75,7 +75,7 @@ export async function getDashboardData(session: SessionUser) {
     prisma.order.findMany({
       where: scope,
       include: { merchant: true, customer: true, items: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
       take: 8,
     }),
     prisma.order.findMany({

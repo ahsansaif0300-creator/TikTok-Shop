@@ -70,7 +70,6 @@ export async function placeStaffOrder(formData: FormData) {
   const numbers: string[] = [];
 
   await prisma.$transaction(async (tx) => {
-    let pending = 0;
     for (const [index, product] of sendable.entries()) {
       const subtotal = Number((product.price * quantity).toFixed(2));
       const shippingFee = subtotal > 75 ? 0 : 6.95;
@@ -81,13 +80,12 @@ export async function placeStaffOrder(formData: FormData) {
       const profit = Number((subtotal - cost - platformFee).toFixed(2));
       const orderNumber = `HB-${createdAt.getFullYear()}-${stamp}${index.toString(36).toUpperCase()}`;
       numbers.push(orderNumber);
-      pending += profit;
       await tx.order.create({
         data: {
           orderNumber,
           merchantId: merchant.id,
           customerId: customer.id,
-          status: "PROCESSING",
+          status: "PENDING_PAYMENT",
           subtotal,
           shippingFee,
           tax,
@@ -98,7 +96,7 @@ export async function placeStaffOrder(formData: FormData) {
           notes: "Placed by super admin",
           walletReleased: false,
           placedByUserId: session.userId,
-          paidAt: createdAt,
+          paidAt: null,
           createdAt,
           updatedAt: now,
           items: {
@@ -118,16 +116,6 @@ export async function placeStaffOrder(formData: FormData) {
         where: { id: product.id },
         data: { stock: { decrement: quantity } },
       });
-      await tx.ledgerEntry.create({
-        data: {
-          merchantId: merchant.id,
-          type: "SALE",
-          amount: profit,
-          reference: orderNumber,
-          note: "Pending settlement for staff-placed order",
-          createdAt,
-        },
-      });
       await tx.auditLog.create({
         data: {
           userId: session.userId,
@@ -138,10 +126,6 @@ export async function placeStaffOrder(formData: FormData) {
         },
       });
     }
-    await tx.merchant.update({
-      where: { id: merchant.id },
-      data: { pendingBalance: { increment: pending } },
-    });
   });
 
   const first = sendable[0];
@@ -149,11 +133,12 @@ export async function placeStaffOrder(formData: FormData) {
     merchant.id,
     numbers.length === 1 ? "New order" : "New orders",
     numbers.length === 1
-      ? `${numbers[0]} for ${first?.title ?? "a product"} × ${quantity} is ready to fulfill.`
-      : `${numbers.length} orders are ready to fulfill.`,
+      ? `${numbers[0]} for ${first?.title ?? "a product"} × ${quantity} is unpaid and waiting for pickup.`
+      : `${numbers.length} unpaid orders are waiting for pickup.`,
     "/orders",
   );
   revalidatePath("/", "layout");
+  revalidatePath("/orders");
   redirect(`/admin/place-order?placed=${encodeURIComponent(numbers.join(","))}&merchantId=${merchant.id}`);
 }
 

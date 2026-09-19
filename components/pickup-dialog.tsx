@@ -1,3 +1,5 @@
+"use client";
+
 import { pickUpOrder } from "@/lib/actions/pickup";
 import { Button } from "@/components/ui";
 

@@ -46,7 +46,7 @@ export default async function OrderDetailPage({
   });
   const canShip = order.status === "PAID" || order.status === "PROCESSING";
   const refundable = canOpenRefund(order.status);
-  const canPickUp = !staff && order.status === "PAID";
+  const canPickUp = !staff && order.status === "PENDING_PAYMENT";
 
   const timeline = [
     { label: "Placed", at: order.createdAt },

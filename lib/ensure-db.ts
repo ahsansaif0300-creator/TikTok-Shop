@@ -11,6 +11,20 @@ import { bumpGrowthCatalogCap, syncDistributionCatalog } from "./sync-distributi
 async function backfill() {
   const prisma = getPrisma();
   try {
+    await prisma.order.updateMany({
+      where: {
+        pickedAt: null,
+        OR: [
+          { status: "PAID", orderNumber: { startsWith: "HB-2026-PICKUP-" } },
+          { status: "PROCESSING", notes: "Placed by super admin" },
+        ],
+      },
+      data: { status: "PENDING_PAYMENT" },
+    });
+  } catch (error) {
+    console.warn("[harbor] unpaid pickup backfill skipped", error);
+  }
+  try {
     await prisma.$executeRawUnsafe(
       `UPDATE "Order" SET walletReleased = 1 WHERE status = 'COMPLETED' AND walletReleased = 0`,
     );

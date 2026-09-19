@@ -25,8 +25,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/distribution",
-        headers: [{ key: "Cache-Control", value: "private, no-cache, must-revalidate" }],
+        source: "/orders",
+        headers: [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }],
+      },
+      {
+        source: "/orders/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }],
+      },
+      {
+        source: "/api/orders/live",
+        headers: [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }],
       },
       {
         source: "/welcome",
