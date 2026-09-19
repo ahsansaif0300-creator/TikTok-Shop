@@ -135,6 +135,9 @@ export function SignupForm({ error }: { error?: string }) {
             maxLength={8}
             autoComplete="off"
             placeholder="8-digit number"
+            onInput={(event) => {
+              event.currentTarget.value = event.currentTarget.value.replace(/\D/g, "").slice(0, 8);
+            }}
             className="h-11 w-full rounded-xl border border-line px-3 text-sm outline-none ring-accent/30 focus:ring-2"
           />
           <span className="block text-xs text-muted">

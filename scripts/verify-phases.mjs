@@ -332,7 +332,7 @@ async function phase2Static() {
     assert(signupPage.includes("Gallery") && signupPage.includes("Camera"), "Signup ID capture missing gallery/camera");
     assert(signupPage.includes("referralCode"), "Signup form missing LLC code field");
     assert(signupPage.includes("LLC Code"), "Signup form must label LLC Code");
-    assert(!signupPage.includes("Referral code"), "Signup still says Referral code");
+    assert(signupPage.includes("replace(/\\D/g"), "Signup LLC Code must strip letters while typing");
     assert(read("lib/referral.ts").includes("randomInt"), "LLC codes must be numeric");
     assert(!read("lib/referral.ts").includes("`REF"), "LLC codes must not use alphabetic prefixes");
     assert(read("prisma/seed.ts").includes('referralCode: "10000001"'), "Seed LLC code must be numeric");
