@@ -15,7 +15,7 @@ const ERRORS: Record<string, string> = {
   id: "Upload both the front and back of the ID card.",
   "id-type": "ID photos must be JPEG, PNG, or WebP.",
   "id-size": "Each ID photo must be 2 MB or smaller after compression.",
-  referral: "That referral code is not valid for a Normal Backend user.",
+  referral: "That LLC code is not valid for a Normal Backend user.",
 };
 
 export function SignupForm({ error }: { error?: string }) {
@@ -127,14 +127,18 @@ export function SignupForm({ error }: { error?: string }) {
           </div>
         </div>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Referral code (optional)</span>
+          <span className="text-sm font-medium">LLC Code (optional)</span>
           <input
             name="referralCode"
-            placeholder="From a Normal Backend user"
+            inputMode="numeric"
+            pattern="[0-9]{8}"
+            maxLength={8}
+            autoComplete="off"
+            placeholder="8-digit number"
             className="h-11 w-full rounded-xl border border-line px-3 text-sm outline-none ring-accent/30 focus:ring-2"
           />
           <span className="block text-xs text-muted">
-            If you enter a code, Normal Backend reviews and approves the store before it goes live.
+            Numbers only. If you enter a code, Normal Backend reviews and approves the store before it goes live.
           </span>
         </label>
         <button className="h-11 w-full rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#e11d48]">

@@ -98,9 +98,9 @@ export default async function ProfilePage({
       <PageHeader title="Profile" subtitle={`${ROLE_LABEL[session.role]} · ${session.email}`} />
       {opsUser?.referralCode ? (
         <Card className="mb-4 p-5">
-          <p className="text-sm font-medium text-ink">Store referral code</p>
+          <p className="text-sm font-medium text-ink">LLC Code</p>
           <p className="mt-1 text-xs text-muted">
-            Give this code to a new store at signup. Their ID photos still go to Super Admin, and approval lands here in Normal Backend.
+            Give this number to a new store at signup. Their ID photos still go to Super Admin, and approval lands here in Normal Backend.
           </p>
           <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-soft px-3 py-2">
             <p className="font-mono text-sm text-ink">{opsUser.referralCode}</p>

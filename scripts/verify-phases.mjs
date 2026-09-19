@@ -324,18 +324,24 @@ async function phase2Static() {
     assert(read("lib/actions/signup.ts").includes("allocateStoreCode"), "Signup must mint a Store ID");
     assert(read("lib/actions/signup.ts").includes("idFront"), "Signup must collect ID card front");
     assert(read("lib/actions/signup.ts").includes("idBack"), "Signup must collect ID card back");
-    assert(read("lib/actions/signup.ts").includes("referralCode"), "Signup must accept a referral code");
+    assert(read("lib/actions/signup.ts").includes("referralCode"), "Signup must accept an LLC code");
+    assert(read("lib/actions/signup.ts").includes("isNumericLlcCode"), "Signup must reject non-numeric LLC codes");
     const signupPage =
       read("app/signup/page.tsx") + read("components/signup-form.tsx") + read("components/id-card-capture.tsx");
     assert(signupPage.includes("idFront") && signupPage.includes("idBack"), "Signup form missing ID uploads");
     assert(signupPage.includes("Gallery") && signupPage.includes("Camera"), "Signup ID capture missing gallery/camera");
-    assert(signupPage.includes("referralCode"), "Signup form missing referral code");
+    assert(signupPage.includes("referralCode"), "Signup form missing LLC code field");
+    assert(signupPage.includes("LLC Code"), "Signup form must label LLC Code");
+    assert(!signupPage.includes("Referral code"), "Signup still says Referral code");
+    assert(read("lib/referral.ts").includes("randomInt"), "LLC codes must be numeric");
+    assert(!read("lib/referral.ts").includes("`REF"), "LLC codes must not use alphabetic prefixes");
+    assert(read("prisma/seed.ts").includes('referralCode: "10000001"'), "Seed LLC code must be numeric");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-order-prices"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-llc-code"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt missing live deploy stamp");
-    assert(read("public/release.txt").includes("tiktok-shop-orders-live-ol1"), "public/release.txt dropped orders-live stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-llc-code"), "public/release.txt missing live deploy stamp");
+    assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
@@ -1569,6 +1575,9 @@ async function phaseHttp(prisma) {
   await check(2, "Anonymous signup and shop card are public", async () => {
     const signup = await fetchManual(`${baseUrl}/signup`);
     assert(signup.status === 200, `/signup returned ${signup.status}`);
+    const signupHtml = await pageText("/signup");
+    assert(signupHtml.text.includes("LLC Code"), "Signup HTML missing LLC Code");
+    assert(!signupHtml.text.includes("Referral code"), "Signup HTML still says Referral code");
     const { res, text } = await pageText("/s/northline-outfitters");
     assert(res.status === 200, `/s/northline-outfitters ${res.status}`);
     assert(/TikTok Shop/.test(text), "Shop card missing product name");

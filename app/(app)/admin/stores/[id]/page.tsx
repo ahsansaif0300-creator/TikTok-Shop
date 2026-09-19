@@ -81,7 +81,7 @@ export default async function StoreRecordDetailPage({
               ["Products", String(store._count.products)],
               ["Orders", String(store._count.orders)],
               ["Shop link", shopUrl],
-              ["Referral code", store.referralCodeUsed || "—"],
+              ["LLC Code", store.referralCodeUsed || "—"],
               [
                 "Referred by",
                 store.referredBy

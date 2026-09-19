@@ -49,7 +49,7 @@ export default async function ApplicationsPage({
                 <tr>
                   <Th>Business</Th>
                   <Th>Contact</Th>
-                  <Th>Referral</Th>
+                  <Th>LLC Code</Th>
                   <Th>Status</Th>
                   <Th>Review</Th>
                 </tr>
@@ -84,7 +84,7 @@ export default async function ApplicationsPage({
                             {application.referredBy?.username || application.referredBy?.name || "Normal Backend"}
                           </p>
                           {application.referredByUserId === session.userId ? (
-                            <p className="text-[11px] font-medium text-accent">Your referral</p>
+                            <p className="text-[11px] font-medium text-accent">Your LLC code</p>
                           ) : null}
                         </div>
                       ) : (

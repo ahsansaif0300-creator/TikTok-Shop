@@ -8,7 +8,7 @@ import { ensureDatabase } from "@/lib/ensure-db";
 import { uniqueMerchantSlug } from "@/lib/slug";
 import { allocateStoreCode } from "@/lib/store-code";
 import { fileToDataUrl, idCardError } from "@/lib/logo";
-import { findOpsByReferralCode, normalizeReferralCode } from "@/lib/referral";
+import { findOpsByReferralCode, isNumericLlcCode, normalizeReferralCode } from "@/lib/referral";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
 
 export async function signupMerchantAction(formData: FormData) {
@@ -49,7 +49,8 @@ export async function signupMerchantAction(formData: FormData) {
 
   const referralCode = normalizeReferralCode(referralRaw);
   let referrer: Awaited<ReturnType<typeof findOpsByReferralCode>> = null;
-  if (referralCode) {
+  if (referralRaw.trim()) {
+    if (!isNumericLlcCode(referralCode)) redirect("/signup?error=referral");
     referrer = await findOpsByReferralCode(referralCode);
     if (!referrer) redirect("/signup?error=referral");
   }
@@ -124,7 +125,7 @@ export async function signupMerchantAction(formData: FormData) {
       data: {
         userId: referrer.id,
         title: "Referred store waiting for approval",
-        body: `${storeName} signed up with your referral code. Review it in Applications.`,
+        body: `${storeName} signed up with your LLC code. Review it in Applications.`,
         href: "/merchants/applications",
       },
     });
