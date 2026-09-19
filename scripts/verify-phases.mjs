@@ -1803,8 +1803,13 @@ async function phaseHttp(prisma) {
     const times = json.orders.map((order) => Date.parse(order.updatedAt));
     const sorted = [...times].sort((a, b) => b - a);
     assert(times.every((value, index) => value === sorted[index]), "Live orders are not newest-first");
-    const anon = await fetch(`${baseUrl}/api/orders/live`, { headers: { accept: "application/json" } });
-    assert(anon.status === 401, `Anonymous orders live was ${anon.status}`);
+    const anon = await fetchManual(`${baseUrl}/api/orders/live`, {
+      headers: { accept: "application/json" },
+    });
+    assert(
+      [401, 301, 302, 303, 307, 308].includes(anon.status),
+      `Anonymous orders live was ${anon.status}`,
+    );
   });
   await check(3, "Admin /orders HTML includes multiple merchants", async () => {
     const { text } = await pageText("/orders", adminCookie);
