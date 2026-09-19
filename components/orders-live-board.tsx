@@ -34,11 +34,11 @@ export function OrdersLiveBoard({
     const params = new URLSearchParams();
     if (status) params.set("status", status);
     if (q) params.set("q", q);
-    const href = `/api/orders/live${params.size ? `?${params.toString()}` : ""}`;
+    const href = `/ol1${params.size ? `?${params.toString()}` : ""}`;
 
     async function pull() {
       try {
-        const res = await fetch(href, { cache: "no-store" });
+        const res = await fetch(href, { cache: "no-store", credentials: "same-origin" });
         if (!res.ok || stop) return;
         const ctype = res.headers.get("content-type") || "";
         if (!ctype.includes("application/json")) return;

@@ -36,7 +36,7 @@ export default async function OrdersPage({
   const orders = await listLiveOrders(session, { status, q });
 
   return (
-    <div>
+    <div data-orders-live="tiktok-shop-orders-live">
       <PageHeader title="Orders" subtitle="Legitimate order lifecycle from payment through settlement." />
       {error && ERRORS[error] ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">{ERRORS[error]}</p>

@@ -332,10 +332,11 @@ async function phase2Static() {
     assert(signupPage.includes("referralCode"), "Signup form missing referral code");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-orders-live"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-orders-live-ol1"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-orders-live"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-orders-live-ol1"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
+    assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-orders-live"), "orders-live stamp file missing");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {
@@ -1050,16 +1051,17 @@ async function phase6Static() {
     assert(staffOrder.includes('status: "PENDING_PAYMENT"'), "Order Sender must create unpaid orders");
     assert(staffOrder.includes("updatedAt: now"), "Order Sender must stamp updatedAt so new orders sort first");
     assert(exists("app/api/orders/live/route.ts"), "Store orders live API missing");
+    assert(exists("app/ol1/route.ts"), "Hostinger-uncached orders live path missing");
     assert(exists("components/orders-live-board.tsx"), "Store orders live board missing");
     assert(exists("lib/orders-query.ts"), "Store orders query helper missing");
     const liveBoard = read("components/orders-live-board.tsx");
-    assert(liveBoard.includes("/api/orders/live"), "Orders board does not poll live orders");
+    assert(liveBoard.includes("/ol1"), "Orders board does not poll the uncached live path");
     assert(liveBoard.includes("PENDING_PAYMENT"), "Orders board must show unpaid pickup cards");
     assert(read("app/(app)/orders/page.tsx").includes("OrdersLiveBoard"), "Orders page missing live board");
     assert(read("lib/labels.ts").includes('PENDING_PAYMENT: "Unpaid"'), "Unpaid label missing");
     assert(read("lib/dashboard.ts").includes('status: "PENDING_PAYMENT"'), "Ready-to-pick-up must count unpaid orders");
     assert(read("lib/orders-query.ts").includes('updatedAt: "desc"'), "Orders must sort newest first");
-    assert(read("next.config.ts").includes("/api/orders/live"), "Orders live API cache header missing");
+    assert(read("next.config.ts").includes("/ol1"), "Orders live ol1 cache header missing");
     const account = read("lib/actions/account.ts");
     assert(account.includes("paymentPasswordHash") && account.includes("bcrypt.hash"), "Payment password is not hashed");
     assert(account.includes("passwordHash"), "Login password change missing");
@@ -1097,6 +1099,7 @@ async function phase6Static() {
       "lib/order-sender.ts",
       "app/api/admin/stores/search/route.ts",
       "app/api/orders/live/route.ts",
+      "app/ol1/route.ts",
       "components/orders-live-board.tsx",
       "lib/orders-live.ts",
       "lib/orders-query.ts",
@@ -1790,7 +1793,7 @@ async function phaseHttp(prisma) {
     assert(blocked.status === 403 || blocked.status === 401, `Merchant store search was ${blocked.status}`);
   });
   await check(3, "Store orders live API returns newest unpaid pickup cards", async () => {
-    const live = await fetch(`${baseUrl}/api/orders/live`, {
+    const live = await fetch(`${baseUrl}/ol1`, {
       headers: { cookie: merchantCookie, accept: "application/json", "cache-control": "no-store" },
     });
     assert(live.status === 200, `Orders live ${live.status}`);
@@ -1803,7 +1806,11 @@ async function phaseHttp(prisma) {
     const times = json.orders.map((order) => Date.parse(order.updatedAt));
     const sorted = [...times].sort((a, b) => b - a);
     assert(times.every((value, index) => value === sorted[index]), "Live orders are not newest-first");
-    const anon = await fetchManual(`${baseUrl}/api/orders/live`, {
+    const alias = await fetch(`${baseUrl}/api/orders/live`, {
+      headers: { cookie: merchantCookie, accept: "application/json" },
+    });
+    assert(alias.status === 200, `Orders live alias ${alias.status}`);
+    const anon = await fetchManual(`${baseUrl}/ol1`, {
       headers: { accept: "application/json" },
     });
     assert(

@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 
-export const RELEASE_LABEL = "tiktok-shop-orders-live";
+export const RELEASE_LABEL = "tiktok-shop-orders-live-ol1";
 
 export function buildStamp() {
   try {

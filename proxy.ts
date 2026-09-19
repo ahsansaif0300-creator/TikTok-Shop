@@ -3,6 +3,23 @@ import { readSessionFromToken } from "@/lib/auth";
 import { shopSlugFromHost } from "@/lib/shop-host";
 import { canAccessPath, isPublicPath, loginPathForRequest } from "@/lib/access";
 
+function withNoStore(response: NextResponse) {
+  response.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+  response.headers.set("CDN-Cache-Control", "no-store");
+  response.headers.set("Surrogate-Control", "no-store");
+  response.headers.set("Pragma", "no-cache");
+  return response;
+}
+
+function needsFreshOrders(pathname: string) {
+  return (
+    pathname === "/orders" ||
+    pathname.startsWith("/orders/") ||
+    pathname === "/ol1" ||
+    pathname.startsWith("/api/orders")
+  );
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get("host") ?? "";
@@ -38,7 +55,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  if (needsFreshOrders(pathname)) return withNoStore(res);
+  return res;
 }
 
 export const config = {

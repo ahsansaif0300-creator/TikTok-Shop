@@ -37,6 +37,13 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }],
       },
       {
+        source: "/ol1",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" },
+          { key: "CDN-Cache-Control", value: "no-store" },
+        ],
+      },
+      {
         source: "/welcome",
         headers: [{ key: "Cache-Control", value: "private, no-cache, must-revalidate" }],
       },
