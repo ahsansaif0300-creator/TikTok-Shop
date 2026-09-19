@@ -1,3 +1,4 @@
+tiktok-shop-order-prices
 tiktok-shop-orders-live
 unpaid-pickup-paid
 ol1

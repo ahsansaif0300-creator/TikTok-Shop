@@ -15,6 +15,7 @@ export type LiveOrder = {
   createdAt: string;
   updatedAt: string;
   total: number;
+  cost: number;
   profit: number;
   merchant: { name: string };
   customer: { name: string; city: string };

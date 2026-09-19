@@ -98,10 +98,21 @@ export function OrdersLiveBoard({
                   </li>
                 ))}
               </ul>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm">
-                  Order amount <span className="font-semibold">{money(order.total)}</span>
-                </p>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <dl className="grid min-w-0 flex-1 grid-cols-3 gap-2 text-sm">
+                  <div className="rounded-xl bg-soft px-3 py-2">
+                    <dt className="text-[11px] uppercase tracking-wide text-muted">Cost Price</dt>
+                    <dd className="mt-1 font-semibold text-ink">{money(order.cost)}</dd>
+                  </div>
+                  <div className="rounded-xl bg-soft px-3 py-2">
+                    <dt className="text-[11px] uppercase tracking-wide text-muted">Total Price</dt>
+                    <dd className="mt-1 font-semibold text-ink">{money(order.total)}</dd>
+                  </div>
+                  <div className="rounded-xl bg-soft px-3 py-2">
+                    <dt className="text-[11px] uppercase tracking-wide text-muted">Profit Amount</dt>
+                    <dd className="mt-1 font-semibold text-ink">{money(order.profit)}</dd>
+                  </div>
+                </dl>
                 <PickupDialog orderId={order.id} orderNumber={order.orderNumber} amountLabel={money(order.total)} />
               </div>
             </Card>
@@ -121,8 +132,9 @@ export function OrdersLiveBoard({
                 <Th>Customer</Th>
                 <Th>Items</Th>
                 <Th>Status</Th>
-                <Th>Total</Th>
-                <Th>Profit</Th>
+                <Th>Cost Price</Th>
+                <Th>Total Price</Th>
+                <Th>Profit Amount</Th>
               </tr>
             </thead>
             <tbody>
@@ -152,6 +164,7 @@ export function OrdersLiveBoard({
                   <Td>
                     <StatusBadge value={order.status} labels={ORDER_STATUS} />
                   </Td>
+                  <Td>{money(order.cost)}</Td>
                   <Td>{money(order.total)}</Td>
                   <Td>{money(order.profit)}</Td>
                 </tr>

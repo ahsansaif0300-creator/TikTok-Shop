@@ -332,11 +332,12 @@ async function phase2Static() {
     assert(signupPage.includes("referralCode"), "Signup form missing referral code");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-orders-live-ol1"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-order-prices"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-orders-live-ol1"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt missing live deploy stamp");
+    assert(read("public/release.txt").includes("tiktok-shop-orders-live-ol1"), "public/release.txt dropped orders-live stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
-    assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-orders-live"), "orders-live stamp file missing");
+    assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
     assert(read("lib/shop-url.ts").includes("shopAbsoluteUrl"), "Shop URL helper missing");
   });
   await check(2, "Login screens use the product name and hide demo passwords", () => {
@@ -1057,6 +1058,7 @@ async function phase6Static() {
     const liveBoard = read("components/orders-live-board.tsx");
     assert(liveBoard.includes("/ol1"), "Orders board does not poll the uncached live path");
     assert(liveBoard.includes("PENDING_PAYMENT"), "Orders board must show unpaid pickup cards");
+    assert(liveBoard.includes("Cost Price") && liveBoard.includes("Total Price") && liveBoard.includes("Profit Amount"), "Store orders missing cost/total/profit");
     assert(read("app/(app)/orders/page.tsx").includes("OrdersLiveBoard"), "Orders page missing live board");
     assert(read("lib/labels.ts").includes('PENDING_PAYMENT: "Unpaid"'), "Unpaid label missing");
     assert(read("lib/dashboard.ts").includes('status: "PENDING_PAYMENT"'), "Ready-to-pick-up must count unpaid orders");
@@ -1742,6 +1744,7 @@ async function phaseHttp(prisma) {
     assert(!text.includes("Lumen Beauty"), "Merchant orders leaked Lumen Beauty");
     assert(text.includes("Click to Pick Up"), "Merchant orders missing pickup control");
     assert(text.includes("Unpaid"), "Merchant new orders missing Unpaid status");
+    assert(text.includes("Cost Price") && text.includes("Total Price") && text.includes("Profit Amount"), "Merchant orders missing cost/total/profit");
     assert(text.includes("/c4/") || text.includes("/catalog/") || text.includes("/product-art/") || text.includes("/products/p"), "Merchant orders missing product images");
   });
   await check(3, "Distribution Center shows listing status on products", async () => {

@@ -33,6 +33,7 @@ export async function listLiveOrders(
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     total: order.total,
+    cost: order.cost,
     profit: order.profit,
     merchant: { name: order.merchant.name },
     customer: { name: order.customer.name, city: order.customer.city },
