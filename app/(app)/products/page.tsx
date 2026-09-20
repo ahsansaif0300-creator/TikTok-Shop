@@ -26,25 +26,57 @@ export default async function ProductsPage({
 }) {
   const session = await requireSession();
   if (session.role === "MERCHANT" && session.merchantId) {
-    await ensureMerchantCatalog(prisma, session.merchantId);
+    try {
+      await ensureMerchantCatalog(prisma, session.merchantId);
+    } catch (error) {
+      console.error("[harbor] products catalog clone skipped", error);
+    }
   }
   const { status = "", q = "" } = await searchParams;
   const merchantView = session.role === "MERCHANT";
-  const products = await prisma.product.findMany({
-    where: {
-      ...merchantScope(session),
-      ...(status === "LOW_STOCK"
-        ? { stock: { lte: 20 }, status: "ACTIVE", listingStatus: "LISTED" }
-        : status === "LISTED" || status === "ON_SHELF"
-          ? { listingStatus: status as ProductListingStatus }
-          : status
-            ? { status: status as ProductStatus }
-            : {}),
-      ...(q ? { OR: [{ title: { contains: q } }, { sku: { contains: q } }] } : {}),
-    },
-    include: { merchant: true, category: true },
-    orderBy: { updatedAt: "desc" },
-  });
+
+  let products: Array<{
+    id: string;
+    title: string;
+    sku: string;
+    price: number;
+    stock: number;
+    listingStatus: ProductListingStatus;
+    status: ProductStatus;
+    image: string;
+    merchant: { name: string } | null;
+    category: { name: string } | null;
+  }> = [];
+  try {
+    products = await prisma.product.findMany({
+      where: {
+        ...merchantScope(session),
+        ...(status === "LOW_STOCK"
+          ? { stock: { lte: 20 }, status: "ACTIVE", listingStatus: "LISTED" }
+          : status === "LISTED" || status === "ON_SHELF"
+            ? { listingStatus: status as ProductListingStatus }
+            : status
+              ? { status: status as ProductStatus }
+              : {}),
+        ...(q ? { OR: [{ title: { contains: q } }, { sku: { contains: q } }] } : {}),
+      },
+      select: {
+        id: true,
+        title: true,
+        sku: true,
+        price: true,
+        stock: true,
+        listingStatus: true,
+        status: true,
+        image: true,
+        merchant: { select: { name: true } },
+        category: { select: { name: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+  } catch (error) {
+    console.error("[harbor] products query failed", error);
+  }
 
   return (
     <div>
@@ -63,7 +95,14 @@ export default async function ProductsPage({
       </div>
       <Card>
         {products.length === 0 ? (
-          <Empty title="No products" body="Add a product to start selling." />
+          <Empty
+            title="No products"
+            body={
+              merchantView
+                ? "Products appear here after the store is approved. Reload if the catalog is still copying."
+                : "Add a product to start selling."
+            }
+          />
         ) : (
           <TableWrap>
             <thead>
@@ -91,8 +130,8 @@ export default async function ProductsPage({
                       </div>
                     </div>
                   </Td>
-                  {merchantView ? null : <Td>{product.merchant.name}</Td>}
-                  <Td>{product.category.name}</Td>
+                  {merchantView ? null : <Td>{product.merchant?.name ?? "—"}</Td>}
+                  <Td>{product.category?.name ?? "—"}</Td>
                   <Td>{money(product.price)}</Td>
                   <Td className={product.stock <= 20 ? "font-semibold text-amber-800" : ""}>{product.stock}</Td>
                   <Td>

@@ -334,6 +334,8 @@ async function phase2Static() {
     assert(signupPage.includes("LLC Code"), "Signup form must label LLC Code");
     assert(!signupPage.includes("LLC Code (optional)"), "LLC Code must not be labeled optional");
     assert(signupPage.includes('name="logo"'), "Signup form missing logo file picker");
+    assert(signupPage.includes("Remove logo") || signupPage.includes("clearLogo"), "Signup logo must have a remove control");
+    assert(signupPage.includes("Remove ID card") || signupPage.includes("clearFile"), "Signup ID photos must have a remove control");
     assert(signupPage.includes("replace(/\\D/g"), "Signup LLC Code must strip letters while typing");
     assert(!read("app/signup/page.tsx").includes("Super Admin"), "Signup page must not mention Super Admin");
     assert(!read("app/signup/page.tsx").includes("Normal Backend"), "Signup page must not mention Normal Backend");
@@ -355,9 +357,9 @@ async function phase2Static() {
     assert(read("prisma/seed.ts").includes('referralCode: "10000001"'), "Seed LLC code must be numeric");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-ops-users-persist"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-products-release-stores"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-ops-users-persist"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-products-release-stores"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -852,6 +854,8 @@ async function phase5Static() {
     assert(read("app/(app)/categories/page.tsx").includes("isStaff"), "Categories not staff-gated");
     assert(read("app/(app)/customers/page.tsx").includes("isStaff"), "Customers not staff-gated");
     assert(read("app/(app)/products/page.tsx").includes("LOW_STOCK"), "Low-stock catalog filter missing");
+    assert(read("app/(app)/products/page.tsx").includes("ensureMerchantCatalog"), "Products page must copy the catalog for approved stores");
+    assert(read("app/(app)/products/page.tsx").includes("products query failed") || read("app/(app)/products/page.tsx").includes("catalog clone skipped"), "Products page must keep rendering if catalog copy fails");
     const taxonomy = read("lib/store-categories.ts");
     for (const name of [
       "Hot Selling Items",
@@ -1140,8 +1144,17 @@ async function phase6Static() {
     assert(admin.includes("createOpsUser"), "Ops user helper missing");
     assert(admin.includes("deleteOpsUser"), "Ops user delete helper missing");
     assert(admin.includes("snapshotOpsUsers"), "Ops users must be snapshotted after create/delete");
+    assert(admin.includes("snapshotStoreRecords"), "Store records must be snapshotted after Super Admin edits");
+    assert(admin.includes('name="minutes"') || read("app/(app)/admin/releases/page.tsx").includes('name="minutes"'), "Payment release must accept minutes");
+    assert(read("lib/actions/admin.ts").includes("delayMs"), "Payment release must combine hours and minutes");
+    assert(read("lib/actions/admin.ts").includes("await processDueReleases()"), "Payment release must run due jobs after scheduling");
     assert(read("lib/ops-users-store.ts").includes("restoreOpsUsers"), "Ops user restore missing");
+    assert(read("lib/store-records-store.ts").includes("restoreStoreRecords"), "Store record restore missing");
     assert(read("lib/ensure-db.ts").includes("restoreOpsUsers"), "Boot must restore Normal Backend users");
+    assert(read("lib/ensure-db.ts").includes("restoreStoreRecords"), "Boot must restore store records");
+    assert(read("lib/ensure-db.ts").includes("listingStatus"), "Boot must backfill product listingStatus");
+    assert(read("lib/ensure-db.ts").includes("PaymentRelease"), "Boot must ensure the PaymentRelease table");
+    assert(read("scripts/copy-demo-db.mjs").includes("storeRecordsSnapshotPaths"), "Store records need a persistent snapshot path");
     assert(read("scripts/copy-demo-db.mjs").includes("persistentDataDirs"), "Live SQLite must prefer a persistent folder");
     assert(read("scripts/copy-demo-db.mjs").includes("homedir"), "Live SQLite must survive Hostinger deploys");
     assert(read("app/(app)/admin/users/page.tsx").includes("DeleteOpsUserButton"), "Normal Backend users need a delete action");
@@ -1179,6 +1192,13 @@ async function phase6Static() {
     assert(read("app/api/support/live/route.ts").includes("setSupportTyping"), "Typing ping missing");
     assert(read("components/service-composer.tsx").includes("Upload Image/Video"), "Service media picker missing");
     assert(read("lib/process-releases.ts").includes('status: "SCHEDULED"'), "Release job must only pick scheduled rows");
+    assert(read("lib/process-releases.ts").includes("10_000"), "Release scheduler must poll at least every 10 seconds");
+    assert(read("app/(app)/admin/releases/page.tsx").includes('name="hours"'), "Release form missing hours");
+    assert(read("app/(app)/admin/releases/page.tsx").includes('name="minutes"'), "Release form missing minutes");
+    assert(read("app/(app)/admin/stores/page.tsx").includes("Store login") || read("app/(app)/admin/stores/page.tsx").includes("Login"), "Store records must show login details");
+    assert(read("lib/actions/signup.ts").includes("snapshotStoreRecords"), "Signup must keep store records");
+    assert(read("lib/actions/merchants.ts").includes("snapshotStoreRecords"), "Approval must keep store records");
+    assert(read("components/id-card-capture.tsx").includes("Remove"), "ID capture missing remove control");
     assert(read("lib/auth.ts").includes("requireSuperAdmin"), "requireSuperAdmin missing");
     assert(read("app/(app)/admin/layout.tsx").includes("requireSuperAdmin"), "Admin layout is not gated");
     assert(read("lib/nav.ts").includes("/admin/place-order") && read("lib/nav.ts").includes("adminOnly"), "Super admin nav missing");
@@ -1831,6 +1851,18 @@ async function phaseHttp(prisma) {
     });
     assert(blocked.status === 403 || blocked.status === 401, `Merchant store search was ${blocked.status}`);
   });
+  await check(4, "Payment release form has hours and minutes; store records show logins", async () => {
+    const releases = await pageText("/admin/releases", adminCookie);
+    assert(releases.res.status === 200, `/admin/releases ${releases.res.status}`);
+    assert(releases.text.includes('name="hours"'), "Release form missing hours");
+    assert(releases.text.includes('name="minutes"'), "Release form missing minutes");
+    assert(releases.text.includes("Start timer"), "Release start control missing");
+    const stores = await pageText("/admin/stores", adminCookie);
+    assert(stores.res.status === 200, `/admin/stores ${stores.res.status}`);
+    assert(stores.text.includes("Northline Outfitters"), "Store records missing Northline");
+    assert(stores.text.includes("Login"), "Store records missing login column");
+    assert(stores.text.includes("iris.p@example.org") || stores.text.includes("@harbor.local"), "Store records missing login email");
+  });
   await check(3, "Store orders live API returns newest unpaid pickup cards", async () => {
     const live = await fetch(`${baseUrl}/ol1`, {
       headers: { cookie: merchantCookie, accept: "application/json", "cache-control": "no-store" },
@@ -1914,6 +1946,16 @@ async function phaseHttp(prisma) {
     const { text } = await pageText("/products", merchantCookie);
     assert(text.includes("Trail Fleece") || text.includes("Alpine Daypack") || text.includes("Merino"), "Northline products missing");
     assert(!text.includes("Vitamin C Serum"), "Merchant products leaked Lumen catalog");
+  });
+  await check(5, "Staff /products pages render catalog rows", async () => {
+    const adminProducts = await pageText("/products", adminCookie);
+    assert(adminProducts.res.status === 200, `Admin /products ${adminProducts.res.status}`);
+    assert(adminProducts.text.includes("This page could not load") === false, "Admin products showed the crash screen");
+    assert(adminProducts.text.includes("Trail Fleece") || adminProducts.text.includes("Alpine Daypack") || adminProducts.text.includes("Merino"), "Admin products missing catalog rows");
+    const opsProducts = await pageText("/products", opsCookie);
+    assert(opsProducts.res.status === 200, `Ops /products ${opsProducts.res.status}`);
+    assert(opsProducts.text.includes("This page could not load") === false, "Ops products showed the crash screen");
+    assert(opsProducts.text.includes("Trail Fleece") || opsProducts.text.includes("Alpine Daypack") || opsProducts.text.includes("Merino"), "Ops products missing catalog rows");
   });
   await check(5, "Merchant cannot open another store's product; staff catalog pages load", async () => {
     const foreign = await prisma.product.findFirst({

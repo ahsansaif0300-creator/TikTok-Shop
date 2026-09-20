@@ -8,6 +8,7 @@ import { uniqueMerchantSlug } from "@/lib/slug";
 import { allocateStoreCode } from "@/lib/store-code";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
 import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
+import { snapshotStoreRecords } from "@/lib/store-records-store";
 
 export async function setMerchantStatus(merchantId: string, status: MerchantStatus) {
   const session = await requireSession();
@@ -19,6 +20,7 @@ export async function setMerchantStatus(merchantId: string, status: MerchantStat
   if (status === "ACTIVE") {
     await ensureMerchantCatalog(prisma, merchantId);
   }
+  await snapshotStoreRecords(prisma);
   await prisma.auditLog.create({
     data: {
       userId: session.userId,
@@ -112,6 +114,7 @@ export async function reviewApplication(formData: FormData) {
         detail: `Rejected ${application.businessName}`,
       },
     });
+    await snapshotStoreRecords(prisma);
     revalidatePath("/", "layout");
     return;
   }
@@ -190,5 +193,6 @@ export async function reviewApplication(formData: FormData) {
       });
     }
   }
+  await snapshotStoreRecords(prisma);
   revalidatePath("/", "layout");
 }

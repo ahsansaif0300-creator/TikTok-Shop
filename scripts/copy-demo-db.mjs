@@ -71,6 +71,16 @@ export function opsUserSnapshotPaths(root = process.cwd()) {
   return [...new Set(paths)];
 }
 
+export function storeRecordsSnapshotPaths(root = process.cwd()) {
+  const paths = persistentDataDirs(root).map((dir) => path.join(dir, "store-records.json"));
+  const url = process.env.DATABASE_URL || "";
+  if (url.startsWith("file:")) {
+    const file = url.slice("file:".length);
+    if (file) paths.push(path.join(path.dirname(file), "store-records.json"));
+  }
+  return [...new Set(paths)];
+}
+
 export function installDemoDb(_root = process.cwd(), { overwrite = false } = {}) {
   const root = process.cwd();
   const demo = path.join(root, "prisma", "demo.sqlite");

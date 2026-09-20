@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { expireStaleSupportSessions } from "@/lib/service-session";
 
 let running = false;
+let runningSince = 0;
 
 async function releaseOne(id: string, now: Date) {
   await prisma.$transaction(async (tx) => {
@@ -62,8 +63,10 @@ async function releaseOne(id: string, now: Date) {
 }
 
 export async function processDueReleases() {
-  if (running) return 0;
+  const nowMs = Date.now();
+  if (running && nowMs - runningSince < 60_000) return 0;
   running = true;
+  runningSince = nowMs;
   try {
     const now = new Date();
     const due = await prisma.paymentRelease.findMany({
@@ -97,5 +100,5 @@ export function startReleaseScheduler() {
   setInterval(() => {
     void processDueReleases();
     void expireStaleSupportSessions();
-  }, 30_000);
+  }, 10_000);
 }

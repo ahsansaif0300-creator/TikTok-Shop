@@ -68,6 +68,12 @@ export default async function StoreRecordDetailPage({
               ["Legal name", store.legalName],
               ["Slug", store.slug],
               ["Email", store.email],
+              [
+                "Store login",
+                store.users.length > 0
+                  ? store.users.map((user) => `${user.email}${user.username ? ` · ${user.username}` : ""}`).join(", ")
+                  : "No seller login yet",
+              ],
               ["Phone", store.phone || "—"],
               ["City", store.city || "—"],
               ["Country", store.country || "—"],
@@ -115,6 +121,7 @@ export default async function StoreRecordDetailPage({
                 {store.users.map((user) => (
                   <li key={user.id}>
                     {user.name} · {user.email}
+                    {user.username ? ` · ${user.username}` : ""}
                   </li>
                 ))}
               </ul>

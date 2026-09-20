@@ -1,3 +1,4 @@
+tiktok-shop-products-release-stores
 tiktok-shop-ops-users-persist
 tiktok-shop-store-review
 tiktok-shop-llc-code
