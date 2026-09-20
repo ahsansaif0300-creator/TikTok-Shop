@@ -7,6 +7,7 @@ import { ensureOpsReferralCodes } from "./referral";
 import { BRAND_NAME } from "./brand-name";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING, STORE_RATING_MAX } from "./store-score";
 import { bumpGrowthCatalogCap, syncDistributionCatalog } from "./sync-distribution-catalog";
+import { restoreOpsUsers, snapshotOpsUsers } from "./ops-users-store";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -179,6 +180,13 @@ async function backfill() {
     }
   } catch (error) {
     console.warn("[harbor] storeName backfill skipped", error);
+  }
+  try {
+    const restored = await restoreOpsUsers(prisma);
+    if (restored > 0) console.log(`[harbor] Restored ${restored} Normal Backend users`);
+    await snapshotOpsUsers(prisma);
+  } catch (error) {
+    console.warn("[harbor] ops user snapshot skipped", error);
   }
 }
 

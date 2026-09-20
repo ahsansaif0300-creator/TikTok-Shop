@@ -355,9 +355,9 @@ async function phase2Static() {
     assert(read("prisma/seed.ts").includes('referralCode: "10000001"'), "Seed LLC code must be numeric");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-store-review"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-ops-users-persist"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-store-review"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-ops-users-persist"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1138,6 +1138,14 @@ async function phase6Static() {
     assert(admin.includes("placeStaffOrder") && admin.includes("addStoreFunds"), "Staff order or funds helper missing");
     assert(admin.includes("schedulePaymentRelease") && admin.includes("broadcastToStores"), "Release or broadcast helper missing");
     assert(admin.includes("createOpsUser"), "Ops user helper missing");
+    assert(admin.includes("deleteOpsUser"), "Ops user delete helper missing");
+    assert(admin.includes("snapshotOpsUsers"), "Ops users must be snapshotted after create/delete");
+    assert(read("lib/ops-users-store.ts").includes("restoreOpsUsers"), "Ops user restore missing");
+    assert(read("lib/ensure-db.ts").includes("restoreOpsUsers"), "Boot must restore Normal Backend users");
+    assert(read("scripts/copy-demo-db.mjs").includes("persistentDataDirs"), "Live SQLite must prefer a persistent folder");
+    assert(read("scripts/copy-demo-db.mjs").includes("homedir"), "Live SQLite must survive Hostinger deploys");
+    assert(read("app/(app)/admin/users/page.tsx").includes("DeleteOpsUserButton"), "Normal Backend users need a delete action");
+    assert(read("app/(app)/admin/users/page.tsx").includes("until you delete them"), "Users page must say logins persist");
     assert(admin.includes("updateStoreScore") && admin.includes("parseStoreRating"), "Store score editor missing");
     assert(read("lib/store-score.ts").includes("STORE_RATING_MAX = 5"), "Store rating limit missing");
     assert(read("lib/store-score.ts").includes("STORE_CREDIT_MAX = 100"), "Store credit limit missing");

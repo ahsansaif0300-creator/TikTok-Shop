@@ -39,6 +39,9 @@ yarn-error.log*
 *.db-journal
 /prisma/dev.db
 /prisma/dev.db-journal
+/data/harbor-commerce.sqlite
+/data/ops-users.json
+/prisma/ops-users.json
 
 # private support uploads (served only through authenticated routes)
 /data/support

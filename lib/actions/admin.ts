@@ -10,6 +10,7 @@ import { processDueReleases } from "@/lib/process-releases";
 import { dummyProductImage } from "@/lib/product-image";
 import { isListedProduct, listedCatalogWhere } from "@/lib/product-listing";
 import { allocateReferralCode } from "@/lib/referral";
+import { snapshotOpsUsers } from "@/lib/ops-users-store";
 import { parseStoreCreditScore, parseStoreRating } from "@/lib/store-score";
 
 function fail(path: string, code: string): never {
@@ -272,11 +273,44 @@ export async function createOpsUser(formData: FormData) {
       detail: `Created operations login ${username}`,
     },
   });
+  await snapshotOpsUsers(prisma);
   revalidatePath("/admin/users");
   const origin = await requestOrigin();
   redirect(
     `/admin/users?created=1&username=${encodeURIComponent(username)}&login=${encodeURIComponent(`${origin}/login/ops`)}&referral=${encodeURIComponent(referralCode)}`,
   );
+}
+
+export async function deleteOpsUser(formData: FormData) {
+  const session = await requireSuperAdmin();
+  const userId = String(formData.get("userId") ?? "");
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, username: true, email: true, role: true },
+  });
+  if (!user || user.role !== "OPS") fail("/admin/users", "missing");
+  await prisma.$transaction(async (tx) => {
+    await tx.merchant.updateMany({ where: { referredByUserId: user.id }, data: { referredByUserId: null } });
+    await tx.merchantApplication.updateMany({ where: { referredByUserId: user.id }, data: { referredByUserId: null } });
+    await tx.merchantApplication.updateMany({ where: { reviewerId: user.id }, data: { reviewerId: null } });
+    await tx.order.updateMany({ where: { placedByUserId: user.id }, data: { placedByUserId: null } });
+    await tx.notification.deleteMany({ where: { userId: user.id } });
+    await tx.auditLog.updateMany({ where: { userId: user.id }, data: { userId: null } });
+    await tx.supportMessage.updateMany({ where: { userId: user.id }, data: { userId: null } });
+    await tx.user.delete({ where: { id: user.id } });
+  });
+  await prisma.auditLog.create({
+    data: {
+      userId: session.userId,
+      action: "user:ops-delete",
+      entity: "User",
+      entityId: user.id,
+      detail: `Deleted operations login ${user.username || user.email}`,
+    },
+  });
+  await snapshotOpsUsers(prisma);
+  revalidatePath("/admin/users");
+  redirect("/admin/users?deleted=1");
 }
 
 export async function broadcastToStores(formData: FormData) {

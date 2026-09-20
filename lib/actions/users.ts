@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { canManageTeam, isStaff, requireSession } from "@/lib/auth";
 import { allocateReferralCode } from "@/lib/referral";
+import { snapshotOpsUsers } from "@/lib/ops-users-store";
 
 export async function createTeamUser(formData: FormData) {
   const session = await requireSession();
@@ -28,6 +29,7 @@ export async function createTeamUser(formData: FormData) {
       referralCode: roleValue === "OPS" ? await allocateReferralCode() : null,
     },
   });
+  if (roleValue === "OPS") await snapshotOpsUsers(prisma);
   revalidatePath("/users");
   redirect("/users?created=1");
 }
