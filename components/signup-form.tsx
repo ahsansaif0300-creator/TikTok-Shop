@@ -15,12 +15,16 @@ const ERRORS: Record<string, string> = {
   id: "Upload both the front and back of the ID card.",
   "id-type": "ID photos must be JPEG, PNG, or WebP.",
   "id-size": "Each ID photo must be 2 MB or smaller after compression.",
-  referral: "That LLC code is not valid for a Normal Backend user.",
+  "logo-type": "Logo must be a JPEG, PNG, or WebP image.",
+  "logo-size": "Logo must be 1.5 MB or smaller.",
+  referral: "That LLC code is not valid.",
 };
 
 export function SignupForm({ error }: { error?: string }) {
   const [front, setFront] = useState<File | null>(null);
   const [back, setBack] = useState<File | null>(null);
+  const [logo, setLogo] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState("");
   const [localError, setLocalError] = useState("");
   const message = localError || (error ? ERRORS[error] : null);
 
@@ -31,6 +35,7 @@ export function SignupForm({ error }: { error?: string }) {
     }
     formData.set("idFront", front);
     formData.set("idBack", back);
+    if (logo) formData.set("logo", logo);
     await signupMerchantAction(formData);
   }
 
@@ -114,11 +119,39 @@ export function SignupForm({ error }: { error?: string }) {
             />
           </label>
         </div>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium">Logo</span>
+          <div className="flex items-center gap-3">
+            {logoPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoPreview} alt="" className="size-14 rounded-2xl object-cover ring-1 ring-line" />
+            ) : (
+              <div className="grid size-14 place-items-center rounded-2xl bg-soft text-xs font-semibold text-muted">
+                Logo
+              </div>
+            )}
+            <input
+              name="logo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="block min-w-0 flex-1 text-sm"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0] ?? null;
+                setLogo(file);
+                setLogoPreview((current) => {
+                  if (current) URL.revokeObjectURL(current);
+                  return file ? URL.createObjectURL(file) : "";
+                });
+              }}
+            />
+          </div>
+          <span className="block text-xs text-muted">JPEG, PNG, or WebP from your device. 1.5 MB maximum.</span>
+        </label>
         <div className="space-y-3 rounded-2xl border border-line bg-soft/60 p-3">
           <div>
             <p className="text-sm font-semibold text-ink">ID card photos</p>
             <p className="mt-0.5 text-xs text-muted">
-              Super Admin keeps these on the store record. Use Gallery or Camera. Camera needs HTTPS and permission.
+              Use Gallery or Camera. Camera needs HTTPS and permission.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -127,7 +160,7 @@ export function SignupForm({ error }: { error?: string }) {
           </div>
         </div>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium">LLC Code (optional)</span>
+          <span className="text-sm font-medium">LLC Code</span>
           <input
             name="referralCode"
             inputMode="numeric"
@@ -140,9 +173,7 @@ export function SignupForm({ error }: { error?: string }) {
             }}
             className="h-11 w-full rounded-xl border border-line px-3 text-sm outline-none ring-accent/30 focus:ring-2"
           />
-          <span className="block text-xs text-muted">
-            Numbers only. If you enter a code, Normal Backend reviews and approves the store before it goes live.
-          </span>
+          <span className="block text-xs text-muted">Numbers only.</span>
         </label>
         <button className="h-11 w-full rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#e11d48]">
           Create shop

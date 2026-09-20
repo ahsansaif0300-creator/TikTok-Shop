@@ -111,3 +111,53 @@ export async function syncDistributionCatalog(
     });
   }
 }
+
+const CATALOG_INSERT_BATCH = 40;
+
+export async function cloneDistributionCatalogForMerchant(prisma: PrismaClient, merchantId: string) {
+  const merchant = await prisma.merchant.findUnique({
+    where: { id: merchantId },
+    select: { id: true, storeCode: true },
+  });
+  if (!merchant) return 0;
+
+  const existing = await prisma.product.count({ where: { merchantId } });
+  if (existing > 0) return existing;
+
+  const categoryByName = await ensureCatalogCategories(prisma);
+  const suffix = (merchant.storeCode || merchant.id).replace(/[^A-Za-z0-9]/g, "").slice(-12) || merchant.id.slice(-8);
+  const rows = [];
+  for (const row of pricedDistributionCatalog()) {
+    const category = categoryByName[row.category];
+    if (!category) continue;
+    const listingStatus: ProductListingStatus = ON_SHELF_TITLES.has(row.title) ? "ON_SHELF" : "LISTED";
+    rows.push({
+      merchantId,
+      categoryId: category.id,
+      title: row.title,
+      sku: `${row.sku}-${suffix}`,
+      description: row.description,
+      price: row.price,
+      cost: row.cost,
+      stock: 28 + (row.sku.length * 7) % 90,
+      status: "ACTIVE" as ProductStatus,
+      listingStatus,
+      image: row.image,
+    });
+  }
+
+  for (let index = 0; index < rows.length; index += CATALOG_INSERT_BATCH) {
+    await prisma.product.createMany({ data: rows.slice(index, index + CATALOG_INSERT_BATCH) });
+  }
+  return rows.length;
+}
+
+export async function ensureMerchantCatalog(prisma: PrismaClient, merchantId: string | null | undefined) {
+  if (!merchantId) return 0;
+  const merchant = await prisma.merchant.findUnique({
+    where: { id: merchantId },
+    select: { id: true, status: true },
+  });
+  if (!merchant || merchant.status !== "ACTIVE") return 0;
+  return cloneDistributionCatalogForMerchant(prisma, merchant.id);
+}

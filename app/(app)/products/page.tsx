@@ -7,6 +7,7 @@ import { money } from "@/lib/utils";
 import { LISTING_STATUS, PRODUCT_STATUS } from "@/lib/labels";
 import { Card, Empty, PageHeader, SearchForm, StatusBadge, TableWrap, Tabs, Td, Th } from "@/components/ui";
 import { ProductThumb } from "@/components/product-thumb";
+import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
 
 const TABS = [
   { value: "", label: "All" },
@@ -24,6 +25,9 @@ export default async function ProductsPage({
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const session = await requireSession();
+  if (session.role === "MERCHANT" && session.merchantId) {
+    await ensureMerchantCatalog(prisma, session.merchantId);
+  }
   const { status = "", q = "" } = await searchParams;
   const merchantView = session.role === "MERCHANT";
   const products = await prisma.product.findMany({

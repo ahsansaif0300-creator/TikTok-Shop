@@ -2,8 +2,12 @@ import { format, subDays } from "date-fns";
 import type { SessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { merchantScope } from "@/lib/scope";
+import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
 
 export async function getDashboardData(session: SessionUser) {
+  if (session.role === "MERCHANT" && session.merchantId) {
+    await ensureMerchantCatalog(prisma, session.merchantId);
+  }
   const scope = merchantScope(session);
   const now = new Date();
   const since = subDays(now, 14);

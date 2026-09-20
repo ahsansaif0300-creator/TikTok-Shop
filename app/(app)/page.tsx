@@ -11,14 +11,9 @@ import { Card, Empty, PageHeader, StatCard, StatusBadge, TableWrap, Td, Th } fro
 import { RevenueChart } from "@/components/charts";
 import { ProductThumb } from "@/components/product-thumb";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ pending?: string }>;
-}) {
+export default async function DashboardPage() {
   const session = await requireSession();
   const data = await getDashboardData(session);
-  const { pending } = await searchParams;
   const merchant = session.role === "MERCHANT";
   const attention = (
     merchant
@@ -61,8 +56,6 @@ export default async function DashboardPage({
           storeName={data.store?.name ?? "Your store"}
           storeCode={data.store?.storeCode ?? ""}
           shopUrl={shopUrl}
-          storeStatus={data.store?.status}
-          pendingApproval={pending === "1"}
           todayOrderCount={data.todayOrderCount}
           todaySales={data.todaySales}
           availableBalance={data.store?.availableBalance ?? 0}

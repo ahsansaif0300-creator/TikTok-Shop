@@ -7,6 +7,7 @@ import { isStaff, requireSession } from "@/lib/auth";
 import { uniqueMerchantSlug } from "@/lib/slug";
 import { allocateStoreCode } from "@/lib/store-code";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
+import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
 
 export async function setMerchantStatus(merchantId: string, status: MerchantStatus) {
   const session = await requireSession();
@@ -15,6 +16,9 @@ export async function setMerchantStatus(merchantId: string, status: MerchantStat
     throw new Error("Invalid merchant status");
   }
   await prisma.merchant.update({ where: { id: merchantId }, data: { status } });
+  if (status === "ACTIVE") {
+    await ensureMerchantCatalog(prisma, merchantId);
+  }
   await prisma.auditLog.create({
     data: {
       userId: session.userId,
@@ -123,6 +127,7 @@ export async function reviewApplication(formData: FormData) {
       where: { id: merchantId },
       data: { status: "ACTIVE" },
     });
+    await ensureMerchantCatalog(prisma, merchantId);
   } else {
     const merchant = await prisma.merchant.create({
       data: {
@@ -147,6 +152,7 @@ export async function reviewApplication(formData: FormData) {
       },
     });
     merchantId = merchant.id;
+    await ensureMerchantCatalog(prisma, merchantId);
   }
 
   await prisma.merchantApplication.update({
@@ -178,7 +184,7 @@ export async function reviewApplication(formData: FormData) {
         data: sellers.map((user) => ({
           userId: user.id,
           title: "Store approved",
-          body: "Normal Backend approved your shop. You can sell now.",
+          body: "Your shop was approved. You can sign in and choose products now.",
           href: "/",
         })),
       });

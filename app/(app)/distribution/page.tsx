@@ -11,6 +11,7 @@ import { ProductThumb } from "@/components/product-thumb";
 import { ListingStatusForm } from "@/components/listing-status-form";
 import { productEconomics } from "@/lib/product-margin";
 import { STORE_CATEGORIES, categorySlug } from "@/lib/store-categories";
+import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
 
 const PICKED = ["PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED"] as const;
 
@@ -120,6 +121,7 @@ export default async function DistributionPage({
 }) {
   await ensureDatabase();
   const session = await requireMerchant();
+  await ensureMerchantCatalog(prisma, session.merchantId);
   const { error, category: categoryParam } = await searchParams;
   const [products, orders] = await Promise.all([
     prisma.product.findMany({

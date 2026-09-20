@@ -17,7 +17,7 @@ export default async function SignupPage({
   return (
     <AuthFrame
       title={`Create a ${BRAND_NAME}`}
-      subtitle="You get a unique shop link and a seller login. ID photos go to Super Admin. A Normal Backend LLC code sends the shop for approval first."
+      subtitle="You get a unique shop link and a seller login. After you create the shop, wait for approval before the dashboard opens."
       footer={
         <>
           Already selling on {BRAND_NAME}?{" "}

@@ -5,6 +5,7 @@ import { ROLE_LABEL } from "@/lib/labels";
 import { shopAbsoluteUrl } from "@/lib/shop-url";
 import { processDueReleases } from "@/lib/process-releases";
 import { WorkspaceChrome } from "@/components/workspace-chrome";
+import { StorePendingReview } from "@/components/store-pending-review";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const session = await requireSession();
@@ -16,10 +17,14 @@ export async function AppShell({ children }: { children: ReactNode }) {
     session.merchantId
       ? prisma.merchant.findUnique({
           where: { id: session.merchantId },
-          select: { name: true, slug: true },
+          select: { name: true, slug: true, status: true },
         })
       : Promise.resolve(null),
   ]);
+
+  if (session.role === "MERCHANT" && store?.status === "PENDING") {
+    return <StorePendingReview storeName={store.name} />;
+  }
 
   const shopUrl = store?.slug ? await shopAbsoluteUrl(store.slug) : null;
 
