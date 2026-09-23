@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { LOGIN } from "@/lib/access";
+import { applyRuntimeEnv } from "@/lib/runtime-env";
 
 export type SessionUser = {
   userId: string;
@@ -22,7 +23,8 @@ function cookieSecure() {
 }
 
 function secret() {
-  const value = process.env.AUTH_SECRET;
+  applyRuntimeEnv();
+  const value = process.env.AUTH_SECRET?.trim();
   if (!value) {
     throw new Error("AUTH_SECRET is not set");
   }

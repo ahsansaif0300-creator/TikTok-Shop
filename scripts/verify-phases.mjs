@@ -357,9 +357,9 @@ async function phase2Static() {
     assert(read("prisma/seed.ts").includes('referralCode: "10000001"'), "Seed LLC code must be numeric");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-login-db-boot"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-login-always"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-login-db-boot"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-login-always"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1212,7 +1212,10 @@ async function phase6Static() {
     assert(read("components/order-sender-board.tsx").includes("Select all"), "Order Sender select-all missing");
     assert(read("lib/actions/admin.ts").includes('intent === "all"'), "Order Sender batch distribute missing");
     assert(read("lib/actions/admin.ts").includes("isListedProduct"), "Order Sender must use listed products");
-    assert(read("lib/actions/auth.ts").includes("username"), "Login does not accept username");
+    assert(
+      read("lib/actions/auth.ts").includes("username") || read("lib/login-db.ts").includes("username"),
+      "Login does not accept username",
+    );
     assert(!/virtual.?order|auto.?order/i.test(admin), "Forbidden order-generation terms in admin actions");
   });
 }
@@ -1472,8 +1475,11 @@ async function phase7Static() {
     assert(ensure.includes("peekAnyUser") || ensure.includes('SELECT id FROM "User"'), "Boot must accept any existing login user");
     assert(read("scripts/copy-demo-db.mjs").includes("findPackedDemoSqlite"), "Packed demo lookup missing");
     assert(read("scripts/copy-demo-db.mjs").includes("repoRoot"), "SQLite paths must not depend only on cwd");
-    assert(read("lib/actions/auth.ts").includes("findLoginUser"), "Login must not require every User column");
-    assert(read("lib/actions/auth.ts").includes("LOGIN_USER_SELECT"), "Login user select missing");
+    assert(read("lib/login-db.ts").includes("openLoginDatabase"), "Login must open any readable SQLite");
+    assert(read("lib/login-db.ts").includes("findLoginUser"), "Login must look up users without Prisma schema mismatch");
+    assert(read("lib/access.ts").includes("visibleLoginError"), "Login pages must hide stale setup errors");
+    assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not show the packed demo setup error");
+    assert(!read("components/role-login-form.tsx").includes("packed demo database"), "Login form must not show packed demo copy");
     assert(exists("prisma/demo.sqlite"), "prisma/demo.sqlite missing");
     assert(exists("scripts/copy-demo-db.mjs"), "scripts/copy-demo-db.mjs missing");
     assert(read("instrumentation.ts").includes("ensureDatabase"), "instrumentation does not prepare the database");

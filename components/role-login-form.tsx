@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { AuthFrame } from "@/components/auth-frame";
-import { BRAND_NAME } from "@/lib/brand-name";
 
 export function RoleLoginForm({
   title,
@@ -17,13 +16,7 @@ export function RoleLoginForm({
 }) {
   return (
     <AuthFrame title={title} subtitle={subtitle} footer={footer}>
-      {error === "setup" ? (
-        <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {BRAND_NAME} could not open the packed demo database. Redeploy the latest{" "}
-          <code>main</code> branch, click Restart, then try again. Keep{" "}
-          <code>AUTH_SECRET</code> set in Hostinger Environment variables.
-        </p>
-      ) : error ? (
+      {error && error !== "setup" ? (
         <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">
           Email or password is incorrect, or this account cannot use this login.
         </p>

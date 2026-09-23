@@ -20,22 +20,31 @@ export function repoRoot(start = process.cwd()) {
   } catch {
     moduleDir = "";
   }
+  const walked = [];
+  let dir = start || process.cwd();
+  for (let i = 0; i < 8; i += 1) {
+    walked.push(dir);
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
   const candidates = [
     process.env.HARBOR_APP_ROOT?.trim(),
     start,
     process.cwd(),
+    ...walked,
     moduleDir ? path.resolve(moduleDir, "..") : "",
     moduleDir ? path.resolve(moduleDir, "../..") : "",
     moduleDir ? path.resolve(moduleDir, "../../..") : "",
   ].filter(Boolean);
-  for (const dir of candidates) {
-    const prismaDir = path.join(dir, "prisma");
+  for (const next of candidates) {
+    const prismaDir = path.join(next, "prisma");
     if (
       existsSync(/*turbopackIgnore: true*/ path.join(prismaDir, "demo.sqlite")) ||
-      (existsSync(/*turbopackIgnore: true*/ path.join(dir, "package.json")) &&
+      (existsSync(/*turbopackIgnore: true*/ path.join(next, "package.json")) &&
         existsSync(/*turbopackIgnore: true*/ prismaDir))
     ) {
-      return dir;
+      return next;
     }
   }
   return start || process.cwd();
