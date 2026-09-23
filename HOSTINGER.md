@@ -139,6 +139,7 @@ Change these under **Profile** before you invite anyone.
 - **Build failed:** open **Deployments** and read the log. Node must be 20+.
 - **TypeScript errors** (`Cannot find name 'isListedProduct'`, `implicit any` in `lib/ensure-db.ts`): that is an **old GitHub commit**. Latest **`main`** already imports `isListedProduct` and types the SQLite PRAGMA rows. In hPanel, Deploy **`main` again** (do not click “Fix and redeploy” on the failed old build). Then **Restart**. `npm run build` on current `main` completes TypeScript successfully.
 - **Site not reachable / 403:** do not edit `public_html/.htaccess`. Redeploy so Hostinger regenerates it.
+- **Build failed: “corrupted next.config.ts” / `6ab391c88885a.next.config.ts`:** Do **not** click **Fix and redeploy**. That leftover hashed file is what Hostinger created. Latest **`main`** uses plain `next.config.mjs` so Next.js does not compile the config. Click **Close**, Deploy GitHub **`main`** again, then **Restart**.
 - **“TikTok Shop could not open the packed demo database”:** That sentence exists only on the **old** Hostinger build. GitHub `main` already removed it. **Clear cache does not install that GitHub commit.** In hPanel → Node.js app → **Deployments** → set branch **`main`** → click **Deploy** → wait until **Running** → **Restart**. Then open `https://tiktokshop.site/login/admin` with no `?error=setup`. You should see **Release tiktok-shop-login-always** under the Login button. Keep `AUTH_SECRET` set.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
 - **Empty data after every deploy:** Live SQLite and Normal Backend users now live in a folder outside the deploy tree (`~/.harbor-commerce`). Created ops users stay until you delete them. If an old deploy still resets, Redeploy **`main`** then Restart.
@@ -152,7 +153,7 @@ In the site dashboard → **Domains** → **Add domain** → set it as primary. 
 
 ## Hostinger says “This repository is missing a package.json file”
 
-Hostinger scans the **default branch** (`main`) at the **repo root**. This project’s `package.json` is on `main` next to `README.md`, `next.config.ts`, and `app/`.
+Hostinger scans the **default branch** (`main`) at the **repo root**. This project’s `package.json` is on `main` next to `README.md`, `next.config.mjs`, and `app/`.
 
 If you still see that message:
 

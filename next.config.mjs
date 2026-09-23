@@ -1,5 +1,26 @@
-import type { NextConfig } from "next";
-import { extraAllowedOrigins, lanIPv4s } from "./scripts/lan-urls.mjs";
+import os from "node:os";
+
+function lanIPv4s() {
+  try {
+    const ips = [];
+    for (const addrs of Object.values(os.networkInterfaces())) {
+      for (const addr of addrs ?? []) {
+        const v4 = addr.family === "IPv4" || addr.family === 4;
+        if (v4 && !addr.internal) ips.push(addr.address);
+      }
+    }
+    return ips;
+  } catch {
+    return [];
+  }
+}
+
+function extraAllowedOrigins() {
+  return (process.env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
 
 const shopBase = process.env.SHOP_BASE_DOMAIN?.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
@@ -17,7 +38,8 @@ const previewHosts = [
   ...extraAllowedOrigins(),
 ];
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma"],
   outputFileTracingIncludes: {
     "/**": ["./prisma/demo.sqlite", "./scripts/copy-demo-db.mjs", "./scripts/bootstrap.mjs", "./public/catalog", "./public/c4"],
@@ -62,7 +84,7 @@ const nextConfig: NextConfig = {
     ];
   },
   allowedDevOrigins: previewHosts,
-    experimental: {
+  experimental: {
     serverActions: {
       allowedOrigins: previewHosts,
       bodySizeLimit: "4mb",

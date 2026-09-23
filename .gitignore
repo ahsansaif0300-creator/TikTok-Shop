@@ -16,6 +16,9 @@
 # next.js
 /.next/
 /out/
+# Hostinger / SWC leftover compiled config (6ab391c88885a.next.config.ts)
+*.next.config.ts
+*.next.config.js
 
 # production
 /build

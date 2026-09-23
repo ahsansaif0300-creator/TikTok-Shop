@@ -55,7 +55,7 @@ function sourceMtime() {
     latestMtime("lib"),
     latestMtime("prisma/schema.prisma"),
     latestMtime("public"),
-    latestMtime("next.config.ts"),
+    latestMtime("next.config.mjs"),
     latestMtime("package.json"),
   );
 }

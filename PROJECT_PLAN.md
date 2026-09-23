@@ -213,7 +213,7 @@ Cancel is allowed through `PROCESSING`. `PAID` credits **pending** profit. `COMP
 - `npm run start` runs `scripts/start.mjs`: bootstrap SQLite if missing, then bind `0.0.0.0:${PORT:-3000}`
 - `package.json` `engines.node` is `>=20`
 - `AUTH_COOKIE_SECURE` can override Secure cookies for plain-HTTP `next start`
-- `next.config.ts` allows Cursor preview hosts (`*.agent.cvm.dev`, `*.cursorvm.com`) — no stale pod hostnames
+- `next.config.mjs` allows Cursor preview hosts (`*.agent.cvm.dev`, `*.cursorvm.com`) — no stale pod hostnames. Plain `.mjs` so Hostinger does not compile a leftover `*.next.config.ts` artifact.
 - README + `USAGE.md` Hostinger (Business/Cloud Node app or VPS) — not PHP `public_html`
 - `npm run lint` and `npm run build` succeed
 - `npm run verify` and `npm run verify:http` succeed

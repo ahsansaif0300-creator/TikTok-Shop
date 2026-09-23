@@ -80,7 +80,7 @@ function walkFiles(dir, acc = []) {
 }
 
 function sourceFiles() {
-  const allowed = ["app/", "components/", "lib/", "prisma/", "proxy.ts", "next.config.ts"];
+  const allowed = ["app/", "components/", "lib/", "prisma/", "proxy.ts", "next.config.ts", "next.config.mjs"];
   return walkFiles(root).filter((file) => {
     const rel = path.relative(root, file);
     return allowed.some((prefix) => rel === prefix || rel.startsWith(prefix));
@@ -154,7 +154,7 @@ async function phase1Static() {
     "app/login/store/page.tsx",
     "app/login/support/page.tsx",
     "app/welcome/page.tsx",
-    "next.config.ts",
+    "next.config.mjs",
   ];
   await check(1, "Required foundation files exist", () => {
     const missing = files.filter((file) => !exists(file));
@@ -358,9 +358,9 @@ async function phase2Static() {
     assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
     assert(read("components/role-login-form.tsx").includes("Release {RELEASE_LABEL}"), "Login must show the live release stamp");
     assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-login-always"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-hostinger-config"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-login-always"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-hostinger-config"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1089,7 +1089,7 @@ async function phase6Static() {
     assert(read("lib/labels.ts").includes('PENDING_PAYMENT: "Unpaid"'), "Unpaid label missing");
     assert(read("lib/dashboard.ts").includes('status: "PENDING_PAYMENT"'), "Ready-to-pick-up must count unpaid orders");
     assert(read("lib/orders-query.ts").includes('updatedAt: "desc"'), "Orders must sort newest first");
-    assert(read("next.config.ts").includes("/ol1"), "Orders live ol1 cache header missing");
+    assert(read("next.config.mjs").includes("/ol1"), "Orders live ol1 cache header missing");
     const account = read("lib/actions/account.ts");
     assert(account.includes("paymentPasswordHash") && account.includes("bcrypt.hash"), "Payment password is not hashed");
     assert(account.includes("passwordHash"), "Login password change missing");
@@ -1476,14 +1476,16 @@ async function phase7Static() {
     assert(envExample.includes("AUTH_COOKIE_SECURE"), ".env.example missing AUTH_COOKIE_SECURE");
   });
   await check(7, "Preview hosts are allowed for Server Actions", () => {
-    const config = read("next.config.ts");
+    const config = read("next.config.mjs");
     assert(config.includes("allowedDevOrigins"), "allowedDevOrigins missing");
     assert(config.includes("*.agent.cvm.dev"), "agent.cvm.dev origin missing");
     assert(config.includes("*.cursorvm.com"), "cursorvm.com origin missing");
     assert(config.includes("*.hostingersite.com"), "hostingersite.com origin missing");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
-    assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.ts");
+    assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.mjs");
     assert(!/\.agent\.cvm\.dev/.test(config.replaceAll("*.agent.cvm.dev", "")), "stale agent.cvm.dev hostname");
+    assert(exists("scripts/clean-next-config.mjs"), "Hostinger leftover Next config cleaner missing");
+    assert(read("package.json").includes("clean-next-config.mjs"), "build must strip leftover Next config artifacts");
   });
   await check(7, "README documents Hostinger Node hosting, not PHP public_html", () => {
     const readme = read("README.md");
