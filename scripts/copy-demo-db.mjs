@@ -95,9 +95,10 @@ export function persistentDataDirs(root = process.cwd()) {
   } catch {
     /* ignore */
   }
-  dirs.push(path.join(root, "..", "harbor-data"));
+  const sibling = path.join(root, "..", "harbor-data");
+  if (canWrite(sibling)) dirs.push(sibling);
   dirs.push(path.join(root, "data"));
-  return dirs;
+  return dirs.filter((dir, index, all) => all.indexOf(dir) === index);
 }
 
 export function liveSqliteCandidates(root = process.cwd()) {
