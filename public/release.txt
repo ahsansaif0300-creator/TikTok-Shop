@@ -1,3 +1,4 @@
+tiktok-shop-hostinger-build
 tiktok-shop-hostinger-webpack
 tiktok-shop-hostinger-config
 tiktok-shop-login-always

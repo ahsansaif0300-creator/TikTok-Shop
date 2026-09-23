@@ -1,4 +1,4 @@
-import os from "node:os";
+const os = require("os");
 
 function lanIPv4s() {
   try {
@@ -38,7 +38,6 @@ const previewHosts = [
   ...extraAllowedOrigins(),
 ];
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma"],
   outputFileTracingIncludes: {
@@ -92,4 +91,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
