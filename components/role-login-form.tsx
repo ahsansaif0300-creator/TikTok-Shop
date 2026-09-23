@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AuthFrame } from "@/components/auth-frame";
+import { RELEASE_LABEL } from "@/lib/build-stamp";
 
 export function RoleLoginForm({
   title,
@@ -21,7 +22,7 @@ export function RoleLoginForm({
           Email or password is incorrect, or this account cannot use this login.
         </p>
       ) : null}
-      <form action={action} className="mt-6 space-y-4">
+      <form action={action} className="mt-6 space-y-4" data-release={RELEASE_LABEL}>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Username / Email</span>
           <input

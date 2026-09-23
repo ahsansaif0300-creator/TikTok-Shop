@@ -355,6 +355,9 @@ async function phase2Static() {
     assert(read("prisma/seed.ts").includes('referralCode: "10000001"'), "Seed LLC code must be numeric");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
+    assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
+    assert(!read("components/role-login-form.tsx").includes("packed demo database"), "Login form must not show packed demo copy");
+    assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
     assert(read("lib/build-stamp.ts").includes("tiktok-shop-login-always"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
     assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-login-always"), "public/release.txt missing live deploy stamp");

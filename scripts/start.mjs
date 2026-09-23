@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -66,18 +66,42 @@ function builtAt() {
   return statSync(id).mtimeMs;
 }
 
+function releaseLabel() {
+  try {
+    return readFileSync(path.join(root, "public", "release.txt"), "utf8").split("\n")[0].trim();
+  } catch {
+    return "";
+  }
+}
+
+function builtRelease() {
+  try {
+    return readFileSync(path.join(root, ".next", "harbor-release.txt"), "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
 function rebuildIfStale() {
   const force = process.env.HARBOR_REBUILD_ON_START === "1";
   const skip = process.env.HARBOR_REBUILD_ON_START === "0";
   if (skip) return;
   const source = sourceMtime();
   const built = builtAt();
-  if (!force && built && source <= built + 2000) return;
-  console.log("[harbor] App source is newer than .next (or no build exists). Running next build…");
+  const stamp = releaseLabel();
+  const builtStamp = builtRelease();
+  const stampChanged = Boolean(stamp) && stamp !== builtStamp;
+  if (!force && built && source <= built + 2000 && !stampChanged) return;
+  console.log("[harbor] App source is newer than .next (or release stamp changed). Running next build…");
   const prismaBin = require.resolve("prisma/build/index.js");
   const nextBin = require.resolve("next/dist/bin/next");
   run(process.execPath, [prismaBin, "generate"]);
   run(process.execPath, [nextBin, "build"]);
+  try {
+    writeFileSync(path.join(root, ".next", "harbor-release.txt"), stamp || "unknown");
+  } catch (error) {
+    console.warn("[harbor] Could not write release stamp", error);
+  }
 }
 
 run(process.execPath, [path.join(root, "scripts", "bootstrap.mjs")]);
