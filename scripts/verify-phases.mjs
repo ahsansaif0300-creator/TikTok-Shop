@@ -356,7 +356,7 @@ async function phase2Static() {
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
     assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
-    assert(!read("components/role-login-form.tsx").includes("packed demo database"), "Login form must not show packed demo copy");
+    assert(read("components/role-login-form.tsx").includes("Release {RELEASE_LABEL}"), "Login must show the live release stamp");
     assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
     assert(read("lib/build-stamp.ts").includes("tiktok-shop-login-always"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");

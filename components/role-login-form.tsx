@@ -47,6 +47,7 @@ export function RoleLoginForm({
           Login
         </button>
       </form>
+      <p className="mt-3 text-center font-mono text-[10px] text-muted">Release {RELEASE_LABEL}</p>
     </AuthFrame>
   );
 }

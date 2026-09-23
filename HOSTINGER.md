@@ -106,9 +106,9 @@ A cache-clear or Restart alone used to keep the **old** `.next` folder, so phone
 Still do this after GitHub updates:
 
 1. Confirm hPanel uses branch **`main`** (not an old PR branch).
-2. Click **Deploy** so Hostinger **pulls GitHub** (a cache clear does not download new commits).
+2. Click **Deploy** so Hostinger **pulls GitHub**. **Clear cache does not download new commits.** Restart also does not download new commits.
 3. When the build is green, click **Restart**.
-4. Open `/welcome`. The title must be **TikTok Shop** and the footer must include **Release tiktok-shop-photos-…**. If you still see TikiTok Shop or a Release line without `tiktok-shop-photos`, Hostinger did not pull current **`main`**. Deploy **`main` again**. Do not click “Fix and redeploy” on an old snapshot.
+4. Open `/login/admin` with no `?error=setup`. Under the Login button you must see **Release tiktok-shop-login-always**. If you still see “packed demo database”, Hostinger is running the old build. Deploy **`main` again**. Do not click “Fix and redeploy” on an old snapshot.
 
 The store Distribution Center (horizontal categories and product photos) only appears after **`main`** is deployed. Do not deploy an old PR branch snapshot.
 
@@ -139,7 +139,7 @@ Change these under **Profile** before you invite anyone.
 - **Build failed:** open **Deployments** and read the log. Node must be 20+.
 - **TypeScript errors** (`Cannot find name 'isListedProduct'`, `implicit any` in `lib/ensure-db.ts`): that is an **old GitHub commit**. Latest **`main`** already imports `isListedProduct` and types the SQLite PRAGMA rows. In hPanel, Deploy **`main` again** (do not click “Fix and redeploy” on the failed old build). Then **Restart**. `npm run build` on current `main` completes TypeScript successfully.
 - **Site not reachable / 403:** do not edit `public_html/.htaccess`. Redeploy so Hostinger regenerates it.
-- **“TikTok Shop could not open the packed demo database”:** That banner is removed in current `main`. Merge the login PR, Deploy GitHub **`main`** (not an old snapshot), then **Restart**. Cache clear is not enough. Keep `AUTH_SECRET` set. The app now signs in from any readable live SQLite and never sends the login form to `error=setup`.
+- **“TikTok Shop could not open the packed demo database”:** That sentence exists only on the **old** Hostinger build. GitHub `main` already removed it. **Clear cache does not install that GitHub commit.** In hPanel → Node.js app → **Deployments** → set branch **`main`** → click **Deploy** → wait until **Running** → **Restart**. Then open `https://tiktokshop.site/login/admin` with no `?error=setup`. You should see **Release tiktok-shop-login-always** under the Login button. Keep `AUTH_SECRET` set.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
 - **Empty data after every deploy:** Live SQLite and Normal Backend users now live in a folder outside the deploy tree (`~/.harbor-commerce`). Created ops users stay until you delete them. If an old deploy still resets, Redeploy **`main`** then Restart.
 - **npm audit / “7 vulnerabilities” after a green Next.js build:** Hostinger is blocking install on `next@16.3.1` and nested Prisma/js-yaml/sharp advisories. Latest **`main`** uses Next.js **16.3.5** and `package.json` overrides. Deploy **`main` again** (do not “Fix and redeploy” the old failed snapshot). Then **Restart**. Do not upgrade Prisma to 7 on Hostinger; SQLite `db push` stays on Prisma 6.
