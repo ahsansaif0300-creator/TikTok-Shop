@@ -96,7 +96,7 @@ function rebuildIfStale() {
   const prismaBin = require.resolve("prisma/build/index.js");
   const nextBin = require.resolve("next/dist/bin/next");
   run(process.execPath, [prismaBin, "generate"]);
-  run(process.execPath, [nextBin, "build"]);
+  run(process.execPath, [nextBin, "build", "--webpack"]);
   try {
     writeFileSync(path.join(root, ".next", "harbor-release.txt"), stamp || "unknown");
   } catch (error) {

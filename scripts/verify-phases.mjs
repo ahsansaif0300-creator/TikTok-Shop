@@ -358,9 +358,9 @@ async function phase2Static() {
     assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
     assert(read("components/role-login-form.tsx").includes("Release {RELEASE_LABEL}"), "Login must show the live release stamp");
     assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-hostinger-config"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-hostinger-webpack"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-hostinger-config"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-hostinger-webpack"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1486,6 +1486,8 @@ async function phase7Static() {
     assert(!/\.agent\.cvm\.dev/.test(config.replaceAll("*.agent.cvm.dev", "")), "stale agent.cvm.dev hostname");
     assert(exists("scripts/clean-next-config.mjs"), "Hostinger leftover Next config cleaner missing");
     assert(read("package.json").includes("clean-next-config.mjs"), "build must strip leftover Next config artifacts");
+    assert(read("package.json").includes("next build --webpack"), "Hostinger must build with webpack because native SWC needs GLIBC 2.29");
+    assert(read("scripts/start.mjs").includes("--webpack"), "start rebuild must use webpack on Hostinger");
   });
   await check(7, "README documents Hostinger Node hosting, not PHP public_html", () => {
     const readme = read("README.md");

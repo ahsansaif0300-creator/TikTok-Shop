@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 
-export const RELEASE_LABEL = "tiktok-shop-hostinger-config";
+export const RELEASE_LABEL = "tiktok-shop-hostinger-webpack";
 
 export function buildStamp() {
   try {
