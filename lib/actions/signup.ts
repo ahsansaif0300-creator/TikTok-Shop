@@ -9,7 +9,7 @@ import { uniqueMerchantSlug } from "@/lib/slug";
 import { allocateStoreCode } from "@/lib/store-code";
 import { fileToDataUrl, idCardError, logoError } from "@/lib/logo";
 import { findOpsByReferralCode, isNumericLlcCode, normalizeReferralCode } from "@/lib/referral";
-import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
+import { snapshotStoreRecords } from "@/lib/store-records-store";
 
 export async function signupMerchantAction(formData: FormData) {
   const storeName = String(formData.get("storeName") ?? "").trim();
@@ -159,6 +159,8 @@ export async function signupMerchantAction(formData: FormData) {
         : `Public signup created shop ${storeName} (${slug}) (pending approval)`,
     },
   });
+
+  await snapshotStoreRecords(prisma);
 
   await createSession({
     userId: user.id,

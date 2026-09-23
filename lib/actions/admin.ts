@@ -11,6 +11,7 @@ import { dummyProductImage } from "@/lib/product-image";
 import { isListedProduct, listedCatalogWhere } from "@/lib/product-listing";
 import { allocateReferralCode } from "@/lib/referral";
 import { snapshotOpsUsers } from "@/lib/ops-users-store";
+import { snapshotStoreRecords } from "@/lib/store-records-store";
 import { parseStoreCreditScore, parseStoreRating } from "@/lib/store-score";
 
 function fail(path: string, code: string): never {
@@ -192,9 +193,14 @@ export async function addStoreFunds(formData: FormData) {
 export async function schedulePaymentRelease(formData: FormData) {
   const session = await requireSuperAdmin();
   const orderId = String(formData.get("orderId") ?? "");
-  const hours = Number(formData.get("hours") ?? 24);
+  const hours = Number(formData.get("hours") ?? 0);
+  const minutes = Number(formData.get("minutes") ?? 0);
   if (!orderId) fail("/admin/releases", "invalid");
-  if (!Number.isFinite(hours) || hours < 0 || hours > 168) fail("/admin/releases", "hours");
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours < 0 || hours > 168 || minutes < 0 || minutes > 59) {
+    fail("/admin/releases", "hours");
+  }
+  const delayMs = Math.round(hours) * 60 * 60 * 1000 + Math.round(minutes) * 60 * 1000;
+  if (delayMs > 168 * 60 * 60 * 1000) fail("/admin/releases", "hours");
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -206,28 +212,33 @@ export async function schedulePaymentRelease(formData: FormData) {
   if (order.paymentRelease) fail("/admin/releases", "exists");
   if (order.profit <= 0) fail("/admin/releases", "amount");
 
-  const releaseAt = new Date(Date.now() + hours * 60 * 60 * 1000);
-  await prisma.paymentRelease.create({
-    data: {
-      orderId: order.id,
-      merchantId: order.merchantId,
-      amount: order.profit,
-      status: "SCHEDULED",
-      releaseAt,
-      createdById: session.userId,
-      note: `${hours}-hour release`,
-    },
-  });
+  const releaseAt = new Date(Date.now() + delayMs);
+  try {
+    await prisma.paymentRelease.create({
+      data: {
+        orderId: order.id,
+        merchantId: order.merchantId,
+        amount: order.profit,
+        status: "SCHEDULED",
+        releaseAt,
+        createdById: session.userId,
+        note: `${Math.round(hours)}h ${Math.round(minutes)}m release`,
+      },
+    });
+  } catch (error) {
+    console.error("[harbor] schedulePaymentRelease failed", error);
+    fail("/admin/releases", "failed");
+  }
   await prisma.auditLog.create({
     data: {
       userId: session.userId,
       action: "release:schedule",
       entity: "Order",
       entityId: order.id,
-      detail: `Scheduled ${order.orderNumber} release at ${releaseAt.toISOString()}`,
+      detail: `Scheduled ${order.orderNumber} release at ${releaseAt.toISOString()} (${Math.round(hours)}h ${Math.round(minutes)}m)`,
     },
   });
-  if (hours === 0) await processDueReleases();
+  await processDueReleases();
   revalidatePath("/", "layout");
   redirect("/admin/releases?scheduled=1");
 }
@@ -393,6 +404,7 @@ export async function updateStoreRecord(formData: FormData) {
       detail: `Updated store record fields for ${merchantId}`,
     },
   });
+  await snapshotStoreRecords(prisma);
   revalidatePath(`/admin/stores/${merchantId}`);
   redirect(`/admin/stores/${merchantId}?saved=1`);
 }
@@ -429,5 +441,6 @@ export async function updateStoreScore(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/admin/stores");
   revalidatePath(`/admin/stores/${merchantId}`);
+  await snapshotStoreRecords(prisma);
   redirect(`/admin/stores/${merchantId}?saved=score`);
 }

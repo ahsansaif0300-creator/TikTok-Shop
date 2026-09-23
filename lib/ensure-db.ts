@@ -1,4 +1,4 @@
-import { installDemoDb } from "../scripts/copy-demo-db.mjs";
+import { existingSqliteFiles, installDemoDb, repoRoot } from "../scripts/copy-demo-db.mjs";
 import { applyRuntimeEnv } from "./runtime-env";
 import { getPrisma, resetPrisma } from "./db";
 import { STORE_CATEGORIES, categorySlug } from "./store-categories";
@@ -8,6 +8,7 @@ import { BRAND_NAME } from "./brand-name";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING, STORE_RATING_MAX } from "./store-score";
 import { bumpGrowthCatalogCap, syncDistributionCatalog } from "./sync-distribution-catalog";
 import { restoreOpsUsers, snapshotOpsUsers } from "./ops-users-store";
+import { restoreStoreRecords, snapshotStoreRecords } from "./store-records-store";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -49,7 +50,7 @@ async function backfill() {
   } catch (error) {
     console.warn("[harbor] storeCode backfill skipped", error);
   }
-  type TableName = "User" | "Merchant" | "MerchantApplication" | "SupportMessage";
+  type TableName = "User" | "Merchant" | "MerchantApplication" | "SupportMessage" | "Product" | "Order";
   type ColumnRow = { name: string };
 
   async function tableColumns(table: TableName) {
@@ -57,21 +58,26 @@ async function backfill() {
     return new Set(rows.map((row) => row.name));
   }
 
-  let supportMessageColumns = new Set<string>();
-  try {
-    supportMessageColumns = await tableColumns("SupportMessage");
-  } catch {
-    supportMessageColumns = new Set();
+  async function safeTableColumns(table: TableName) {
+    try {
+      return await tableColumns(table);
+    } catch {
+      return new Set<string>();
+    }
   }
 
   const columns: Record<TableName, Set<string>> = {
-    User: await tableColumns("User"),
-    Merchant: await tableColumns("Merchant"),
-    MerchantApplication: await tableColumns("MerchantApplication"),
-    SupportMessage: supportMessageColumns,
+    User: await safeTableColumns("User"),
+    Merchant: await safeTableColumns("Merchant"),
+    MerchantApplication: await safeTableColumns("MerchantApplication"),
+    SupportMessage: await safeTableColumns("SupportMessage"),
+    Product: await safeTableColumns("Product"),
+    Order: await safeTableColumns("Order"),
   };
   const needed: Array<[TableName, string, string]> = [
     ["User", "referralCode", `ALTER TABLE "User" ADD COLUMN "referralCode" TEXT`],
+    ["User", "username", `ALTER TABLE "User" ADD COLUMN "username" TEXT`],
+    ["User", "paymentPasswordHash", `ALTER TABLE "User" ADD COLUMN "paymentPasswordHash" TEXT`],
     ["Merchant", "cnicImageFront", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageFront" TEXT NOT NULL DEFAULT ''`],
     ["Merchant", "cnicImageBack", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageBack" TEXT NOT NULL DEFAULT ''`],
     ["Merchant", "referralCodeUsed", `ALTER TABLE "Merchant" ADD COLUMN "referralCodeUsed" TEXT NOT NULL DEFAULT ''`],
@@ -83,6 +89,8 @@ async function backfill() {
     ["SupportMessage", "attachmentKind", `ALTER TABLE "SupportMessage" ADD COLUMN "attachmentKind" TEXT NOT NULL DEFAULT ''`],
     ["SupportMessage", "attachmentMime", `ALTER TABLE "SupportMessage" ADD COLUMN "attachmentMime" TEXT NOT NULL DEFAULT ''`],
     ["SupportMessage", "attachmentPath", `ALTER TABLE "SupportMessage" ADD COLUMN "attachmentPath" TEXT NOT NULL DEFAULT ''`],
+    ["Product", "listingStatus", `ALTER TABLE "Product" ADD COLUMN "listingStatus" TEXT NOT NULL DEFAULT 'ON_SHELF'`],
+    ["Order", "walletReleased", `ALTER TABLE "Order" ADD COLUMN "walletReleased" INTEGER NOT NULL DEFAULT 0`],
   ];
   for (const [table, column, sql] of needed) {
     if (columns[table].has(column)) continue;
@@ -182,44 +190,168 @@ async function backfill() {
     console.warn("[harbor] storeName backfill skipped", error);
   }
   try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PaymentRelease" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orderId" TEXT NOT NULL,
+        "merchantId" TEXT NOT NULL,
+        "amount" REAL NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'SCHEDULED',
+        "releaseAt" DATETIME NOT NULL,
+        "releasedAt" DATETIME,
+        "createdById" TEXT NOT NULL,
+        "note" TEXT NOT NULL DEFAULT '',
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "PaymentRelease_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+        CONSTRAINT "PaymentRelease_merchantId_fkey" FOREIGN KEY ("merchantId") REFERENCES "Merchant" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "PaymentRelease_orderId_key" ON "PaymentRelease"("orderId")`,
+    );
+  } catch (error) {
+    console.warn("[harbor] PaymentRelease table skipped", error);
+  }
+  try {
     const restored = await restoreOpsUsers(prisma);
     if (restored > 0) console.log(`[harbor] Restored ${restored} Normal Backend users`);
     await snapshotOpsUsers(prisma);
   } catch (error) {
     console.warn("[harbor] ops user snapshot skipped", error);
   }
+  try {
+    const restoredStores = await restoreStoreRecords(prisma);
+    if (restoredStores > 0) console.log(`[harbor] Restored ${restoredStores} store records`);
+    await snapshotStoreRecords(prisma);
+  } catch (error) {
+    console.warn("[harbor] store records snapshot skipped", error);
+  }
 }
 
-export async function ensureDatabase() {
-  applyRuntimeEnv();
-  const root = process.cwd();
-  const dest = installDemoDb(root);
+async function withSqliteRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
+  let last: unknown;
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      last = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/busy|locked|SQLITE_BUSY|database is locked/i.test(message)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 40 * (index + 1)));
+    }
+  }
+  throw last;
+}
+
+async function peekAnyUser() {
+  const prisma = getPrisma();
+  try {
+    const rows = await withSqliteRetry(() =>
+      prisma.$queryRawUnsafe<Array<{ id: string }>>(`SELECT id FROM "User" LIMIT 1`),
+    );
+    if (rows?.[0]?.id) return true;
+  } catch {
+    /* fall through to Prisma */
+  }
+  try {
+    const user = await withSqliteRetry(() => prisma.user.findFirst({ select: { id: true } }));
+    return Boolean(user);
+  } catch {
+    return false;
+  }
+}
+
+function openSqlite(dest: string) {
   process.env.DATABASE_URL = `file:${dest}`;
   resetPrisma();
+}
+
+function scheduleBackfill() {
+  if (backfillDone || backfillStarted) return;
+  backfillStarted = true;
+  void backfill()
+    .then(() => {
+      backfillDone = true;
+    })
+    .catch((error) => {
+      console.warn("[harbor] background backfill skipped", error);
+    })
+    .finally(() => {
+      backfillStarted = false;
+    });
+}
+
+let dbReady = false;
+let backfillStarted = false;
+let backfillDone = false;
+
+export async function ensureDatabase() {
+  const root = repoRoot();
+  applyRuntimeEnv(root);
+
+  if (dbReady) {
+    try {
+      if (await peekAnyUser()) {
+        scheduleBackfill();
+        return;
+      }
+    } catch (error) {
+      console.warn("[harbor] cached database probe failed", error);
+    }
+    dbReady = false;
+  }
+
+  const tried = new Set<string>();
+  const queue: string[] = [];
+  try {
+    queue.push(installDemoDb(root));
+  } catch (error) {
+    console.warn("[harbor] installDemoDb skipped", error);
+  }
+  for (const file of existingSqliteFiles(root)) queue.push(file);
+
+  for (const dest of queue) {
+    if (!dest || tried.has(dest)) continue;
+    tried.add(dest);
+    try {
+      openSqlite(dest);
+      if (await peekAnyUser()) {
+        dbReady = true;
+        scheduleBackfill();
+        return;
+      }
+      console.warn("[harbor] SQLite has no users yet", dest);
+    } catch (error) {
+      console.warn("[harbor] SQLite candidate failed", dest, error);
+    }
+  }
 
   try {
-    const user = await getPrisma().user.findFirst({
-      where: { email: "oscar.d@example.net" },
-      select: { id: true },
-    });
-    if (user) {
-      await backfill();
+    const restored = installDemoDb(root, { overwrite: true });
+    openSqlite(restored);
+    if (await peekAnyUser()) {
+      dbReady = true;
+      scheduleBackfill();
       return;
     }
-    console.warn("[harbor] Demo admin missing; restoring packed SQLite.");
   } catch (error) {
-    console.error("[harbor] SQLite not readable; restoring packed database.", error);
+    console.warn("[harbor] packed SQLite restore failed", error);
   }
 
-  const restored = installDemoDb(root, { overwrite: true });
-  process.env.DATABASE_URL = `file:${restored}`;
-  resetPrisma();
-  const admin = await getPrisma().user.findFirst({
-    where: { email: "oscar.d@example.net" },
-    select: { id: true },
-  });
-  if (!admin) {
-    throw new Error("Demo database installed but admin user is missing.");
+  for (const dest of existingSqliteFiles(root)) {
+    if (tried.has(dest)) continue;
+    try {
+      openSqlite(dest);
+      if (await peekAnyUser()) {
+        dbReady = true;
+        scheduleBackfill();
+        return;
+      }
+    } catch (error) {
+      console.warn("[harbor] fallback SQLite failed", dest, error);
+    }
   }
-  await backfill();
+
+  throw new Error("TikTok Shop could not open a readable SQLite database with a login user.");
 }

@@ -36,7 +36,7 @@ export function IdCardCapture({
   onFile,
 }: {
   label: string;
-  onFile: (file: File) => void;
+  onFile: (file: File | null) => void;
 }) {
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraFileRef = useRef<HTMLInputElement>(null);
@@ -79,6 +79,17 @@ export function IdCardCapture({
       if (galleryRef.current) galleryRef.current.value = "";
       if (cameraFileRef.current) cameraFileRef.current.value = "";
     }
+  }
+
+  function clearFile() {
+    onFile(null);
+    setPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return "";
+    });
+    setHint("");
+    if (galleryRef.current) galleryRef.current.value = "";
+    if (cameraFileRef.current) cameraFileRef.current.value = "";
   }
 
   async function openLiveCamera() {
@@ -131,10 +142,20 @@ export function IdCardCapture({
         className="hidden"
         onChange={(event) => void useFile(event.target.files?.[0])}
       />
-      <div className="overflow-hidden rounded-2xl border border-line bg-soft">
+      <div className="relative overflow-hidden rounded-2xl border border-line bg-soft">
         {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt={`${label} preview`} className="h-40 w-full bg-black/90 object-contain" />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt={`${label} preview`} className="h-40 w-full bg-black/90 object-contain" />
+            <button
+              type="button"
+              onClick={clearFile}
+              className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-black/75 text-white shadow-sm ring-2 ring-white/80"
+              aria-label={`Remove ${label}`}
+            >
+              <X className="size-3.5" />
+            </button>
+          </>
         ) : (
           <div className="grid h-32 place-items-center px-3 text-center text-xs text-muted">
             {busy ? "Preparing photo…" : "Choose a gallery photo or take one with the camera."}

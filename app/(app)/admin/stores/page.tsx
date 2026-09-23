@@ -25,6 +25,7 @@ export default async function StoreRecordsPage({
             { storeCode: { contains: q } },
             { cnicNumber: { contains: q } },
             { legalName: { contains: q } },
+            { users: { some: { OR: [{ email: { contains: q } }, { username: { contains: q } }, { name: { contains: q } }] } } },
           ],
         }
       : {},
@@ -34,9 +35,9 @@ export default async function StoreRecordsPage({
 
   return (
     <div>
-      <PageHeader title="Store records" subtitle="Complete registered information for every store, including contact and identity fields." />
+      <PageHeader title="Store records" subtitle="Complete registered information and login details for every store. These records stay on file and are never removed or expired." />
       <div className="mb-4">
-        <SearchForm placeholder="Search name, email, phone, city, or ID number" defaultValue={q} />
+        <SearchForm placeholder="Search name, login email, phone, city, or ID number" defaultValue={q} />
       </div>
       <Card>
         {stores.length === 0 ? (
@@ -49,6 +50,7 @@ export default async function StoreRecordsPage({
                 <Th>Rating</Th>
                 <Th>Credit</Th>
                 <Th>Email</Th>
+                <Th>Login</Th>
                 <Th>Phone</Th>
                 <Th>City</Th>
                 <Th>Country</Th>
@@ -68,6 +70,18 @@ export default async function StoreRecordsPage({
                   <Td>{formatStoreRating(store.rating)}</Td>
                   <Td>{Math.round(store.creditScore)} / 100</Td>
                   <Td>{store.email}</Td>
+                  <Td>
+                    {store.users.length === 0 ? (
+                      "—"
+                    ) : (
+                      <span>
+                        {store.users[0].email}
+                        {store.users[0].username ? (
+                          <span className="block text-xs text-muted">{store.users[0].username}</span>
+                        ) : null}
+                      </span>
+                    )}
+                  </Td>
                   <Td>{store.phone || "—"}</Td>
                   <Td>{store.city || "—"}</Td>
                   <Td>{store.country || "—"}</Td>

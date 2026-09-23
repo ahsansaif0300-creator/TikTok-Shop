@@ -76,3 +76,8 @@ export function loginPathForRole(role: Role) {
   if (role === "OPS") return LOGIN.ops;
   return LOGIN.store;
 }
+
+export function visibleLoginError(error?: string) {
+  if (!error || error === "setup") return undefined;
+  return error;
+}

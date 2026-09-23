@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { prisma } from "@/lib/db";
 import { requireSuperAdmin } from "@/lib/auth";
 import { money } from "@/lib/utils";
@@ -9,11 +9,12 @@ import { Button, Card, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/comp
 
 const ERRORS: Record<string, string> = {
   invalid: "Select an order.",
-  hours: "Release delay must be between 0 and 168 hours.",
+  hours: "Release delay must be 0–168 hours and 0–59 minutes.",
   order: "Order not found.",
   status: "That order is not waiting on a payment release.",
   exists: "A release is already scheduled for that order.",
   amount: "This order has no merchant proceeds to release.",
+  failed: "The release timer could not be saved. Try again.",
 };
 
 export default async function PaymentReleasePage({
@@ -53,7 +54,7 @@ export default async function PaymentReleasePage({
     <div>
       <PageHeader
         title="Payment release"
-        subtitle="Schedule accepted-order proceeds to move from pending to available after a delay. The job runs automatically."
+        subtitle="Set hours and minutes for when accepted-order proceeds move from pending to available. 0 hours and 0 minutes releases immediately. The job runs automatically and on every signed-in page load."
       />
       {scheduled ? (
         <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -99,12 +100,23 @@ export default async function PaymentReleasePage({
                         type="number"
                         min={0}
                         max={168}
-                        step="0.25"
-                        defaultValue={24}
-                        className="h-9 w-20 rounded-lg border border-line px-2 text-sm"
+                        step={1}
+                        defaultValue={0}
+                        className="h-9 w-16 rounded-lg border border-line px-2 text-sm"
                         aria-label="Hours until release"
                       />
-                      <span className="text-xs text-muted">hours</span>
+                      <span className="text-xs text-muted">h</span>
+                      <input
+                        name="minutes"
+                        type="number"
+                        min={0}
+                        max={59}
+                        step={1}
+                        defaultValue={0}
+                        className="h-9 w-16 rounded-lg border border-line px-2 text-sm"
+                        aria-label="Minutes until release"
+                      />
+                      <span className="text-xs text-muted">min</span>
                       <Button type="submit">Start timer</Button>
                     </form>
                   </Td>
@@ -127,6 +139,7 @@ export default async function PaymentReleasePage({
                 <Th>Store</Th>
                 <Th>Amount</Th>
                 <Th>Releases at</Th>
+                <Th>Remaining</Th>
                 <Th>Status</Th>
               </tr>
             </thead>
@@ -137,6 +150,11 @@ export default async function PaymentReleasePage({
                   <Td>{row.order.merchant.name}</Td>
                   <Td>{money(row.amount)}</Td>
                   <Td>{format(row.releaseAt, "MMM d, yyyy HH:mm")}</Td>
+                  <Td className="text-xs text-muted">
+                    {row.releaseAt.getTime() <= Date.now()
+                      ? "Releasing now"
+                      : formatDistanceToNow(row.releaseAt, { addSuffix: true })}
+                  </Td>
                   <Td>
                     <StatusBadge value={row.status} labels={PAYMENT_RELEASE_STATUS} />
                   </Td>

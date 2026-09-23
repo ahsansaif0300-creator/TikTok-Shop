@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
+import { X } from "lucide-react";
 import { signupMerchantAction } from "@/lib/actions/signup";
 import { IdCardCapture } from "@/components/id-card-capture";
 import { BRAND_NAME } from "@/lib/brand-name";
@@ -26,7 +27,17 @@ export function SignupForm({ error }: { error?: string }) {
   const [logo, setLogo] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState("");
   const [localError, setLocalError] = useState("");
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const message = localError || (error ? ERRORS[error] : null);
+
+  function clearLogo() {
+    setLogo(null);
+    setLogoPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return "";
+    });
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  }
 
   async function submit(formData: FormData) {
     if (!front || !back) {
@@ -123,14 +134,25 @@ export function SignupForm({ error }: { error?: string }) {
           <span className="text-sm font-medium">Logo</span>
           <div className="flex items-center gap-3">
             {logoPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoPreview} alt="" className="size-14 rounded-2xl object-cover ring-1 ring-line" />
+              <div className="relative shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoPreview} alt="" className="size-14 rounded-2xl object-cover ring-1 ring-line" />
+                <button
+                  type="button"
+                  onClick={clearLogo}
+                  className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-ink text-white shadow-sm ring-2 ring-white"
+                  aria-label="Remove logo"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
             ) : (
               <div className="grid size-14 place-items-center rounded-2xl bg-soft text-xs font-semibold text-muted">
                 Logo
               </div>
             )}
             <input
+              ref={logoInputRef}
               name="logo"
               type="file"
               accept="image/jpeg,image/png,image/webp"
