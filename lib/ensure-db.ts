@@ -1,4 +1,4 @@
-import { installDemoDb } from "../scripts/copy-demo-db.mjs";
+import { existingSqliteFiles, installDemoDb, repoRoot } from "../scripts/copy-demo-db.mjs";
 import { applyRuntimeEnv } from "./runtime-env";
 import { getPrisma, resetPrisma } from "./db";
 import { STORE_CATEGORIES, categorySlug } from "./store-categories";
@@ -57,21 +57,24 @@ async function backfill() {
     return new Set(rows.map((row) => row.name));
   }
 
-  let supportMessageColumns = new Set<string>();
-  try {
-    supportMessageColumns = await tableColumns("SupportMessage");
-  } catch {
-    supportMessageColumns = new Set();
+  async function safeTableColumns(table: TableName) {
+    try {
+      return await tableColumns(table);
+    } catch {
+      return new Set<string>();
+    }
   }
 
   const columns: Record<TableName, Set<string>> = {
-    User: await tableColumns("User"),
-    Merchant: await tableColumns("Merchant"),
-    MerchantApplication: await tableColumns("MerchantApplication"),
-    SupportMessage: supportMessageColumns,
+    User: await safeTableColumns("User"),
+    Merchant: await safeTableColumns("Merchant"),
+    MerchantApplication: await safeTableColumns("MerchantApplication"),
+    SupportMessage: await safeTableColumns("SupportMessage"),
   };
   const needed: Array<[TableName, string, string]> = [
     ["User", "referralCode", `ALTER TABLE "User" ADD COLUMN "referralCode" TEXT`],
+    ["User", "username", `ALTER TABLE "User" ADD COLUMN "username" TEXT`],
+    ["User", "paymentPasswordHash", `ALTER TABLE "User" ADD COLUMN "paymentPasswordHash" TEXT`],
     ["Merchant", "cnicImageFront", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageFront" TEXT NOT NULL DEFAULT ''`],
     ["Merchant", "cnicImageBack", `ALTER TABLE "Merchant" ADD COLUMN "cnicImageBack" TEXT NOT NULL DEFAULT ''`],
     ["Merchant", "referralCodeUsed", `ALTER TABLE "Merchant" ADD COLUMN "referralCodeUsed" TEXT NOT NULL DEFAULT ''`],
@@ -190,36 +193,97 @@ async function backfill() {
   }
 }
 
-export async function ensureDatabase() {
-  applyRuntimeEnv();
-  const root = process.cwd();
-  const dest = installDemoDb(root);
+async function peekAnyUser() {
+  const prisma = getPrisma();
+  try {
+    const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(`SELECT id FROM "User" LIMIT 1`);
+    if (rows?.[0]?.id) return true;
+  } catch {
+    /* fall through */
+  }
+  try {
+    const user = await prisma.user.findFirst({ select: { id: true } });
+    return Boolean(user);
+  } catch {
+    return false;
+  }
+}
+
+function openSqlite(dest: string) {
   process.env.DATABASE_URL = `file:${dest}`;
   resetPrisma();
+}
+
+function scheduleBackfill() {
+  if (backfillDone || backfillStarted) return;
+  backfillStarted = true;
+  void backfill()
+    .then(() => {
+      backfillDone = true;
+    })
+    .catch((error) => {
+      console.warn("[harbor] background backfill skipped", error);
+    })
+    .finally(() => {
+      backfillStarted = false;
+    });
+}
+
+let dbReady = false;
+let backfillStarted = false;
+let backfillDone = false;
+
+export async function ensureDatabase() {
+  const root = repoRoot();
+  applyRuntimeEnv(root);
+
+  if (dbReady) {
+    try {
+      if (await peekAnyUser()) {
+        scheduleBackfill();
+        return;
+      }
+    } catch (error) {
+      console.warn("[harbor] cached database probe failed", error);
+    }
+    dbReady = false;
+  }
+
+  const tried = new Set<string>();
+  const queue: string[] = [];
+  try {
+    queue.push(installDemoDb(root));
+  } catch (error) {
+    console.warn("[harbor] installDemoDb skipped", error);
+  }
+  for (const file of existingSqliteFiles(root)) queue.push(file);
+
+  for (const dest of queue) {
+    if (!dest || tried.has(dest)) continue;
+    tried.add(dest);
+    try {
+      openSqlite(dest);
+      if (await peekAnyUser()) {
+        dbReady = true;
+        scheduleBackfill();
+        return;
+      }
+    } catch (error) {
+      console.warn("[harbor] SQLite candidate failed", dest, error);
+    }
+  }
 
   try {
-    const user = await getPrisma().user.findFirst({
-      where: { email: "oscar.d@example.net" },
-      select: { id: true },
-    });
-    if (user) {
-      await backfill();
+    const restored = installDemoDb(root, { overwrite: true });
+    openSqlite(restored);
+    if (await peekAnyUser()) {
+      dbReady = true;
+      scheduleBackfill();
       return;
     }
-    console.warn("[harbor] Demo admin missing; restoring packed SQLite.");
   } catch (error) {
-    console.error("[harbor] SQLite not readable; restoring packed database.", error);
+    console.warn("[harbor] packed SQLite restore failed", error);
   }
 
-  const restored = installDemoDb(root, { overwrite: true });
-  process.env.DATABASE_URL = `file:${restored}`;
-  resetPrisma();
-  const admin = await getPrisma().user.findFirst({
-    where: { email: "oscar.d@example.net" },
-    select: { id: true },
-  });
-  if (!admin) {
-    throw new Error("Demo database installed but admin user is missing.");
-  }
-  await backfill();
+  throw new Error("TikTok Shop could not open a readable SQLite database with a login user.");
 }

@@ -355,9 +355,9 @@ async function phase2Static() {
     assert(read("prisma/seed.ts").includes('referralCode: "10000001"'), "Seed LLC code must be numeric");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-ops-users-persist"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-login-always"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-ops-users-persist"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-login-always"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1192,7 +1192,10 @@ async function phase6Static() {
     assert(read("components/order-sender-board.tsx").includes("Select all"), "Order Sender select-all missing");
     assert(read("lib/actions/admin.ts").includes('intent === "all"'), "Order Sender batch distribute missing");
     assert(read("lib/actions/admin.ts").includes("isListedProduct"), "Order Sender must use listed products");
-    assert(read("lib/actions/auth.ts").includes("username"), "Login does not accept username");
+    assert(
+      read("lib/actions/auth.ts").includes("username") || read("lib/login-db.ts").includes("username"),
+      "Login does not accept username",
+    );
     assert(!/virtual.?order|auto.?order/i.test(admin), "Forbidden order-generation terms in admin actions");
   });
 }

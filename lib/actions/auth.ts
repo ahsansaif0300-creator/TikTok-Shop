@@ -3,8 +3,9 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
+import { applyRuntimeEnv } from "@/lib/runtime-env";
 import { prisma } from "@/lib/db";
-import { ensureDatabase } from "@/lib/ensure-db";
+import { findLoginUser } from "@/lib/login-db";
 import { clearSession, createSession, getSession, isStaff, requireSession } from "@/lib/auth";
 import { LOGIN, loginPathForRole } from "@/lib/access";
 
@@ -14,29 +15,20 @@ async function loginWithRole(formData: FormData, expectedRole: Role, failPath: s
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
+  applyRuntimeEnv();
+  let user = null;
   try {
-    await ensureDatabase();
+    user = await findLoginUser(identifier);
   } catch (error) {
-    console.error("[harbor] login database failed", error);
-    redirect(`${failPath}?error=setup`);
+    console.error("[harbor] login lookup failed", error);
   }
 
-  let user: Awaited<ReturnType<typeof prisma.user.findFirst>> | null = null;
-  try {
-    user = await prisma.user.findFirst({
-      where: identifier ? { OR: [{ email: identifier }, { username: identifier }] } : { id: "__none__" },
-    });
-    if (!user || user.role !== expectedRole || !(await bcrypt.compare(password, user.passwordHash))) {
-      user = null;
-    }
-  } catch (error) {
-    console.error("[harbor] login query failed", error);
-    redirect(`${failPath}?error=setup`);
+  if (!user || user.role !== expectedRole || !(await bcrypt.compare(password, user.passwordHash))) {
+    redirect(`${failPath}?error=1`);
   }
-
-  if (!user) redirect(`${failPath}?error=1`);
   if (expectedRole === "MERCHANT" && !user.merchantId) redirect(`${failPath}?error=1`);
 
+  applyRuntimeEnv();
   try {
     await createSession({
       userId: user.id,
@@ -47,7 +39,19 @@ async function loginWithRole(formData: FormData, expectedRole: Role, failPath: s
     });
   } catch (error) {
     console.error("[harbor] login session failed", error);
-    redirect(`${failPath}?error=setup`);
+    applyRuntimeEnv();
+    try {
+      await createSession({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        merchantId: user.merchantId,
+      });
+    } catch (retryError) {
+      console.error("[harbor] login session retry failed", retryError);
+      redirect(`${failPath}?error=1`);
+    }
   }
 
   redirect("/");
@@ -71,28 +75,19 @@ export async function loginSupportAction(formData: FormData) {
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
+  applyRuntimeEnv();
+  let user = null;
   try {
-    await ensureDatabase();
+    user = await findLoginUser(identifier);
   } catch (error) {
-    console.error("[harbor] support login database failed", error);
-    redirect(`${LOGIN.support}?error=setup`);
+    console.error("[harbor] support login lookup failed", error);
   }
 
-  let user: Awaited<ReturnType<typeof prisma.user.findFirst>> | null = null;
-  try {
-    user = await prisma.user.findFirst({
-      where: identifier ? { OR: [{ email: identifier }, { username: identifier }] } : { id: "__none__" },
-    });
-    if (!user || !isStaff(user.role) || !(await bcrypt.compare(password, user.passwordHash))) {
-      user = null;
-    }
-  } catch (error) {
-    console.error("[harbor] support login query failed", error);
-    redirect(`${LOGIN.support}?error=setup`);
+  if (!user || !isStaff(user.role) || !(await bcrypt.compare(password, user.passwordHash))) {
+    redirect(`${LOGIN.support}?error=1`);
   }
 
-  if (!user) redirect(`${LOGIN.support}?error=1`);
-
+  applyRuntimeEnv();
   try {
     await createSession({
       userId: user.id,
@@ -103,7 +98,19 @@ export async function loginSupportAction(formData: FormData) {
     });
   } catch (error) {
     console.error("[harbor] support login session failed", error);
-    redirect(`${LOGIN.support}?error=setup`);
+    applyRuntimeEnv();
+    try {
+      await createSession({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        merchantId: user.merchantId,
+      });
+    } catch (retryError) {
+      console.error("[harbor] support login session retry failed", retryError);
+      redirect(`${LOGIN.support}?error=1`);
+    }
   }
 
   redirect("/support-desk");

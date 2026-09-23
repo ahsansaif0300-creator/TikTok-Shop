@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loginOpsAction } from "@/lib/actions/auth";
 import { RoleLoginForm } from "@/components/role-login-form";
+import { visibleLoginError } from "@/lib/access";
 
 export default async function OpsLoginPage({
   searchParams,
@@ -13,7 +14,7 @@ export default async function OpsLoginPage({
       title="Normal Backend Login"
       subtitle="Operations workspace for onboarding, orders across stores, refunds, and payouts."
       action={loginOpsAction}
-      error={error}
+      error={visibleLoginError(error)}
       footer={
         <>
           Super admin?{" "}

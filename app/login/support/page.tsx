@@ -1,5 +1,6 @@
 import { loginSupportAction } from "@/lib/actions/auth";
 import { RoleLoginForm } from "@/components/role-login-form";
+import { visibleLoginError } from "@/lib/access";
 
 export default async function SupportLoginPage({
   searchParams,
@@ -12,7 +13,7 @@ export default async function SupportLoginPage({
       title="Support Desk Login"
       subtitle="Private console for the support team. Store chats, store IDs, and the 1-hour timer are all on the next screen."
       action={loginSupportAction}
-      error={error}
+      error={visibleLoginError(error)}
     />
   );
 }
