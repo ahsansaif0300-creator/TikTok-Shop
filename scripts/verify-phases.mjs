@@ -357,9 +357,9 @@ async function phase2Static() {
     assert(read("prisma/seed.ts").includes('referralCode: "10000001"'), "Seed LLC code must be numeric");
     const start = read("scripts/start.mjs");
     assert(start.includes("rebuildIfStale") && start.includes("next"), "start script must rebuild stale .next");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-products-release-stores"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-login-db-boot"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-products-release-stores"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-login-db-boot"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1468,6 +1468,12 @@ async function phase7Static() {
     assert(start.includes("-p") && start.includes("resolvePort"), "start must accept Hostinger -p PORT");
     const ensure = read("lib/ensure-db.ts");
     assert(ensure.includes("installDemoDb") || ensure.includes("demo.sqlite"), "ensure-db does not install packed SQLite");
+    assert(ensure.includes("scheduleBackfill"), "Login boot must not block on catalog backfill");
+    assert(ensure.includes("peekAnyUser") || ensure.includes('SELECT id FROM "User"'), "Boot must accept any existing login user");
+    assert(read("scripts/copy-demo-db.mjs").includes("findPackedDemoSqlite"), "Packed demo lookup missing");
+    assert(read("scripts/copy-demo-db.mjs").includes("repoRoot"), "SQLite paths must not depend only on cwd");
+    assert(read("lib/actions/auth.ts").includes("findLoginUser"), "Login must not require every User column");
+    assert(read("lib/actions/auth.ts").includes("LOGIN_USER_SELECT"), "Login user select missing");
     assert(exists("prisma/demo.sqlite"), "prisma/demo.sqlite missing");
     assert(exists("scripts/copy-demo-db.mjs"), "scripts/copy-demo-db.mjs missing");
     assert(read("instrumentation.ts").includes("ensureDatabase"), "instrumentation does not prepare the database");

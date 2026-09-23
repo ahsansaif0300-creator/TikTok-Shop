@@ -3,10 +3,63 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
+import { applyRuntimeEnv } from "@/lib/runtime-env";
 import { prisma } from "@/lib/db";
 import { ensureDatabase } from "@/lib/ensure-db";
 import { clearSession, createSession, getSession, isStaff, requireSession } from "@/lib/auth";
 import { LOGIN, loginPathForRole } from "@/lib/access";
+
+const LOGIN_USER_SELECT = {
+  id: true,
+  email: true,
+  username: true,
+  name: true,
+  passwordHash: true,
+  role: true,
+  merchantId: true,
+} as const;
+
+type LoginUser = {
+  id: string;
+  email: string;
+  username: string | null;
+  name: string;
+  passwordHash: string;
+  role: Role;
+  merchantId: string | null;
+};
+
+async function findLoginUser(identifier: string): Promise<LoginUser | null> {
+  if (!identifier) return null;
+  try {
+    return await prisma.user.findFirst({
+      where: { OR: [{ email: identifier }, { username: identifier }] },
+      select: LOGIN_USER_SELECT,
+    });
+  } catch (error) {
+    console.warn("[harbor] login lookup with username failed; retrying email only", error);
+    return prisma.user.findFirst({
+      where: { email: identifier },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        passwordHash: true,
+        role: true,
+        merchantId: true,
+      },
+    }).then((user) => (user ? { ...user, username: null } : null));
+  }
+}
+
+async function prepareLogin() {
+  applyRuntimeEnv();
+  try {
+    await ensureDatabase();
+  } catch (error) {
+    console.error("[harbor] login database failed", error);
+  }
+}
 
 async function loginWithRole(formData: FormData, expectedRole: Role, failPath: string) {
   const identifier = String(formData.get("email") ?? formData.get("identifier") ?? "")
@@ -14,30 +67,29 @@ async function loginWithRole(formData: FormData, expectedRole: Role, failPath: s
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  try {
-    await ensureDatabase();
-  } catch (error) {
-    console.error("[harbor] login database failed", error);
-    redirect(`${failPath}?error=setup`);
-  }
+  await prepareLogin();
 
-  let user: Awaited<ReturnType<typeof prisma.user.findFirst>> | null = null;
+  let user: LoginUser | null = null;
   try {
-    user = await prisma.user.findFirst({
-      where: identifier ? { OR: [{ email: identifier }, { username: identifier }] } : { id: "__none__" },
-    });
-    if (!user || user.role !== expectedRole || !(await bcrypt.compare(password, user.passwordHash))) {
-      user = null;
-    }
+    user = await findLoginUser(identifier);
   } catch (error) {
     console.error("[harbor] login query failed", error);
-    redirect(`${failPath}?error=setup`);
+    try {
+      await ensureDatabase();
+      user = await findLoginUser(identifier);
+    } catch (retryError) {
+      console.error("[harbor] login query retry failed", retryError);
+      redirect(`${failPath}?error=setup`);
+    }
   }
 
-  if (!user) redirect(`${failPath}?error=1`);
+  if (!user || user.role !== expectedRole || !(await bcrypt.compare(password, user.passwordHash))) {
+    redirect(`${failPath}?error=1`);
+  }
   if (expectedRole === "MERCHANT" && !user.merchantId) redirect(`${failPath}?error=1`);
 
   try {
+    applyRuntimeEnv();
     await createSession({
       userId: user.id,
       email: user.email,
@@ -71,29 +123,28 @@ export async function loginSupportAction(formData: FormData) {
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  try {
-    await ensureDatabase();
-  } catch (error) {
-    console.error("[harbor] support login database failed", error);
-    redirect(`${LOGIN.support}?error=setup`);
-  }
+  await prepareLogin();
 
-  let user: Awaited<ReturnType<typeof prisma.user.findFirst>> | null = null;
+  let user: LoginUser | null = null;
   try {
-    user = await prisma.user.findFirst({
-      where: identifier ? { OR: [{ email: identifier }, { username: identifier }] } : { id: "__none__" },
-    });
-    if (!user || !isStaff(user.role) || !(await bcrypt.compare(password, user.passwordHash))) {
-      user = null;
-    }
+    user = await findLoginUser(identifier);
   } catch (error) {
     console.error("[harbor] support login query failed", error);
-    redirect(`${LOGIN.support}?error=setup`);
+    try {
+      await ensureDatabase();
+      user = await findLoginUser(identifier);
+    } catch (retryError) {
+      console.error("[harbor] support login query retry failed", retryError);
+      redirect(`${LOGIN.support}?error=setup`);
+    }
   }
 
-  if (!user) redirect(`${LOGIN.support}?error=1`);
+  if (!user || !isStaff(user.role) || !(await bcrypt.compare(password, user.passwordHash))) {
+    redirect(`${LOGIN.support}?error=1`);
+  }
 
   try {
+    applyRuntimeEnv();
     await createSession({
       userId: user.id,
       email: user.email,

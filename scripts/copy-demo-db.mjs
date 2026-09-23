@@ -13,6 +13,34 @@ import path from "node:path";
 const MIN_SEEDED_BYTES = 50_000;
 const LIVE_SQLITE = "harbor-commerce.sqlite";
 
+export function repoRoot(start = process.cwd()) {
+  let moduleDir = "";
+  try {
+    moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    moduleDir = "";
+  }
+  const candidates = [
+    process.env.HARBOR_APP_ROOT?.trim(),
+    start,
+    process.cwd(),
+    moduleDir ? path.resolve(moduleDir, "..") : "",
+    moduleDir ? path.resolve(moduleDir, "../..") : "",
+    moduleDir ? path.resolve(moduleDir, "../../..") : "",
+  ].filter(Boolean);
+  for (const dir of candidates) {
+    const prismaDir = path.join(dir, "prisma");
+    if (
+      existsSync(/*turbopackIgnore: true*/ path.join(prismaDir, "demo.sqlite")) ||
+      (existsSync(/*turbopackIgnore: true*/ path.join(dir, "package.json")) &&
+        existsSync(/*turbopackIgnore: true*/ prismaDir))
+    ) {
+      return dir;
+    }
+  }
+  return start || process.cwd();
+}
+
 function canWrite(dir) {
   try {
     mkdirSync(dir, { recursive: true });
@@ -33,8 +61,28 @@ function isHealthy(file) {
   }
 }
 
-export function demoSqlitePath(root = process.cwd()) {
+export function demoSqlitePath(root = repoRoot()) {
   return path.join(root, "prisma", "demo.sqlite");
+}
+
+export function findPackedDemoSqlite(root = repoRoot()) {
+  const candidates = [
+    path.join(root, "prisma", "demo.sqlite"),
+    path.join(process.cwd(), "prisma", "demo.sqlite"),
+    demoSqlitePath(root),
+  ];
+  try {
+    candidates.push(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "prisma", "demo.sqlite"));
+  } catch {
+    /* ignore */
+  }
+  return candidates.find((file) => {
+    try {
+      return existsSync(/*turbopackIgnore: true*/ file) && statSync(/*turbopackIgnore: true*/ file).size > 0;
+    } catch {
+      return false;
+    }
+  }) ?? null;
 }
 
 export function persistentDataDirs(root = process.cwd()) {
@@ -81,15 +129,25 @@ export function storeRecordsSnapshotPaths(root = process.cwd()) {
   return [...new Set(paths)];
 }
 
-export function installDemoDb(_root = process.cwd(), { overwrite = false } = {}) {
-  const root = process.cwd();
-  const demo = path.join(root, "prisma", "demo.sqlite");
-  if (!existsSync(/*turbopackIgnore: true*/ demo)) {
-    throw new Error(`Missing ${demo}. Redeploy the latest main branch.`);
+export function existingSqliteFiles(root = repoRoot()) {
+  const files = [];
+  for (const dest of liveSqliteCandidates(root)) {
+    try {
+      if (existsSync(/*turbopackIgnore: true*/ dest) && statSync(/*turbopackIgnore: true*/ dest).size > 0) {
+        files.push(dest);
+      }
+    } catch {
+      /* ignore */
+    }
   }
+  return files;
+}
 
+export function installDemoDb(_root = process.cwd(), { overwrite = false } = {}) {
+  const root = repoRoot(_root);
   const destinations = liveSqliteCandidates(root);
   const persistent = persistentDataDirs(root).map((dir) => path.join(dir, LIVE_SQLITE));
+  const demo = findPackedDemoSqlite(root);
 
   if (!overwrite) {
     const existingPersistent = persistent.find(isHealthy);
@@ -109,6 +167,21 @@ export function installDemoDb(_root = process.cwd(), { overwrite = false } = {})
       }
       return existingAny;
     }
+
+    const readable = existingSqliteFiles(root)[0];
+    if (readable) {
+      console.warn("[harbor] Packed demo SQLite missing or tiny; using existing", readable);
+      return readable;
+    }
+  }
+
+  if (!demo) {
+    const readable = existingSqliteFiles(root)[0];
+    if (readable) {
+      console.warn("[harbor] prisma/demo.sqlite is missing; continuing with", readable);
+      return readable;
+    }
+    throw new Error(`Missing packed demo database under ${root}. Redeploy the latest main branch.`);
   }
 
   let lastError = null;
@@ -119,6 +192,13 @@ export function installDemoDb(_root = process.cwd(), { overwrite = false } = {})
       const missing = !existsSync(/*turbopackIgnore: true*/ dest);
       const tiny = !missing && statSync(/*turbopackIgnore: true*/ dest).size < MIN_SEEDED_BYTES;
       if (overwrite || missing || tiny) {
+        if (overwrite && !missing && !tiny) {
+          try {
+            copyFileSync(dest, `${dest}.bak`);
+          } catch (error) {
+            console.warn("[harbor] Could not backup SQLite before restore", dest, error);
+          }
+        }
         copyFileSync(demo, dest);
         console.log(`[harbor] Installed demo database at ${dest}`);
       }
@@ -126,6 +206,12 @@ export function installDemoDb(_root = process.cwd(), { overwrite = false } = {})
     } catch (error) {
       lastError = error;
     }
+  }
+
+  const fallback = existingSqliteFiles(root)[0];
+  if (fallback) {
+    console.warn("[harbor] Could not write a new SQLite file; using", fallback);
+    return fallback;
   }
 
   throw lastError ?? new Error("No writable directory for SQLite on this host.");

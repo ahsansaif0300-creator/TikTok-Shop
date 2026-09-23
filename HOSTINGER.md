@@ -139,7 +139,7 @@ Change these under **Profile** before you invite anyone.
 - **Build failed:** open **Deployments** and read the log. Node must be 20+.
 - **TypeScript errors** (`Cannot find name 'isListedProduct'`, `implicit any` in `lib/ensure-db.ts`): that is an **old GitHub commit**. Latest **`main`** already imports `isListedProduct` and types the SQLite PRAGMA rows. In hPanel, Deploy **`main` again** (do not click “Fix and redeploy” on the failed old build). Then **Restart**. `npm run build` on current `main` completes TypeScript successfully.
 - **Site not reachable / 403:** do not edit `public_html/.htaccess`. Redeploy so Hostinger regenerates it.
-- **“TikTok Shop could not open the packed demo database”:** Redeploy the latest **`main`** branch (it includes `prisma/demo.sqlite`). Then **Restart**. `DATABASE_URL` can stay `file:./dev.db`; the app copies the packed demo DB into a writable folder automatically.
+- **“TikTok Shop could not open the packed demo database”:** Login no longer depends on copying `prisma/demo.sqlite` on every sign-in. It uses any readable live SQLite (`~/.harbor-commerce/harbor-commerce.sqlite` or `prisma/dev.db`) that already has users. Redeploy the latest **`main`** branch, click **Restart**, and keep `AUTH_SECRET` set. Do not click “Fix and redeploy” on an old failed build.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
 - **Empty data after every deploy:** Live SQLite and Normal Backend users now live in a folder outside the deploy tree (`~/.harbor-commerce`). Created ops users stay until you delete them. If an old deploy still resets, Redeploy **`main`** then Restart.
 - **npm audit / “7 vulnerabilities” after a green Next.js build:** Hostinger is blocking install on `next@16.3.1` and nested Prisma/js-yaml/sharp advisories. Latest **`main`** uses Next.js **16.3.5** and `package.json` overrides. Deploy **`main` again** (do not “Fix and redeploy” the old failed snapshot). Then **Restart**. Do not upgrade Prisma to 7 on Hostinger; SQLite `db push` stays on Prisma 6.
@@ -159,4 +159,4 @@ If you still see that message:
 1. In hPanel, pick branch **`main`**, not an old/empty copy of the repo.
 2. Root directory must be empty or `.` — not a subfolder.
 3. Do not choose **Continue as a static website**.
-4. If GitHub still shows only a README on `main`, refresh repositories in hPanel after this merge has been pushed.
+4. If 
