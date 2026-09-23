@@ -358,9 +358,9 @@ async function phase2Static() {
     assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
     assert(read("components/role-login-form.tsx").includes("Release {RELEASE_LABEL}"), "Login must show the live release stamp");
     assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-hostinger-build"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tiktok-shop-profit-staff-id"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-hostinger-build"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-profit-staff-id"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1085,6 +1085,15 @@ async function phase6Static() {
     assert(liveBoard.includes("/ol1"), "Orders board does not poll the uncached live path");
     assert(liveBoard.includes("PENDING_PAYMENT"), "Orders board must show unpaid pickup cards");
     assert(liveBoard.includes("Cost Price") && liveBoard.includes("Total Price") && liveBoard.includes("Profit Amount"), "Store orders missing cost/total/profit");
+    assert(read("lib/order-economics.ts").includes("total - cost"), "Profit must be total minus cost");
+    assert(read("lib/actions/admin.ts").includes("orderProfitAmount"), "Order Sender must store total-minus-cost profit");
+    assert(read("lib/orders-query.ts").includes("orderProfitAmount"), "Live order cards must recompute profit");
+    assert(read("lib/staff-display.ts").includes("ID No 004"), "Super Admin must display as ID No 004");
+    assert(read("lib/auth.ts").includes("displayStaffName"), "Sessions must remap Super Admin to ID No 004");
+    assert(read("components/support-desk-chrome.tsx").includes("displayStaffName"), "Support Desk must show the staff ID not the old name");
+    const cookiePackProfit = Math.round((19.79 - 9.24) * 100) / 100;
+    assert(cookiePackProfit === 10.55, "Almond Cookie Pack profit must be total minus cost");
+    assert(read("lib/ensure-db.ts").includes("WHERE paidAt IS NULL"), "Profit backfill must not rewrite settled orders");
     assert(read("app/(app)/orders/page.tsx").includes("OrdersLiveBoard"), "Orders page missing live board");
     assert(read("lib/labels.ts").includes('PENDING_PAYMENT: "Unpaid"'), "Unpaid label missing");
     assert(read("lib/dashboard.ts").includes('status: "PENDING_PAYMENT"'), "Ready-to-pick-up must count unpaid orders");

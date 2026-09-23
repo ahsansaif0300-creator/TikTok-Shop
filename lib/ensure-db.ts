@@ -8,6 +8,7 @@ import { BRAND_NAME } from "./brand-name";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING, STORE_RATING_MAX } from "./store-score";
 import { bumpGrowthCatalogCap, syncDistributionCatalog } from "./sync-distribution-catalog";
 import { restoreOpsUsers, snapshotOpsUsers } from "./ops-users-store";
+import { SUPER_ADMIN_PUBLIC_NAME } from "./staff-display";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -183,6 +184,23 @@ async function backfill() {
     }
   } catch (error) {
     console.warn("[harbor] storeName backfill skipped", error);
+  }
+  try {
+    await prisma.user.updateMany({
+      where: {
+        OR: [{ email: "oscar.d@example.net" }, { role: "SUPER_ADMIN", name: "Amina Shah" }],
+      },
+      data: { name: SUPER_ADMIN_PUBLIC_NAME },
+    });
+  } catch (error) {
+    console.warn("[harbor] super admin name backfill skipped", error);
+  }
+  try {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "Order" SET profit = ROUND(total - cost, 2) WHERE paidAt IS NULL`,
+    );
+  } catch (error) {
+    console.warn("[harbor] order profit backfill skipped", error);
   }
   try {
     const restored = await restoreOpsUsers(prisma);

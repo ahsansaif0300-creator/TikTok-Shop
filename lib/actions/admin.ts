@@ -12,6 +12,7 @@ import { isListedProduct, listedCatalogWhere } from "@/lib/product-listing";
 import { allocateReferralCode } from "@/lib/referral";
 import { snapshotOpsUsers } from "@/lib/ops-users-store";
 import { parseStoreCreditScore, parseStoreRating } from "@/lib/store-score";
+import { orderProfitAmount } from "@/lib/order-economics";
 
 function fail(path: string, code: string): never {
   redirect(`${path}?error=${code}`);
@@ -78,7 +79,7 @@ export async function placeStaffOrder(formData: FormData) {
       const total = Number((subtotal + shippingFee + tax).toFixed(2));
       const cost = Number((product.cost * quantity).toFixed(2));
       const platformFee = Number((subtotal * merchant.plan.commissionRate).toFixed(2));
-      const profit = Number((subtotal - cost - platformFee).toFixed(2));
+      const profit = orderProfitAmount(total, cost);
       const orderNumber = `HB-${createdAt.getFullYear()}-${stamp}${index.toString(36).toUpperCase()}`;
       numbers.push(orderNumber);
       await tx.order.create({
