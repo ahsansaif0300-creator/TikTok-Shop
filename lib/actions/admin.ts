@@ -11,6 +11,7 @@ import { dummyProductImage } from "@/lib/product-image";
 import { isListedProduct, listedCatalogWhere } from "@/lib/product-listing";
 import { allocateReferralCode } from "@/lib/referral";
 import { snapshotOpsUsers } from "@/lib/ops-users-store";
+import { snapshotStores } from "@/lib/stores-persist";
 import { parseStoreCreditScore, parseStoreRating } from "@/lib/store-score";
 import { orderProfitAmount } from "@/lib/order-economics";
 
@@ -394,6 +395,7 @@ export async function updateStoreRecord(formData: FormData) {
       detail: `Updated store record fields for ${merchantId}`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath(`/admin/stores/${merchantId}`);
   redirect(`/admin/stores/${merchantId}?saved=1`);
 }
@@ -427,6 +429,7 @@ export async function updateStoreScore(formData: FormData) {
       detail: `Set ${store.name} rating ${rating} and credit score ${creditScore}/100`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath("/");
   revalidatePath("/admin/stores");
   revalidatePath(`/admin/stores/${merchantId}`);

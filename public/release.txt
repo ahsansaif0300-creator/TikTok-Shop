@@ -1,3 +1,4 @@
+tikitok-stores-persist
 tikitok-failover-host
 tikitok-independent-brand
 tiktok-shop-profit-staff-id

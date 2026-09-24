@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { demoSqlitePath, installDemoDb } from "./copy-demo-db.mjs";
+import { demoSqlitePath, resolveLiveSqlite } from "./copy-demo-db.mjs";
 
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -24,9 +24,12 @@ function run(bin, args) {
 }
 
 try {
-  const dest = installDemoDb(root, { overwrite: force });
+  const dest = resolveLiveSqlite(root);
   process.env.DATABASE_URL = `file:${dest}`;
   console.log(`SQLite ready at ${dest}`);
+  if (force) {
+    console.warn("[harbor] HARBOR_FORCE_DB is set but live stores are never overwritten automatically.");
+  }
 } catch (error) {
   if (existsSync(demoSqlitePath(root))) {
     console.error(error);
@@ -42,6 +45,12 @@ try {
 
 {
   const prismaBin = require.resolve("prisma/build/index.js");
-  run(prismaBin, ["db", "push", "--skip-generate", "--accept-data-loss"]);
+  const url = process.env.DATABASE_URL || "";
+  const file = url.startsWith("file:") ? url.slice("file:".length) : "";
+  const liveExists = Boolean(file && existsSync(file));
+  run(
+    prismaBin,
+    liveExists ? ["db", "push", "--skip-generate"] : ["db", "push", "--skip-generate", "--accept-data-loss"],
+  );
   console.log("SQLite schema is current.");
 }

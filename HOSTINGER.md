@@ -17,12 +17,12 @@ Use the **Free** instance. Do **not** add a payment card. The old Blueprint used
 3. Branch: **`cursor/tikitok-rebrand-host-7442`**.
 4. Runtime **Node**. Build `npm ci && npm run build`. Start `npm run start`.
 5. Instance type: **Free**.
-6. Environment: `DATABASE_URL=file:./prisma/dev.db`, `AUTH_COOKIE_SECURE=true`, `AUTH_SECRET` = any long random string, `APP_BASE_URL` = leave blank until you have the URL.
+6. Environment: `DATABASE_URL=file:./dev.db`, `AUTH_COOKIE_SECURE=true`, `AUTH_SECRET` = any long random string, `APP_BASE_URL` = leave blank until you have the URL. The app remaps that file to a persistent `harbor-commerce.sqlite` so created stores are not replaced by the packed demo.
 7. Create Web Service. Wait until **Live**.
 8. Copy `https://….onrender.com`, put that in `APP_BASE_URL`, Manual Deploy.
 9. Open `/welcome` and send the client that URL.
 
-Free instances sleep after ~15 minutes and the demo SQLite can reset on a new deploy. That is fine for getting the client a live link today.
+Free instances sleep after ~15 minutes. Sleep does **not** delete stores. A **new deploy** does, unless the live SQLite lives in `HARBOR_DATA_DIR`. Latest code writes stores to a persistent file and a `store-records.json` snapshot so created shops are restored on boot. On Render: turn **Auto-Deploy** off after the site is Live, and do not click Manual Deploy unless you mean to ship code. For deploys that must keep data, attach a disk at `/data` and set `HARBOR_DATA_DIR=/data`.
 
 **Or retry Blueprint** after this `render.yaml` (plan `free`, no disk) is on the same branch, then click Retry. If it still demands a card, use Web Service → Free above.
 

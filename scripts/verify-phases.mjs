@@ -363,9 +363,9 @@ async function phase2Static() {
     assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
     assert(read("components/role-login-form.tsx").includes("Release {RELEASE_LABEL}"), "Login must show the live release stamp");
     assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
-    assert(read("lib/build-stamp.ts").includes("tikitok-failover-host"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tikitok-stores-persist"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tikitok-failover-host"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tikitok-stores-persist"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1467,7 +1467,9 @@ async function phase7Static() {
     assert(start.includes("PORT"), "start ignores PORT");
     assert(start.includes("-p") && start.includes("resolvePort"), "start must accept Hostinger -p PORT");
     const ensure = read("lib/ensure-db.ts");
-    assert(ensure.includes("installDemoDb") || ensure.includes("demo.sqlite"), "ensure-db does not install packed SQLite");
+    assert(ensure.includes("resolveLiveSqlite"), "ensure-db must open the persistent live SQLite");
+    assert(ensure.includes("restoreStores"), "ensure-db must restore saved stores on boot");
+    assert(!read("lib/login-db.ts").includes("overwrite: true"), "login must never overwrite the live store database");
     assert(exists("prisma/demo.sqlite"), "prisma/demo.sqlite missing");
     assert(exists("scripts/copy-demo-db.mjs"), "scripts/copy-demo-db.mjs missing");
     assert(read("instrumentation.ts").includes("ensureDatabase"), "instrumentation does not prepare the database");
@@ -1499,6 +1501,15 @@ async function phase7Static() {
     assert(config.includes("hostFromAppBase"), "New custom domain must be allowed from APP_BASE_URL");
     assert(exists("render.yaml"), "Render failover blueprint missing");
     assert(read("render.yaml").includes("plan: free"), "Render blueprint must stay on the free instance");
+    assert(read("scripts/copy-demo-db.mjs").includes("resolveLiveSqlite"), "Live SQLite must stay outside the wiped deploy tree");
+    assert(read("scripts/copy-demo-db.mjs").includes("HARBOR_FORCE_DB"), "Overwriting the live store database must require HARBOR_FORCE_DB");
+    assert(read("scripts/copy-demo-db.mjs").includes("preserveLiveSqlite"), "Live SQLite must be copied to persist folders");
+    assert(read("lib/login-db.ts").includes("resolveLiveSqlite"), "Login must open the persistent live SQLite");
+    assert(read("lib/db.ts").includes("prismaUrl"), "Prisma must reconnect when the live SQLite path changes");
+    assert(exists("lib/stores-persist.ts"), "Store snapshot helper missing");
+    assert(read("lib/actions/signup.ts").includes("snapshotStores"), "Signup must persist new stores");
+    assert(read("lib/actions/merchants.ts").includes("snapshotStores"), "Merchant status and approval must persist stores");
+    assert(read("lib/ensure-db.ts").includes("restoreStores"), "Boot must restore saved stores");
     assert(!read("render.yaml").includes("\n    disk:"), "Free Render plan cannot attach a paid disk");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
     assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.js");
