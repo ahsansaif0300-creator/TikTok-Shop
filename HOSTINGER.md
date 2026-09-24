@@ -24,6 +24,8 @@ Use the **Free** instance. Do **not** add a payment card. The old Blueprint used
 
 Free instances sleep after ~15 minutes. Sleep does **not** delete stores. A **new deploy** does, unless the live SQLite lives in `HARBOR_DATA_DIR`. Latest code writes stores to a persistent file and a `store-records.json` snapshot so created shops are restored on boot. On Render: turn **Auto-Deploy** off after the site is Live, and do not click Manual Deploy unless you mean to ship code. For deploys that must keep data, attach a disk at `/data` and set `HARBOR_DATA_DIR=/data`.
 
+**Bring back stores wiped on Hostinger:** in hPanel File Manager / the old Node app folder, download any of `harbor-commerce.sqlite`, `prisma/dev.db`, `data/store-records.json`, or `~/.harbor-commerce/harbor-commerce.sqlite`. Put the SQLite file in the live app as `data/hostinger-import.sqlite` (or set `HARBOR_IMPORT_DB` to its path) and restart. Boot uses that file when it is larger than the packed demo. The last known snapshot is also packed at `prisma/recovered-stores.json` and is restored automatically.
+
 **Or retry Blueprint** after this `render.yaml` (plan `free`, no disk) is on the same branch, then click Retry. If it still demands a card, use Web Service → Free above.
 
 **Then attach another domain** (Namecheap → the new name):

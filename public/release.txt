@@ -1,3 +1,4 @@
+tikitok-stores-recover
 tikitok-stores-persist
 tikitok-failover-host
 tikitok-independent-brand

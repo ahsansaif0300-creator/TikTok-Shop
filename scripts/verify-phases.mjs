@@ -1507,6 +1507,10 @@ async function phase7Static() {
     assert(read("lib/login-db.ts").includes("resolveLiveSqlite"), "Login must open the persistent live SQLite");
     assert(read("lib/db.ts").includes("prismaUrl"), "Prisma must reconnect when the live SQLite path changes");
     assert(exists("lib/stores-persist.ts"), "Store snapshot helper missing");
+    assert(exists("prisma/recovered-stores.json"), "Packed last-known store snapshot missing");
+    assert(read("prisma/recovered-stores.json").includes("harbor-review-shop"), "Recovered snapshot dropped review stores");
+    assert(read("scripts/copy-demo-db.mjs").includes("storeRecordsReadPaths"), "Store restore must read the packed recovery snapshot");
+    assert(read("scripts/copy-demo-db.mjs").includes("hostinger-import.sqlite"), "Hostinger SQLite import path missing");
     assert(read("lib/actions/signup.ts").includes("snapshotStores"), "Signup must persist new stores");
     assert(read("lib/actions/merchants.ts").includes("snapshotStores"), "Merchant status and approval must persist stores");
     assert(read("lib/ensure-db.ts").includes("restoreStores"), "Boot must restore saved stores");
@@ -1536,6 +1540,7 @@ async function phase7Static() {
     const hostinger = read("HOSTINGER.md");
     assert(/Free subdomain|temporary domain/i.test(hostinger), "HOSTINGER.md missing temporary domain steps");
     assert(hostinger.includes("hostingersite.com"), "HOSTINGER.md missing hostingersite.com");
+    assert(hostinger.includes("hostinger-import.sqlite"), "HOSTINGER.md must say how to import the old Hostinger database");
     const usage = read("USAGE.md");
     assert(usage.includes("localhost:3000/welcome"), "USAGE.md missing local login URL");
     assert(usage.includes("Hostinger"), "USAGE.md missing Hostinger steps");

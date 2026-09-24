@@ -1,7 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
-import { preserveLiveSqlite, storeRecordsSnapshotPaths } from "../scripts/copy-demo-db.mjs";
+import {
+  preserveLiveSqlite,
+  storeRecordsReadPaths,
+  storeRecordsSnapshotPaths,
+} from "../scripts/copy-demo-db.mjs";
 import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
 
 type StoreUserSnap = {
@@ -75,7 +79,7 @@ function parseSnapshot(raw: string): StoreSnap[] {
 
 function readSnapshots() {
   const bySlug = new Map<string, StoreSnap>();
-  for (const file of storeRecordsSnapshotPaths()) {
+  for (const file of storeRecordsReadPaths()) {
     try {
       if (!existsSync(file)) continue;
       for (const store of parseSnapshot(readFileSync(file, "utf8"))) {

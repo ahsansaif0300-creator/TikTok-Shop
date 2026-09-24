@@ -147,6 +147,23 @@ export function storeRecordsSnapshotPaths(root = process.cwd()) {
   return [...new Set(paths)];
 }
 
+export function packedRecoveredStoresPath(root = repoRoot()) {
+  return path.join(root, "prisma", "recovered-stores.json");
+}
+
+/** Read packed recovery first, then live snapshots (later files win on the same slug). */
+export function storeRecordsReadPaths(root = process.cwd()) {
+  return [...new Set([packedRecoveredStoresPath(root), ...storeRecordsSnapshotPaths(root)])];
+}
+
+export function hostingerImportCandidates(root = repoRoot()) {
+  return [
+    process.env.HARBOR_IMPORT_DB?.trim(),
+    path.join(root, "data", "hostinger-import.sqlite"),
+    path.join(root, "prisma", "hostinger-import.sqlite"),
+  ].filter(Boolean);
+}
+
 export function existingSqliteFiles(root = repoRoot()) {
   const files = [];
   for (const dest of liveSqliteCandidates(root)) {
@@ -161,9 +178,34 @@ export function existingSqliteFiles(root = repoRoot()) {
   return files;
 }
 
+function importHostingerSqlite(root) {
+  const source = hostingerImportCandidates(root).find(isNonEmpty);
+  if (!source) return null;
+  const persistent = persistentDataDirs(root).map((dir) => path.join(dir, LIVE_SQLITE));
+  const live = persistent.find(isNonEmpty);
+  const importSize = statSync(/*turbopackIgnore: true*/ source).size;
+  const liveSize = live ? statSync(/*turbopackIgnore: true*/ live).size : 0;
+  if (live && importSize <= liveSize && process.env.HARBOR_IMPORT_DB?.trim() !== source) {
+    return live;
+  }
+  for (const dest of persistent) {
+    if (!canWrite(path.dirname(dest))) continue;
+    try {
+      if (path.resolve(dest) !== path.resolve(source)) copyFileSync(source, dest);
+      console.log(`[harbor] Restored Hostinger/import database at ${dest}`);
+      return dest;
+    } catch (error) {
+      console.warn("[harbor] Could not import Hostinger database to", dest, error);
+    }
+  }
+  return source;
+}
+
 /** Always prefer a persistent live file so deploys cannot wipe stores. */
 export function resolveLiveSqlite(_root = process.cwd()) {
   const root = repoRoot(_root);
+  const imported = importHostingerSqlite(root);
+  if (imported) return imported;
   const persistent = persistentDataDirs(root).map((dir) => path.join(dir, LIVE_SQLITE));
   const existingPersistent = persistent.find(isNonEmpty);
   if (existingPersistent) return existingPersistent;
