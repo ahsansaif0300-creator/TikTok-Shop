@@ -214,7 +214,11 @@ async function phase1Static() {
   await check(1, "No impersonation or trap-product code in app source", () => {
     const hits = [];
     for (const file of sourceFiles()) {
-      const text = readFileSync(file, "utf8").replace(/TikTok[\s-]?Shop/gi, "").replace(/TikiTok[\s-]?Shop/gi, "");
+      const text = readFileSync(file, "utf8")
+        .replace(/TikTok[\s-]?Shop/gi, "")
+        .replace(/TikiTok[\s-]?Shop/gi, "")
+        .replace(/Not affiliated with TikTok or ByteDance\.?/gi, "")
+        .replace(/Independent platform — not TikTok\.?/gi, "");
       if (/tiktok|bytedance|yuebao|yu'?e\s*bao|invite.?pyramid|virtual.?order|auto.?order|blockchain/i.test(text)) {
         hits.push(path.relative(root, file));
       }
