@@ -363,9 +363,9 @@ async function phase2Static() {
     assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
     assert(read("components/role-login-form.tsx").includes("Release {RELEASE_LABEL}"), "Login must show the live release stamp");
     assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
-    assert(read("lib/build-stamp.ts").includes("tikitok-independent-brand"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tikitok-failover-host"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tikitok-independent-brand"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tikitok-failover-host"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -1495,6 +1495,10 @@ async function phase7Static() {
     assert(config.includes("*.agent.cvm.dev"), "agent.cvm.dev origin missing");
     assert(config.includes("*.cursorvm.com"), "cursorvm.com origin missing");
     assert(config.includes("*.hostingersite.com"), "hostingersite.com origin missing");
+    assert(config.includes("*.onrender.com"), "Render failover origin missing");
+    assert(config.includes("hostFromAppBase"), "New custom domain must be allowed from APP_BASE_URL");
+    assert(exists("render.yaml"), "Render failover blueprint missing");
+    assert(read("render.yaml").includes("HARBOR_DATA_DIR"), "Render disk path missing");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
     assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.js");
     assert(!/\.agent\.cvm\.dev/.test(config.replaceAll("*.agent.cvm.dev", "")), "stale agent.cvm.dev hostname");

@@ -1,5 +1,30 @@
 # Go live on Hostinger with a temporary domain
 
+## Failover if Hostinger suspended the site
+
+Do **not** attach another domain to the same Hostinger website. That slot is frozen, so a new Namecheap domain pointed at Hostinger will stay dark.
+
+**Fastest live URL (today):** Render’s free `https://….onrender.com` hostname. The client can use that immediately. Attach any new domain afterward.
+
+1. Merge the current GitHub `main` (TikiTok Shop brand, not TikTok Shop).
+2. Open [https://dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**.
+3. Connect GitHub repo `TikTok-Shop` (`ahsansaif0300-creator/TikTok-Shop`). Render reads `render.yaml`.
+4. Create the service. Wait until it is **Live**.
+5. Copy the URL (`https://tikitok-shop-xxxx.onrender.com`).
+6. **Environment** → set `APP_BASE_URL` to that URL with no trailing slash → **Save** → **Manual Deploy**.
+7. Open `https://THAT-URL/welcome` and `/login/admin`. Under Login you should see **Release tikitok-failover-host**.
+8. Send the client that URL now.
+
+**Then attach another domain** (Namecheap → the new name):
+
+1. In Render → **Settings** → **Custom Domains** → add `yournewdomain.com` and `www.yournewdomain.com`.
+2. In Namecheap → **Advanced DNS** add the A / CNAME records Render shows. Do **not** keep `hermes.dns-parking.com` / `artemis.dns-parking.com` if this site is no longer on Hostinger.
+3. Change `APP_BASE_URL` to `https://yournewdomain.com` and redeploy.
+
+Railway works the same way (`railway.toml`). Add a volume mounted at `/data` and set `DATABASE_URL=file:/data/harbor-commerce.sqlite`, `HARBOR_DATA_DIR=/data`. Vercel serverless is a poor fit (no persistent SQLite disk).
+
+---
+
 Use this when you **do not have your own domain**. Hostinger gives you a free URL like:
 
 ```

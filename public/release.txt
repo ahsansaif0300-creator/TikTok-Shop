@@ -1,3 +1,4 @@
+tikitok-failover-host
 tikitok-independent-brand
 tiktok-shop-profit-staff-id
 tiktok-shop-hostinger-build
