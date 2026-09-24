@@ -1,4 +1,4 @@
-# TikTok Shop
+# TikiTok Shop
 
 A professional multi-merchant commerce operations dashboard. It covers the legitimate parts of a seller-center style admin — orders, catalog, onboarding, refunds, shipping, and bank payouts — without marketplace impersonation, fake orders, or MLM mechanics.
 

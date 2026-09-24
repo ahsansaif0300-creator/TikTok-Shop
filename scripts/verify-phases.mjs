@@ -247,7 +247,7 @@ async function phase1Database(prisma, bcrypt) {
   });
   await check(1, "Workspace settings are seeded", async () => {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });
-    assert(name?.value === "TikTok Shop", `storeName is ${name?.value}`);
+    assert(name?.value === "TikiTok Shop", `storeName is ${name?.value}`);
   });
 }
 
@@ -270,7 +270,8 @@ async function phase2Static() {
       assert(exists(file), `Missing ${file}`);
     }
     const chrome = read("components/workspace-chrome.tsx") + read("components/brand.tsx") + read("lib/brand-name.ts");
-    assert(chrome.includes("TikTok Shop"), "Brand mark missing from shell");
+    assert(chrome.includes("TikiTok Shop"), "Brand mark missing from shell");
+    assert(chrome.includes("Not affiliated with TikTok"), "Public chrome must disclaim TikTok affiliation");
     assert(chrome.includes("logoutAction"), "Logout control missing");
     assert(chrome.includes("Open menu"), "Mobile menu control missing");
     const nav = read("lib/nav.ts");
@@ -358,9 +359,9 @@ async function phase2Static() {
     assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
     assert(read("components/role-login-form.tsx").includes("Release {RELEASE_LABEL}"), "Login must show the live release stamp");
     assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-profit-staff-id"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tikitok-independent-brand"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-profit-staff-id"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tikitok-independent-brand"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -375,7 +376,7 @@ async function phase2Static() {
       read("app/login/support/page.tsx") +
       read("components/role-login-form.tsx") +
       read("lib/brand-name.ts");
-    assert(login.includes("TikTok Shop"), "Login missing product name");
+    assert(login.includes("TikiTok Shop"), "Login missing product name");
     assert(login.includes("BRAND_NAME"), "Login must use the shared brand name");
     assert(read("app/login/support/page.tsx").includes("Support Desk Login"), "Support desk login missing");
     assert(!read("app/welcome/page.tsx").includes("/login/support"), "Welcome must not advertise Support Desk login");
@@ -1588,7 +1589,7 @@ async function phaseHttp(prisma) {
   await check(2, "Login HTML uses the product name, not a marketplace clone", async () => {
     const { res, text } = await pageText("/login");
     assert(res.status === 200, `/login ${res.status}`);
-    assert(/TikTok Shop/.test(text), "Login HTML missing product name");
+    assert(/TikiTok Shop/.test(text), "Login HTML missing product name");
     assert(/signup/i.test(text), "Login HTML missing Sign up");
     assert(!/HarborAdmin!2026|HarborMerchant!2026|HarborOps!2026/.test(text), "Login HTML leaked demo passwords");
   });
@@ -1627,7 +1628,7 @@ async function phaseHttp(prisma) {
     assert(!signupHtml.text.includes("Referral code"), "Signup HTML still says Referral code");
     const { res, text } = await pageText("/s/northline-outfitters");
     assert(res.status === 200, `/s/northline-outfitters ${res.status}`);
-    assert(/TikTok Shop/.test(text), "Shop card missing product name");
+    assert(/TikiTok Shop/.test(text), "Shop card missing product name");
     assert(/Seller login|Sign in/.test(text), "Shop card missing seller login");
     assert(/northline-outfitters/.test(text), "Shop card missing slug");
   });
@@ -1983,7 +1984,7 @@ async function phaseHttp(prisma) {
     assert(service.res.status === 200, `Merchant /service ${service.res.status}`);
     assert(service.text.includes("Store ID"), "Service missing store identity");
     assert(service.text.includes("Northline Outfitters"), "Service missing logged-in store name");
-    assert(service.text.includes("TikTok Shop Service assistant") || service.text.includes("assistant"), "Service assistant missing");
+    assert(service.text.includes("TikiTok Shop Service assistant") || service.text.includes("assistant"), "Service assistant missing");
     assert(!service.text.includes("Time Remaining"), "Store Service must not show the countdown");
     const supportInbox = await pageText("/support-desk", adminCookie);
     assert(supportInbox.res.status === 200, `Admin /support-desk ${supportInbox.res.status}`);

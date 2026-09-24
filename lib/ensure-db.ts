@@ -179,7 +179,7 @@ async function backfill() {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });
     if (!name) {
       await prisma.setting.create({ data: { key: "storeName", value: BRAND_NAME } });
-    } else if (name.value === "Harbor Commerce" || name.value === "TikiTok Shop") {
+    } else if (name.value === "Harbor Commerce" || name.value === "TikTok Shop") {
       await prisma.setting.update({ where: { key: "storeName" }, data: { value: BRAND_NAME } });
     }
   } catch (error) {
@@ -303,5 +303,5 @@ export async function ensureDatabase() {
     console.warn("[harbor] packed SQLite restore failed", error);
   }
 
-  throw new Error("TikTok Shop could not open a readable SQLite database with a login user.");
+  throw new Error(`${BRAND_NAME} could not open a readable SQLite database with a login user.`);
 }

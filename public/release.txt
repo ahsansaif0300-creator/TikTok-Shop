@@ -1,3 +1,4 @@
+tikitok-independent-brand
 tiktok-shop-profit-staff-id
 tiktok-shop-hostinger-build
 tiktok-shop-hostinger-webpack
