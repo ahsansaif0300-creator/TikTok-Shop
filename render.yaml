@@ -1,5 +1,4 @@
 # Free failover host. No payment card.
-# If Blueprint still asks for a card, skip it: New → Web Service → instance Free.
 # After the first boot, set APP_BASE_URL to the https://….onrender.com URL.
 
 services:
@@ -8,12 +7,18 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci && npm run build:render
     startCommand: npm run start
     healthCheckPath: /welcome
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384
+      - key: HARBOR_REBUILD_ON_START
+        value: "0"
+      - key: HARBOR_WEBPACK_BUILD
+        value: "0"
       - key: DATABASE_URL
         value: file:./prisma/dev.db
       - key: AUTH_COOKIE_SECURE

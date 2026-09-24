@@ -1506,6 +1506,8 @@ async function phase7Static() {
     assert(!read("package.json").includes("clean-next-config"), "build must not delete Next hashed config files");
     assert(!exists("scripts/clean-next-config.mjs"), "leftover config cleaner would break Hostinger builds");
     assert(read("package.json").includes("next build --webpack"), "Hostinger must build with webpack because native SWC needs GLIBC 2.29");
+    assert(read("package.json").includes("build:render"), "Render must build without webpack so the Free instance does not run out of memory");
+    assert(read("render.yaml").includes("build:render"), "Render blueprint must use the lighter Next.js build");
     assert(read("scripts/start.mjs").includes("--webpack"), "start rebuild must use webpack on Hostinger");
     assert(read("next.config.js").includes("module.exports"), "Hostinger needs CommonJS next.config.js");
   });
