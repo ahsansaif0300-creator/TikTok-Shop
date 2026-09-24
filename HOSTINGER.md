@@ -6,14 +6,25 @@ Do **not** attach another domain to the same Hostinger website. That slot is fro
 
 **Fastest live URL (today):** Render’s free `https://….onrender.com` hostname. The client can use that immediately. Attach any new domain afterward.
 
-1. Merge the current GitHub `main` (TikiTok Shop brand, not TikTok Shop).
-2. Open [https://dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**.
-3. Connect GitHub repo `TikTok-Shop` (`ahsansaif0300-creator/TikTok-Shop`). Render reads `render.yaml`.
-4. Create the service. Wait until it is **Live**.
-5. Copy the URL (`https://tikitok-shop-xxxx.onrender.com`).
-6. **Environment** → set `APP_BASE_URL` to that URL with no trailing slash → **Save** → **Manual Deploy**.
-7. Open `https://THAT-URL/welcome` and `/login/admin`. Under Login you should see **Release tikitok-failover-host**.
-8. Send the client that URL now.
+Use the **Free** instance. Do **not** add a payment card. The old Blueprint used a paid disk; that is why Render asked for a card.
+
+**If Render is asking for a card right now:** click Back / cancel. Do not enter a card.
+
+**Then create a Free web service (clearest path):**
+
+1. [dashboard.render.com](https://dashboard.render.com) → **New** → **Web Service** (not Blueprint).
+2. Connect GitHub `TikTok-Shop`.
+3. Branch: **`cursor/tikitok-rebrand-host-7442`**.
+4. Runtime **Node**. Build `npm ci && npm run build`. Start `npm run start`.
+5. Instance type: **Free**.
+6. Environment: `DATABASE_URL=file:./prisma/dev.db`, `AUTH_COOKIE_SECURE=true`, `AUTH_SECRET` = any long random string, `APP_BASE_URL` = leave blank until you have the URL.
+7. Create Web Service. Wait until **Live**.
+8. Copy `https://….onrender.com`, put that in `APP_BASE_URL`, Manual Deploy.
+9. Open `/welcome` and send the client that URL.
+
+Free instances sleep after ~15 minutes and the demo SQLite can reset on a new deploy. That is fine for getting the client a live link today.
+
+**Or retry Blueprint** after this `render.yaml` (plan `free`, no disk) is on the same branch, then click Retry. If it still demands a card, use Web Service → Free above.
 
 **Then attach another domain** (Namecheap → the new name):
 

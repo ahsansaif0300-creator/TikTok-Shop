@@ -1,28 +1,21 @@
-# Failover host while Hostinger is suspended.
-# Dashboard → New → Blueprint → this repo. After the first boot, set
-# APP_BASE_URL to the https://….onrender.com URL (no trailing slash).
-# Attach a custom domain later in Render → Settings → Custom Domains.
+# Free failover host. No payment card.
+# If Blueprint still asks for a card, skip it: New → Web Service → instance Free.
+# After the first boot, set APP_BASE_URL to the https://….onrender.com URL.
 
 services:
   - type: web
     name: tikitok-shop
     runtime: node
-    plan: starter
+    plan: free
     region: oregon
     buildCommand: npm ci && npm run build
     startCommand: npm run start
     healthCheckPath: /welcome
-    disk:
-      name: tikitok-data
-      mountPath: /data
-      sizeGB: 2
     envVars:
       - key: NODE_VERSION
         value: "20"
       - key: DATABASE_URL
-        value: file:/data/harbor-commerce.sqlite
-      - key: HARBOR_DATA_DIR
-        value: /data
+        value: file:./prisma/dev.db
       - key: AUTH_COOKIE_SECURE
         value: "true"
       - key: AUTH_SECRET

@@ -1498,7 +1498,8 @@ async function phase7Static() {
     assert(config.includes("*.onrender.com"), "Render failover origin missing");
     assert(config.includes("hostFromAppBase"), "New custom domain must be allowed from APP_BASE_URL");
     assert(exists("render.yaml"), "Render failover blueprint missing");
-    assert(read("render.yaml").includes("HARBOR_DATA_DIR"), "Render disk path missing");
+    assert(read("render.yaml").includes("plan: free"), "Render blueprint must stay on the free instance");
+    assert(!read("render.yaml").includes("\n    disk:"), "Free Render plan cannot attach a paid disk");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
     assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.js");
     assert(!/\.agent\.cvm\.dev/.test(config.replaceAll("*.agent.cvm.dev", "")), "stale agent.cvm.dev hostname");
