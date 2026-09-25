@@ -310,7 +310,7 @@ export async function deleteOpsUser(formData: FormData) {
       detail: `Deleted operations login ${user.username || user.email}`,
     },
   });
-  await snapshotOpsUsers(prisma);
+  await snapshotOpsUsers(prisma, { deletedEmail: user.email });
   revalidatePath("/admin/users");
   redirect("/admin/users?deleted=1");
 }

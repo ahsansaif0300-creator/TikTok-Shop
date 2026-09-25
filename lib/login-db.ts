@@ -84,6 +84,20 @@ function mapRow(row: Record<string, unknown> | undefined): LoginUser | null {
   };
 }
 
+async function restorePersistedLogins() {
+  try {
+    const { pullRemotePersist } = await import("@/lib/remote-persist");
+    const { restoreOpsUsers } = await import("@/lib/ops-users-store");
+    const { restoreStores } = await import("@/lib/stores-persist");
+    await pullRemotePersist();
+    const prisma = getPrisma();
+    await restoreOpsUsers(prisma);
+    await restoreStores(prisma);
+  } catch (error) {
+    console.warn("[harbor] login persist restore skipped", error);
+  }
+}
+
 export async function findLoginUser(identifier: string): Promise<LoginUser | null> {
   if (!identifier) return null;
   await openLoginDatabase();
@@ -118,7 +132,7 @@ export async function findLoginUser(identifier: string): Promise<LoginUser | nul
         merchantId: true,
       },
     });
-    return user;
+    if (user) return user;
   } catch (error) {
     console.warn("[harbor] login prisma lookup skipped", error);
   }
@@ -135,9 +149,28 @@ export async function findLoginUser(identifier: string): Promise<LoginUser | nul
         merchantId: true,
       },
     });
-    return user ? { ...user, username: null } : null;
+    if (user) return { ...user, username: null };
   } catch (error) {
     console.warn("[harbor] login email lookup failed", error);
+  }
+
+  await restorePersistedLogins();
+  try {
+    const user = await getPrisma().user.findFirst({
+      where: { OR: [{ email: identifier }, { username: identifier }] },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        name: true,
+        passwordHash: true,
+        role: true,
+        merchantId: true,
+      },
+    });
+    return user;
+  } catch (error) {
+    console.warn("[harbor] login persist retry failed", error);
     return null;
   }
 }

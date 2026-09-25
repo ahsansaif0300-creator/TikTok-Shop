@@ -30,7 +30,7 @@ export async function createTeamUser(formData: FormData) {
       referralCode: roleValue === "OPS" ? await allocateReferralCode() : null,
     },
   });
-  if (roleValue === "OPS") await snapshotOpsUsers(prisma);
+  await snapshotOpsUsers(prisma);
   revalidatePath("/users");
   redirect("/users?created=1");
 }

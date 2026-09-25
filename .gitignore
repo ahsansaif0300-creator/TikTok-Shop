@@ -48,6 +48,8 @@ yarn-error.log*
 /prisma/ops-users.json
 store-records.json
 ops-users.json
+!/persist/
+!/persist/**
 **/.harbor-commerce/
 /data/hostinger-import.sqlite
 /prisma/hostinger-import.sqlite

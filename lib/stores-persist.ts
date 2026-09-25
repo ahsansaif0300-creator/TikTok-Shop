@@ -7,6 +7,7 @@ import {
   storeRecordsSnapshotPaths,
 } from "../scripts/copy-demo-db.mjs";
 import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
+import { queueRemotePush, REMOTE_STORES_PATH } from "@/lib/remote-persist";
 
 type StoreUserSnap = {
   email: string;
@@ -65,30 +66,44 @@ type StoreSnap = {
 type StoreSnapshot = {
   updatedAt: string;
   stores: StoreSnap[];
+  deletedSlugs?: string[];
 };
 
-function parseSnapshot(raw: string): StoreSnap[] {
+function parseSnapshot(raw: string): StoreSnapshot | null {
   try {
     const parsed = JSON.parse(raw) as StoreSnapshot;
-    if (!Array.isArray(parsed?.stores)) return [];
-    return parsed.stores.filter((store) => store?.slug && store?.name);
+    if (!Array.isArray(parsed?.stores)) return null;
+    return {
+      updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : "",
+      stores: parsed.stores.filter((store) => store?.slug && store?.name),
+      deletedSlugs: (parsed.deletedSlugs ?? []).map((slug) => String(slug || "").trim()).filter(Boolean),
+    };
   } catch {
-    return [];
+    return null;
   }
+}
+
+export function readStoreSnapshots() {
+  return readSnapshots();
 }
 
 function readSnapshots() {
   const bySlug = new Map<string, StoreSnap>();
+  const deleted = new Set<string>();
   for (const file of storeRecordsReadPaths()) {
     try {
       if (!existsSync(file)) continue;
-      for (const store of parseSnapshot(readFileSync(file, "utf8"))) {
+      const parsed = parseSnapshot(readFileSync(file, "utf8"));
+      if (!parsed) continue;
+      for (const slug of parsed.deletedSlugs ?? []) deleted.add(slug);
+      for (const store of parsed.stores) {
         bySlug.set(store.slug, store);
       }
     } catch (error) {
       console.warn("[harbor] store snapshot read skipped", file, error);
     }
   }
+  for (const slug of deleted) bySlug.delete(slug);
   return [...bySlug.values()];
 }
 
@@ -186,6 +201,7 @@ export async function snapshotStores(prisma: PrismaClient) {
       console.warn("[harbor] store snapshot write skipped", file, error);
     }
   }
+  queueRemotePush(REMOTE_STORES_PATH, body);
   const url = process.env.DATABASE_URL || "";
   if (url.startsWith("file:")) {
     try {

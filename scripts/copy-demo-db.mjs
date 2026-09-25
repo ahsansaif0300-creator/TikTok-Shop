@@ -151,9 +151,18 @@ export function packedRecoveredStoresPath(root = repoRoot()) {
   return path.join(root, "prisma", "recovered-stores.json");
 }
 
+export function packedRecoveredOpsUsersPath(root = repoRoot()) {
+  return path.join(root, "prisma", "recovered-ops-users.json");
+}
+
 /** Read packed recovery first, then live snapshots (later files win on the same slug). */
 export function storeRecordsReadPaths(root = process.cwd()) {
   return [...new Set([packedRecoveredStoresPath(root), ...storeRecordsSnapshotPaths(root)])];
+}
+
+/** Packed recovery first, then live snapshots (later files win on the same email). */
+export function opsUserReadPaths(root = process.cwd()) {
+  return [...new Set([packedRecoveredOpsUsersPath(root), ...opsUserSnapshotPaths(root)])];
 }
 
 export function hostingerImportCandidates(root = repoRoot()) {

@@ -6,6 +6,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -1514,6 +1515,27 @@ async function phase7Static() {
     assert(read("lib/actions/signup.ts").includes("snapshotStores"), "Signup must persist new stores");
     assert(read("lib/actions/merchants.ts").includes("snapshotStores"), "Merchant status and approval must persist stores");
     assert(read("lib/ensure-db.ts").includes("restoreStores"), "Boot must restore saved stores");
+    assert(exists("lib/remote-persist.ts"), "Remote persist helper missing");
+    assert(read("lib/remote-persist.ts").includes("pullRemotePersist"), "Boot must pull remote persist");
+    assert(read("lib/ensure-db.ts").includes("pullRemotePersist"), "Boot must pull remote users before restore");
+    assert(read("lib/login-db.ts").includes("restorePersistedLogins"), "Login must restore persisted users");
+    assert(read("lib/ops-users-store.ts").includes("deletedEmails"), "Deleted Normal Backend users must stay deleted");
+    assert(read("lib/ops-users-store.ts").includes("opsUserReadPaths"), "Ops restore must read the packed recovery snapshot");
+    assert(read("lib/actions/admin.ts").includes("deletedEmail"), "Admin delete must tombstone Normal Backend users");
+    assert(read("lib/actions/users.ts").includes("snapshotOpsUsers"), "Team user create must persist Normal Backend users");
+    assert(exists("prisma/recovered-ops-users.json"), "Packed Normal Backend user snapshot missing");
+    assert(read("prisma/recovered-ops-users.json").includes("keepuser1@ops.harbor.local"), "Packed ops recovery dropped keepuser1");
+    assert(exists(".github/workflows/harbor-persist.yml"), "Persist workflow missing");
+    assert(read(".github/workflows/harbor-persist.yml").includes("harbor-persist"), "Persist workflow must write the persist branch");
+    assert(exists("persist/backend-users.json"), "Tracked Normal Backend persist file missing");
+    assert(exists("scripts/harbor-persist-sync.mjs"), "Persist export script missing");
+    assert(read("scripts/copy-demo-db.mjs").includes("opsUserReadPaths"), "Ops read paths helper missing");
+    assert(read("render.yaml").includes("HARBOR_PERSIST_BRANCH"), "Render must point at the persist branch");
+    const persistTest = spawnSync(path.join(root, "node_modules", ".bin", "tsx"), ["scripts/verify-user-persist.mjs"], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    assert(persistTest.status === 0, persistTest.stderr || persistTest.stdout || "user persist test failed");
     assert(!read("render.yaml").includes("\n    disk:"), "Free Render plan cannot attach a paid disk");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
     assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.js");

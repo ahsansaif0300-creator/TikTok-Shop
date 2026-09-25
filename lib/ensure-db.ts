@@ -9,6 +9,7 @@ import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING, STORE_RATING_MAX } from "./
 import { bumpGrowthCatalogCap, syncDistributionCatalog } from "./sync-distribution-catalog";
 import { restoreOpsUsers, snapshotOpsUsers } from "./ops-users-store";
 import { restoreStores, snapshotStores } from "./stores-persist";
+import { pullRemotePersist } from "./remote-persist";
 import { SUPER_ADMIN_PUBLIC_NAME } from "./staff-display";
 
 async function backfill() {
@@ -202,6 +203,11 @@ async function backfill() {
     );
   } catch (error) {
     console.warn("[harbor] order profit backfill skipped", error);
+  }
+  try {
+    await pullRemotePersist();
+  } catch (error) {
+    console.warn("[harbor] remote persist pull skipped", error);
   }
   try {
     const restored = await restoreOpsUsers(prisma);

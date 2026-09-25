@@ -21,6 +21,10 @@ services:
         value: "0"
       - key: HARBOR_DATA_DIR
         value: /opt/render/project/src/data
+      - key: HARBOR_PERSIST_REPO
+        value: ahsansaif0300-creator/TikTok-Shop
+      - key: HARBOR_PERSIST_BRANCH
+        value: harbor-persist
       - key: AUTH_COOKIE_SECURE
         value: "true"
       - key: AUTH_SECRET
