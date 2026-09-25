@@ -67,6 +67,7 @@ type StoreSnapshot = {
   updatedAt: string;
   stores: StoreSnap[];
   deletedSlugs?: string[];
+  orphanApplications?: StoreAppSnap[];
 };
 
 function parseSnapshot(raw: string): StoreSnapshot | null {
@@ -77,19 +78,17 @@ function parseSnapshot(raw: string): StoreSnapshot | null {
       updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : "",
       stores: parsed.stores.filter((store) => store?.slug && store?.name),
       deletedSlugs: (parsed.deletedSlugs ?? []).map((slug) => String(slug || "").trim()).filter(Boolean),
+      orphanApplications: (parsed.orphanApplications ?? []).filter((row) => row?.businessName && row?.email),
     };
   } catch {
     return null;
   }
 }
 
-export function readStoreSnapshots() {
-  return readSnapshots();
-}
-
-function readSnapshots() {
+function readSnapshotBundle(): StoreSnapshot {
   const bySlug = new Map<string, StoreSnap>();
   const deleted = new Set<string>();
+  const orphans = new Map<string, StoreAppSnap>();
   for (const file of storeRecordsReadPaths()) {
     try {
       if (!existsSync(file)) continue;
@@ -99,12 +98,28 @@ function readSnapshots() {
       for (const store of parsed.stores) {
         bySlug.set(store.slug, store);
       }
+      for (const application of parsed.orphanApplications ?? []) {
+        orphans.set(`${application.email}::${application.businessName}`, application);
+      }
     } catch (error) {
       console.warn("[harbor] store snapshot read skipped", file, error);
     }
   }
   for (const slug of deleted) bySlug.delete(slug);
-  return [...bySlug.values()];
+  return {
+    updatedAt: new Date().toISOString(),
+    stores: [...bySlug.values()],
+    deletedSlugs: [...deleted],
+    orphanApplications: [...orphans.values()],
+  };
+}
+
+export function readStoreSnapshots() {
+  return readSnapshotBundle().stores;
+}
+
+function readSnapshots() {
+  return readSnapshotBundle().stores;
 }
 
 export async function snapshotStores(prisma: PrismaClient) {
@@ -140,8 +155,40 @@ export async function snapshotStores(prisma: PrismaClient) {
     },
     orderBy: { createdAt: "asc" },
   });
+  const previous = readSnapshotBundle();
+  const liveSlugs = new Set(merchants.map((merchant) => merchant.slug));
+  const orphanApplications = await prisma.merchantApplication.findMany({
+    where: { merchantId: null },
+    select: {
+      businessName: true,
+      contactName: true,
+      email: true,
+      phone: true,
+      country: true,
+      category: true,
+      notes: true,
+      status: true,
+      reviewNote: true,
+      referralCode: true,
+      createdAt: true,
+    },
+  });
   const payload: StoreSnapshot = {
     updatedAt: new Date().toISOString(),
+    deletedSlugs: (previous.deletedSlugs ?? []).filter((slug) => !liveSlugs.has(slug)),
+    orphanApplications: orphanApplications.map((application) => ({
+      businessName: application.businessName,
+      contactName: application.contactName,
+      email: application.email,
+      phone: application.phone,
+      country: application.country,
+      category: application.category,
+      notes: application.notes,
+      status: application.status,
+      reviewNote: application.reviewNote,
+      referralCode: application.referralCode,
+      createdAt: application.createdAt.toISOString(),
+    })),
     stores: merchants.map((merchant) => ({
       name: merchant.name,
       slug: merchant.slug,
@@ -212,20 +259,99 @@ export async function snapshotStores(prisma: PrismaClient) {
   }
 }
 
+async function restoreStoreUsers(
+  prisma: PrismaClient,
+  merchantId: string,
+  users: StoreUserSnap[] | undefined,
+) {
+  let restored = 0;
+  for (const user of users ?? []) {
+    const email = user.email.trim().toLowerCase();
+    if (!email) continue;
+    const taken = await prisma.user.findUnique({ where: { email }, select: { id: true, merchantId: true } });
+    if (taken) {
+      if (!taken.merchantId) {
+        await prisma.user.update({ where: { id: taken.id }, data: { merchantId } });
+        restored += 1;
+      }
+      continue;
+    }
+    await prisma.user.create({
+      data: {
+        email,
+        username: user.username,
+        name: user.name,
+        passwordHash: user.passwordHash,
+        paymentPasswordHash: user.paymentPasswordHash,
+        role: "MERCHANT",
+        merchantId,
+        createdAt: user.createdAt ? new Date(user.createdAt) : undefined,
+      },
+    });
+    restored += 1;
+  }
+  return restored;
+}
+
+async function restoreStoreApplications(
+  prisma: PrismaClient,
+  merchantId: string | null,
+  applications: StoreAppSnap[] | undefined,
+) {
+  let restored = 0;
+  for (const application of applications ?? []) {
+    const email = application.email.trim().toLowerCase();
+    const existing = await prisma.merchantApplication.findFirst({
+      where: { email, businessName: application.businessName, merchantId },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await prisma.merchantApplication.create({
+      data: {
+        businessName: application.businessName,
+        contactName: application.contactName,
+        email: application.email,
+        phone: application.phone,
+        country: application.country,
+        category: application.category || "Public signup",
+        notes: application.notes || "",
+        status:
+          application.status === "APPROVED"
+            ? "APPROVED"
+            : application.status === "REJECTED"
+              ? "REJECTED"
+              : "PENDING",
+        reviewNote: application.reviewNote,
+        merchantId,
+        referralCode: application.referralCode || "",
+        createdAt: application.createdAt ? new Date(application.createdAt) : undefined,
+      },
+    });
+    restored += 1;
+  }
+  return restored;
+}
+
 export async function restoreStores(prisma: PrismaClient) {
-  const saved = readSnapshots();
-  if (saved.length === 0) return 0;
+  const bundle = readSnapshotBundle();
+  const saved = bundle.stores;
+  if (saved.length === 0 && (bundle.orphanApplications?.length ?? 0) === 0) return 0;
   const plans = await prisma.plan.findMany();
   const cheapest = plans.sort((a, b) => a.monthlyFee - b.monthlyFee)[0];
   if (!cheapest) return 0;
 
   let restored = 0;
+  restored += await restoreStoreApplications(prisma, null, bundle.orphanApplications);
   for (const row of saved) {
     const existing = await prisma.merchant.findUnique({
       where: { slug: row.slug },
-      select: { id: true },
+      select: { id: true, status: true },
     });
-    if (existing) continue;
+    if (existing) {
+      restored += await restoreStoreUsers(prisma, existing.id, row.users);
+      restored += await restoreStoreApplications(prisma, existing.id, row.applications);
+      continue;
+    }
 
     const plan = plans.find((item) => item.name === row.planName) ?? cheapest;
     const merchant = await prisma.merchant.create({
@@ -258,49 +384,8 @@ export async function restoreStores(prisma: PrismaClient) {
       },
     });
     restored += 1;
-
-    for (const user of row.users ?? []) {
-      const email = user.email.trim().toLowerCase();
-      if (!email) continue;
-      const taken = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-      if (taken) continue;
-      await prisma.user.create({
-        data: {
-          email,
-          username: user.username,
-          name: user.name,
-          passwordHash: user.passwordHash,
-          paymentPasswordHash: user.paymentPasswordHash,
-          role: "MERCHANT",
-          merchantId: merchant.id,
-          createdAt: user.createdAt ? new Date(user.createdAt) : undefined,
-        },
-      });
-    }
-
-    for (const application of row.applications ?? []) {
-      await prisma.merchantApplication.create({
-        data: {
-          businessName: application.businessName,
-          contactName: application.contactName,
-          email: application.email,
-          phone: application.phone,
-          country: application.country,
-          category: application.category || "Public signup",
-          notes: application.notes || "",
-          status:
-            application.status === "APPROVED"
-              ? "APPROVED"
-              : application.status === "REJECTED"
-                ? "REJECTED"
-                : "PENDING",
-          reviewNote: application.reviewNote,
-          merchantId: merchant.id,
-          referralCode: application.referralCode || "",
-          createdAt: application.createdAt ? new Date(application.createdAt) : undefined,
-        },
-      });
-    }
+    restored += await restoreStoreUsers(prisma, merchant.id, row.users);
+    restored += await restoreStoreApplications(prisma, merchant.id, row.applications);
 
     const products = await prisma.product.count({ where: { merchantId: merchant.id } });
     if (products === 0 && merchant.status === "ACTIVE") {

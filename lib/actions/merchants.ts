@@ -78,6 +78,7 @@ export async function createApplication(formData: FormData) {
       detail: `Logged inbound application for ${businessName}`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath("/merchants/applications");
 }
 

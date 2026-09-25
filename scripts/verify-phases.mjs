@@ -1514,7 +1514,12 @@ async function phase7Static() {
     assert(read("scripts/copy-demo-db.mjs").includes("hostinger-import.sqlite"), "Hostinger SQLite import path missing");
     assert(read("lib/actions/signup.ts").includes("snapshotStores"), "Signup must persist new stores");
     assert(read("lib/actions/merchants.ts").includes("snapshotStores"), "Merchant status and approval must persist stores");
+    assert(read("lib/actions/account.ts").includes("snapshotStores"), "Store profile edits must persist");
+    assert(read("lib/actions/payouts.ts").includes("snapshotStores"), "Paid payouts must persist store balances");
     assert(read("lib/ensure-db.ts").includes("restoreStores"), "Boot must restore saved stores");
+    assert(read("lib/ensure-db.ts").includes("restorePersistedRecordsNow"), "Boot must wait for store restore before serving pages");
+    assert(read("components/shell.tsx").includes("ensureDatabase"), "Merchants and store pages must restore before listing");
+    assert(read("lib/stores-persist.ts").includes("restoreStoreUsers"), "Existing stores must get missing logins back");
     assert(exists("lib/remote-persist.ts"), "Remote persist helper missing");
     assert(read("lib/remote-persist.ts").includes("pullRemotePersist"), "Boot must pull remote persist");
     assert(read("lib/ensure-db.ts").includes("pullRemotePersist"), "Boot must pull remote users before restore");
@@ -1536,6 +1541,11 @@ async function phase7Static() {
       encoding: "utf8",
     });
     assert(persistTest.status === 0, persistTest.stderr || persistTest.stdout || "user persist test failed");
+    const storePersistTest = spawnSync(path.join(root, "node_modules", ".bin", "tsx"), ["scripts/verify-store-persist.mjs"], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    assert(storePersistTest.status === 0, storePersistTest.stderr || storePersistTest.stdout || "store persist test failed");
     assert(!read("render.yaml").includes("\n    disk:"), "Free Render plan cannot attach a paid disk");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
     assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.js");

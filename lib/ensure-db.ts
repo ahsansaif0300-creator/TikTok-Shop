@@ -264,6 +264,40 @@ function scheduleBackfill() {
 let dbReady = false;
 let backfillStarted = false;
 let backfillDone = false;
+let persistReady = false;
+let persistInflight: Promise<void> | null = null;
+
+async function restorePersistedRecordsNow() {
+  if (persistReady) return;
+  if (persistInflight) {
+    await persistInflight;
+    return;
+  }
+  persistInflight = (async () => {
+    const prisma = getPrisma();
+    try {
+      await pullRemotePersist();
+    } catch (error) {
+      console.warn("[harbor] remote persist pull skipped", error);
+    }
+    try {
+      const restored = await restoreOpsUsers(prisma);
+      if (restored > 0) console.log(`[harbor] Restored ${restored} Normal Backend users`);
+    } catch (error) {
+      console.warn("[harbor] ops user restore skipped", error);
+    }
+    try {
+      const restoredStores = await restoreStores(prisma);
+      if (restoredStores > 0) console.log(`[harbor] Restored ${restoredStores} stores`);
+    } catch (error) {
+      console.warn("[harbor] store restore skipped", error);
+    }
+    persistReady = true;
+  })().finally(() => {
+    persistInflight = null;
+  });
+  await persistInflight;
+}
 
 export async function ensureDatabase() {
   const root = repoRoot();
@@ -272,6 +306,7 @@ export async function ensureDatabase() {
   if (dbReady) {
     try {
       if (await peekAnyUser()) {
+        await restorePersistedRecordsNow();
         scheduleBackfill();
         return;
       }
@@ -297,6 +332,7 @@ export async function ensureDatabase() {
       openSqlite(dest);
       if (await peekAnyUser()) {
         dbReady = true;
+        await restorePersistedRecordsNow();
         scheduleBackfill();
         return;
       }
@@ -310,6 +346,7 @@ export async function ensureDatabase() {
     openSqlite(restored);
     if (await peekAnyUser()) {
       dbReady = true;
+      await restorePersistedRecordsNow();
       scheduleBackfill();
       return;
     }
