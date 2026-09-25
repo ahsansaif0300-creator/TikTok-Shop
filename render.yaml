@@ -1,0 +1,29 @@
+# Free failover host. No payment card.
+# After the first boot, set APP_BASE_URL to the https://….onrender.com URL.
+
+services:
+  - type: web
+    name: tikitok-shop
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build:render
+    startCommand: npm run start
+    healthCheckPath: /welcome
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384
+      - key: HARBOR_REBUILD_ON_START
+        value: "0"
+      - key: HARBOR_WEBPACK_BUILD
+        value: "0"
+      - key: HARBOR_DATA_DIR
+        value: /opt/render/project/src/data
+      - key: AUTH_COOKIE_SECURE
+        value: "true"
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: APP_BASE_URL
+        sync: false

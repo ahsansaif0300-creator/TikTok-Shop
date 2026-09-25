@@ -6,6 +6,7 @@
     "dev": "node scripts/dev.mjs",
     "urls": "node scripts/lan-urls.mjs",
     "build": "prisma generate && next build --webpack",
+    "build:render": "prisma generate && next build",
     "start": "node scripts/start.mjs",
     "lint": "eslint",
     "setup": "prisma generate && prisma db push --skip-generate && tsx prisma/seed.ts",

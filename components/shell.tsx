@@ -6,6 +6,7 @@ import { shopAbsoluteUrl } from "@/lib/shop-url";
 import { processDueReleases } from "@/lib/process-releases";
 import { WorkspaceChrome } from "@/components/workspace-chrome";
 import { StorePendingReview } from "@/components/store-pending-review";
+import { displayStaffName } from "@/lib/staff-display";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const session = await requireSession();
@@ -31,7 +32,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   return (
     <WorkspaceChrome
       role={session.role}
-      name={session.name}
+      name={displayStaffName(session)}
       roleLabel={ROLE_LABEL[session.role]}
       unread={unread}
       storeName={store?.name ?? null}

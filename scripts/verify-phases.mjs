@@ -214,7 +214,11 @@ async function phase1Static() {
   await check(1, "No impersonation or trap-product code in app source", () => {
     const hits = [];
     for (const file of sourceFiles()) {
-      const text = readFileSync(file, "utf8").replace(/TikTok[\s-]?Shop/gi, "").replace(/TikiTok[\s-]?Shop/gi, "");
+      const text = readFileSync(file, "utf8")
+        .replace(/TikTok[\s-]?Shop/gi, "")
+        .replace(/TikiTok[\s-]?Shop/gi, "")
+        .replace(/Not affiliated with TikTok or ByteDance\.?/gi, "")
+        .replace(/Independent platform — not TikTok\.?/gi, "");
       if (/tiktok|bytedance|yuebao|yu'?e\s*bao|invite.?pyramid|virtual.?order|auto.?order|blockchain/i.test(text)) {
         hits.push(path.relative(root, file));
       }
@@ -247,7 +251,7 @@ async function phase1Database(prisma, bcrypt) {
   });
   await check(1, "Workspace settings are seeded", async () => {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });
-    assert(name?.value === "TikTok Shop", `storeName is ${name?.value}`);
+    assert(name?.value === "TikiTok Shop", `storeName is ${name?.value}`);
   });
 }
 
@@ -270,7 +274,8 @@ async function phase2Static() {
       assert(exists(file), `Missing ${file}`);
     }
     const chrome = read("components/workspace-chrome.tsx") + read("components/brand.tsx") + read("lib/brand-name.ts");
-    assert(chrome.includes("TikTok Shop"), "Brand mark missing from shell");
+    assert(chrome.includes("TikiTok Shop"), "Brand mark missing from shell");
+    assert(chrome.includes("Not affiliated with TikTok"), "Public chrome must disclaim TikTok affiliation");
     assert(chrome.includes("logoutAction"), "Logout control missing");
     assert(chrome.includes("Open menu"), "Mobile menu control missing");
     const nav = read("lib/nav.ts");
@@ -358,9 +363,9 @@ async function phase2Static() {
     assert(start.includes("harbor-release.txt"), "start must rebuild when the release stamp changes");
     assert(read("components/role-login-form.tsx").includes("Release {RELEASE_LABEL}"), "Login must show the live release stamp");
     assert(!read("lib/actions/auth.ts").includes("error=setup"), "Login must not redirect to packed-demo setup");
-    assert(read("lib/build-stamp.ts").includes("tiktok-shop-hostinger-build"), "Release label missing from build stamp");
+    assert(read("lib/build-stamp.ts").includes("tikitok-stores-persist"), "Release label missing from build stamp");
     assert(read("lib/catalog-photo.ts").includes("CATALOG_PHOTO_VERSION"), "Catalog photo cache-bust missing");
-    assert(exists("public/release.txt") && read("public/release.txt").includes("tiktok-shop-hostinger-build"), "public/release.txt missing live deploy stamp");
+    assert(exists("public/release.txt") && read("public/release.txt").includes("tikitok-stores-persist"), "public/release.txt missing live deploy stamp");
     assert(read("public/release.txt").includes("tiktok-shop-order-prices"), "public/release.txt dropped order-prices stamp");
     assert(read("public/release.txt").includes("tiktok-shop-catalog-c4"), "public/release.txt dropped catalog stamp");
     assert(exists("public/orders-live.txt") && read("public/orders-live.txt").includes("tiktok-shop-order-prices"), "orders-live stamp file missing");
@@ -375,7 +380,7 @@ async function phase2Static() {
       read("app/login/support/page.tsx") +
       read("components/role-login-form.tsx") +
       read("lib/brand-name.ts");
-    assert(login.includes("TikTok Shop"), "Login missing product name");
+    assert(login.includes("TikiTok Shop"), "Login missing product name");
     assert(login.includes("BRAND_NAME"), "Login must use the shared brand name");
     assert(read("app/login/support/page.tsx").includes("Support Desk Login"), "Support desk login missing");
     assert(!read("app/welcome/page.tsx").includes("/login/support"), "Welcome must not advertise Support Desk login");
@@ -1085,6 +1090,15 @@ async function phase6Static() {
     assert(liveBoard.includes("/ol1"), "Orders board does not poll the uncached live path");
     assert(liveBoard.includes("PENDING_PAYMENT"), "Orders board must show unpaid pickup cards");
     assert(liveBoard.includes("Cost Price") && liveBoard.includes("Total Price") && liveBoard.includes("Profit Amount"), "Store orders missing cost/total/profit");
+    assert(read("lib/order-economics.ts").includes("total - cost"), "Profit must be total minus cost");
+    assert(read("lib/actions/admin.ts").includes("orderProfitAmount"), "Order Sender must store total-minus-cost profit");
+    assert(read("lib/orders-query.ts").includes("orderProfitAmount"), "Live order cards must recompute profit");
+    assert(read("lib/staff-display.ts").includes("ID No 004"), "Super Admin must display as ID No 004");
+    assert(read("lib/auth.ts").includes("displayStaffName"), "Sessions must remap Super Admin to ID No 004");
+    assert(read("components/support-desk-chrome.tsx").includes("displayStaffName"), "Support Desk must show the staff ID not the old name");
+    const cookiePackProfit = Math.round((19.79 - 9.24) * 100) / 100;
+    assert(cookiePackProfit === 10.55, "Almond Cookie Pack profit must be total minus cost");
+    assert(read("lib/ensure-db.ts").includes("WHERE paidAt IS NULL"), "Profit backfill must not rewrite settled orders");
     assert(read("app/(app)/orders/page.tsx").includes("OrdersLiveBoard"), "Orders page missing live board");
     assert(read("lib/labels.ts").includes('PENDING_PAYMENT: "Unpaid"'), "Unpaid label missing");
     assert(read("lib/dashboard.ts").includes('status: "PENDING_PAYMENT"'), "Ready-to-pick-up must count unpaid orders");
@@ -1453,7 +1467,9 @@ async function phase7Static() {
     assert(start.includes("PORT"), "start ignores PORT");
     assert(start.includes("-p") && start.includes("resolvePort"), "start must accept Hostinger -p PORT");
     const ensure = read("lib/ensure-db.ts");
-    assert(ensure.includes("installDemoDb") || ensure.includes("demo.sqlite"), "ensure-db does not install packed SQLite");
+    assert(ensure.includes("resolveLiveSqlite"), "ensure-db must open the persistent live SQLite");
+    assert(ensure.includes("restoreStores"), "ensure-db must restore saved stores on boot");
+    assert(!read("lib/login-db.ts").includes("overwrite: true"), "login must never overwrite the live store database");
     assert(exists("prisma/demo.sqlite"), "prisma/demo.sqlite missing");
     assert(exists("scripts/copy-demo-db.mjs"), "scripts/copy-demo-db.mjs missing");
     assert(read("instrumentation.ts").includes("ensureDatabase"), "instrumentation does not prepare the database");
@@ -1481,12 +1497,32 @@ async function phase7Static() {
     assert(config.includes("*.agent.cvm.dev"), "agent.cvm.dev origin missing");
     assert(config.includes("*.cursorvm.com"), "cursorvm.com origin missing");
     assert(config.includes("*.hostingersite.com"), "hostingersite.com origin missing");
+    assert(config.includes("*.onrender.com"), "Render failover origin missing");
+    assert(config.includes("hostFromAppBase"), "New custom domain must be allowed from APP_BASE_URL");
+    assert(exists("render.yaml"), "Render failover blueprint missing");
+    assert(read("render.yaml").includes("plan: free"), "Render blueprint must stay on the free instance");
+    assert(read("scripts/copy-demo-db.mjs").includes("resolveLiveSqlite"), "Live SQLite must stay outside the wiped deploy tree");
+    assert(read("scripts/copy-demo-db.mjs").includes("HARBOR_FORCE_DB"), "Overwriting the live store database must require HARBOR_FORCE_DB");
+    assert(read("scripts/copy-demo-db.mjs").includes("preserveLiveSqlite"), "Live SQLite must be copied to persist folders");
+    assert(read("lib/login-db.ts").includes("resolveLiveSqlite"), "Login must open the persistent live SQLite");
+    assert(read("lib/db.ts").includes("prismaUrl"), "Prisma must reconnect when the live SQLite path changes");
+    assert(exists("lib/stores-persist.ts"), "Store snapshot helper missing");
+    assert(exists("prisma/recovered-stores.json"), "Packed last-known store snapshot missing");
+    assert(read("prisma/recovered-stores.json").includes("harbor-review-shop"), "Recovered snapshot dropped review stores");
+    assert(read("scripts/copy-demo-db.mjs").includes("storeRecordsReadPaths"), "Store restore must read the packed recovery snapshot");
+    assert(read("scripts/copy-demo-db.mjs").includes("hostinger-import.sqlite"), "Hostinger SQLite import path missing");
+    assert(read("lib/actions/signup.ts").includes("snapshotStores"), "Signup must persist new stores");
+    assert(read("lib/actions/merchants.ts").includes("snapshotStores"), "Merchant status and approval must persist stores");
+    assert(read("lib/ensure-db.ts").includes("restoreStores"), "Boot must restore saved stores");
+    assert(!read("render.yaml").includes("\n    disk:"), "Free Render plan cannot attach a paid disk");
     assert(config.includes("allowedOrigins"), "serverActions.allowedOrigins missing");
     assert(!/p-3000-pod-/.test(config), "stale Cursor pod hostname in next.config.js");
     assert(!/\.agent\.cvm\.dev/.test(config.replaceAll("*.agent.cvm.dev", "")), "stale agent.cvm.dev hostname");
     assert(!read("package.json").includes("clean-next-config"), "build must not delete Next hashed config files");
     assert(!exists("scripts/clean-next-config.mjs"), "leftover config cleaner would break Hostinger builds");
     assert(read("package.json").includes("next build --webpack"), "Hostinger must build with webpack because native SWC needs GLIBC 2.29");
+    assert(read("package.json").includes("build:render"), "Render must build without webpack so the Free instance does not run out of memory");
+    assert(read("render.yaml").includes("build:render"), "Render blueprint must use the lighter Next.js build");
     assert(read("scripts/start.mjs").includes("--webpack"), "start rebuild must use webpack on Hostinger");
     assert(read("next.config.js").includes("module.exports"), "Hostinger needs CommonJS next.config.js");
   });
@@ -1504,6 +1540,7 @@ async function phase7Static() {
     const hostinger = read("HOSTINGER.md");
     assert(/Free subdomain|temporary domain/i.test(hostinger), "HOSTINGER.md missing temporary domain steps");
     assert(hostinger.includes("hostingersite.com"), "HOSTINGER.md missing hostingersite.com");
+    assert(hostinger.includes("hostinger-import.sqlite"), "HOSTINGER.md must say how to import the old Hostinger database");
     const usage = read("USAGE.md");
     assert(usage.includes("localhost:3000/welcome"), "USAGE.md missing local login URL");
     assert(usage.includes("Hostinger"), "USAGE.md missing Hostinger steps");
@@ -1579,7 +1616,7 @@ async function phaseHttp(prisma) {
   await check(2, "Login HTML uses the product name, not a marketplace clone", async () => {
     const { res, text } = await pageText("/login");
     assert(res.status === 200, `/login ${res.status}`);
-    assert(/TikTok Shop/.test(text), "Login HTML missing product name");
+    assert(/TikiTok Shop/.test(text), "Login HTML missing product name");
     assert(/signup/i.test(text), "Login HTML missing Sign up");
     assert(!/HarborAdmin!2026|HarborMerchant!2026|HarborOps!2026/.test(text), "Login HTML leaked demo passwords");
   });
@@ -1618,7 +1655,7 @@ async function phaseHttp(prisma) {
     assert(!signupHtml.text.includes("Referral code"), "Signup HTML still says Referral code");
     const { res, text } = await pageText("/s/northline-outfitters");
     assert(res.status === 200, `/s/northline-outfitters ${res.status}`);
-    assert(/TikTok Shop/.test(text), "Shop card missing product name");
+    assert(/TikiTok Shop/.test(text), "Shop card missing product name");
     assert(/Seller login|Sign in/.test(text), "Shop card missing seller login");
     assert(/northline-outfitters/.test(text), "Shop card missing slug");
   });
@@ -1974,7 +2011,7 @@ async function phaseHttp(prisma) {
     assert(service.res.status === 200, `Merchant /service ${service.res.status}`);
     assert(service.text.includes("Store ID"), "Service missing store identity");
     assert(service.text.includes("Northline Outfitters"), "Service missing logged-in store name");
-    assert(service.text.includes("TikTok Shop Service assistant") || service.text.includes("assistant"), "Service assistant missing");
+    assert(service.text.includes("TikiTok Shop Service assistant") || service.text.includes("assistant"), "Service assistant missing");
     assert(!service.text.includes("Time Remaining"), "Store Service must not show the countdown");
     const supportInbox = await pageText("/support-desk", adminCookie);
     assert(supportInbox.res.status === 200, `Admin /support-desk ${supportInbox.res.status}`);

@@ -1,7 +1,7 @@
 import type { Role } from "@prisma/client";
 import { applyRuntimeEnv } from "@/lib/runtime-env";
 import { getPrisma, resetPrisma } from "@/lib/db";
-import { existingSqliteFiles, installDemoDb, repoRoot } from "../scripts/copy-demo-db.mjs";
+import { existingSqliteFiles, resolveLiveSqlite, repoRoot } from "../scripts/copy-demo-db.mjs";
 
 export type LoginUser = {
   id: string;
@@ -38,9 +38,9 @@ export async function openLoginDatabase() {
   const root = repoRoot();
   const queue: string[] = [];
   try {
-    queue.push(installDemoDb(root));
+    queue.push(resolveLiveSqlite(root));
   } catch (error) {
-    console.warn("[harbor] login installDemoDb skipped", error);
+    console.warn("[harbor] login resolveLiveSqlite skipped", error);
   }
   try {
     queue.push(...existingSqliteFiles(root));
@@ -61,7 +61,7 @@ export async function openLoginDatabase() {
   }
 
   try {
-    const restored = installDemoDb(root, { overwrite: true });
+    const restored = resolveLiveSqlite(root);
     openSqlite(restored);
     if (await peekUserTable()) return true;
   } catch (error) {
