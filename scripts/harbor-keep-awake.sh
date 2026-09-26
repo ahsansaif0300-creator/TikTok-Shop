@@ -19,6 +19,7 @@ heal_now() {
   touch_stamp
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) heal-on-wake"
   python3 "$HEAL" || echo "heal-on-wake failed; next ping will retry"
+  bash "$ROOT/scripts/harbor-save-persist.sh" || echo "persist save skipped"
   touch_stamp
 }
 

@@ -526,6 +526,21 @@ def cleanup_tmp():
     shutil.rmtree(RUN_DIR, ignore_errors=True)
 
 
+def slug_live(slug):
+    try:
+        code = subprocess.check_output(
+            ["curl", "-sS", "-m", "15", "-o", "/dev/null", "-w", "%{http_code}", f"{BASE}/s/{slug}"],
+            text=True,
+        ).strip()
+    except subprocess.CalledProcessError as error:
+        code = str(error)
+    return code in {"200", "301", "302", "303", "307", "308"}
+
+
+def missing_client_slugs():
+    return [slug for slug in sorted(CLIENT_SLUGS) if not slug_live(slug)]
+
+
 def main():
     lock = open("/tmp/harbor-heal.lock", "a+")
     try:
@@ -534,6 +549,17 @@ def main():
         print("heal already running")
         return
     merchants = login()
+    gone = missing_client_slugs()
+    if gone:
+        print("heal fast-path missing shop pages", gone)
+        packed = wanted_stores()
+        need = [
+            store
+            for store in packed
+            if store["slug"] in gone or (store["slug"] in CLIENT_SLUGS and store["name"] not in merchants)
+        ]
+        recreate_missing(need)
+        merchants = curl(["-L", f"{BASE}/merchants"], out("mer-fast.html"))
     remembered = remember_live_stores(merchants)
     wanted = wanted_stores(remembered)
     missing = [store for store in wanted if store["name"] not in merchants and store["slug"] not in merchants]
