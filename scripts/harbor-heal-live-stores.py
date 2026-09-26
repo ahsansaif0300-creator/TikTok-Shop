@@ -31,9 +31,6 @@ DEMO_SLUGS = {
     "willow-baby",
 }
 SKIP_SLUG_PREFIXES = (
-    "approved-catalog-",
-    "pending-review-",
-    "harbor-review-shop",
     "keep-forever-store",
 )
 
@@ -44,8 +41,6 @@ def skip_store(slug, email=""):
     if slug in DEMO_SLUGS:
         return True
     if any(slug.startswith(prefix) or slug == prefix.rstrip("-") for prefix in SKIP_SLUG_PREFIXES):
-        return True
-    if email.endswith("@example.test"):
         return True
     return False
 
