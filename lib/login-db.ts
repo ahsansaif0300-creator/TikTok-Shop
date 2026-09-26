@@ -1,7 +1,7 @@
 import type { Role } from "@prisma/client";
 import { applyRuntimeEnv } from "@/lib/runtime-env";
 import { getPrisma, resetPrisma } from "@/lib/db";
-import { existingSqliteFiles, installDemoDb, repoRoot } from "../scripts/copy-demo-db.mjs";
+import { existingSqliteFiles, resolveLiveSqlite, repoRoot } from "../scripts/copy-demo-db.mjs";
 
 export type LoginUser = {
   id: string;
@@ -38,9 +38,9 @@ export async function openLoginDatabase() {
   const root = repoRoot();
   const queue: string[] = [];
   try {
-    queue.push(installDemoDb(root));
+    queue.push(resolveLiveSqlite(root));
   } catch (error) {
-    console.warn("[harbor] login installDemoDb skipped", error);
+    console.warn("[harbor] login resolveLiveSqlite skipped", error);
   }
   try {
     queue.push(...existingSqliteFiles(root));
@@ -61,7 +61,7 @@ export async function openLoginDatabase() {
   }
 
   try {
-    const restored = installDemoDb(root, { overwrite: true });
+    const restored = resolveLiveSqlite(root);
     openSqlite(restored);
     if (await peekUserTable()) return true;
   } catch (error) {
@@ -82,6 +82,20 @@ function mapRow(row: Record<string, unknown> | undefined): LoginUser | null {
     role: row.role as Role,
     merchantId: row.merchantId ? String(row.merchantId) : null,
   };
+}
+
+async function restorePersistedLogins() {
+  try {
+    const { pullRemotePersist } = await import("@/lib/remote-persist");
+    const { restoreOpsUsers } = await import("@/lib/ops-users-store");
+    const { restoreStores } = await import("@/lib/stores-persist");
+    await pullRemotePersist();
+    const prisma = getPrisma();
+    await restoreOpsUsers(prisma);
+    await restoreStores(prisma);
+  } catch (error) {
+    console.warn("[harbor] login persist restore skipped", error);
+  }
 }
 
 export async function findLoginUser(identifier: string): Promise<LoginUser | null> {
@@ -118,7 +132,7 @@ export async function findLoginUser(identifier: string): Promise<LoginUser | nul
         merchantId: true,
       },
     });
-    return user;
+    if (user) return user;
   } catch (error) {
     console.warn("[harbor] login prisma lookup skipped", error);
   }
@@ -135,9 +149,28 @@ export async function findLoginUser(identifier: string): Promise<LoginUser | nul
         merchantId: true,
       },
     });
-    return user ? { ...user, username: null } : null;
+    if (user) return { ...user, username: null };
   } catch (error) {
     console.warn("[harbor] login email lookup failed", error);
+  }
+
+  await restorePersistedLogins();
+  try {
+    const user = await getPrisma().user.findFirst({
+      where: { OR: [{ email: identifier }, { username: identifier }] },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        name: true,
+        passwordHash: true,
+        role: true,
+        merchantId: true,
+      },
+    });
+    return user;
+  } catch (error) {
+    console.warn("[harbor] login persist retry failed", error);
     return null;
   }
 }

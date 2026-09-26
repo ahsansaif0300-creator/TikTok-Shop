@@ -116,7 +116,7 @@ export function MerchantHome({
       </div>
       <Link
         href="/service"
-        className="mt-4 flex items-center gap-3 rounded-2xl bg-accent px-4 py-4 text-white shadow-sm hover:bg-[#e11d48]"
+        className="mt-4 flex items-center gap-3 rounded-2xl bg-accent px-4 py-4 text-white shadow-sm hover:bg-[#9f1840]"
       >
         <span className="grid size-12 place-items-center rounded-2xl bg-white/15">
           <Headset className="size-6" />
