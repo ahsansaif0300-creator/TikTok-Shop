@@ -9,10 +9,9 @@ services:
     runtime: node
     plan: free
     region: oregon
-    repo: https://github.com/ahsansaif0300-creator/TikTok-Shop
     branch: cursor/tikitok-rebrand-host-7442
     autoDeploy: true
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: commit
     buildCommand: npm ci && npm run build:render
     startCommand: npm run start
     healthCheckPath: /welcome
@@ -20,7 +19,7 @@ services:
       - key: NODE_VERSION
         value: "20"
       - key: NODE_OPTIONS
-        value: --max-old-space-size=384
+        value: --max-old-space-size=460
       - key: HARBOR_REBUILD_ON_START
         value: "0"
       - key: HARBOR_WEBPACK_BUILD
