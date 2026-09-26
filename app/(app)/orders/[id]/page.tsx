@@ -12,6 +12,7 @@ import { createRefund } from "@/lib/actions/refunds";
 import { PickupDialog } from "@/components/pickup-dialog";
 import { ProductThumb } from "@/components/product-thumb";
 import { Button, Card, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
+import { orderProfitAmount } from "@/lib/order-economics";
 
 export default async function OrderDetailPage({
   params,
@@ -178,7 +179,7 @@ export default async function OrderDetailPage({
               label={`Platform fee (${(order.merchant.plan.commissionRate * 100).toFixed(0)}%)`}
               value={money(order.platformFee)}
             />
-            <Row label="Merchant profit" value={money(order.profit)} />
+            <Row label="Merchant profit" value={money(orderProfitAmount(order.total, order.cost))} />
           </Card>
           <Card className="p-5 text-sm">
             <h2 className="font-medium">Customer</h2>

@@ -51,6 +51,15 @@ export default async function StoreRecordDetailPage({
       {error === "cnic" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">ID number should be 5–20 digits or hyphens.</p>
       ) : null}
+      {error === "city" ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">City should be under 80 characters.</p>
+      ) : null}
+      {error === "phone" ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Phone should be 5–20 digits or + ( ).</p>
+      ) : null}
+      {error === "llc" ? (
+        <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">LLC code should be 4–20 letters or digits.</p>
+      ) : null}
       {error === "image" ? (
         <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">Upload a JPG, PNG, or WebP under 1.5 MB.</p>
       ) : null}
@@ -156,7 +165,13 @@ export default async function StoreRecordDetailPage({
               )}
             </div>
           </div>
-          <StoreIdentityForm merchantId={store.id} cnicNumber={store.cnicNumber} />
+          <StoreIdentityForm
+            merchantId={store.id}
+            cnicNumber={store.cnicNumber}
+            city={store.city}
+            phone={store.phone}
+            llcCode={store.referralCodeUsed}
+          />
         </Card>
         <Card className="p-5 xl:col-span-2">
           <h2 className="font-medium">Store Rating and Credit Score</h2>

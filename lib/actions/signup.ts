@@ -10,6 +10,7 @@ import { allocateStoreCode } from "@/lib/store-code";
 import { fileToDataUrl, idCardError, logoError } from "@/lib/logo";
 import { findOpsByReferralCode, isNumericLlcCode, normalizeReferralCode } from "@/lib/referral";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
+import { snapshotStores } from "@/lib/stores-persist";
 
 export async function signupMerchantAction(formData: FormData) {
   const storeName = String(formData.get("storeName") ?? "").trim();
@@ -148,6 +149,7 @@ export async function signupMerchantAction(formData: FormData) {
     });
   }
 
+  await snapshotStores(prisma);
   await prisma.auditLog.create({
     data: {
       userId: user.id,

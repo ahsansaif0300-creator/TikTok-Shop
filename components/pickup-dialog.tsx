@@ -16,7 +16,7 @@ export function PickupDialog({
 }) {
   return (
     <details className="relative">
-      <summary className="inline-flex cursor-pointer list-none items-center justify-center rounded-xl bg-accent px-3.5 py-2 text-sm font-medium text-white hover:bg-[#e11d48] [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex cursor-pointer list-none items-center justify-center rounded-xl bg-accent px-3.5 py-2 text-sm font-medium text-white hover:bg-[#9f1840] [&::-webkit-details-marker]:hidden">
         Click to Pick Up
       </summary>
       <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4">

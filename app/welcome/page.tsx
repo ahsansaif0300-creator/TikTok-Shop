@@ -11,7 +11,7 @@ export default function WelcomePage() {
   return (
     <AuthFrame
       title={BRAND_NAME}
-      subtitle="Real shops, orders, and bank payouts. Pick the door that matches your account — they are separate logins, not one shared form."
+      subtitle="Real shops, orders, and bank payouts for your own stores. Independent platform — not TikTok. Pick the door that matches your account."
       footer={
         <>
           Public shop pages live at <span className="font-mono text-white/90">/s/your-shop</span>
@@ -22,7 +22,7 @@ export default function WelcomePage() {
       <div className="mt-6 space-y-3">
         <Link
           href="/signup"
-          className="grid h-11 place-items-center rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#e11d48]"
+          className="grid h-11 place-items-center rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#9f1840]"
         >
           Create a store
         </Link>

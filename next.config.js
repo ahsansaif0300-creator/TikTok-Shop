@@ -22,6 +22,18 @@ function extraAllowedOrigins() {
     .filter(Boolean);
 }
 
+function hostFromAppBase() {
+  const raw = process.env.APP_BASE_URL?.trim();
+  if (!raw) return [];
+  try {
+    const url = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    const host = url.hostname.replace(/^www\./, "");
+    return host ? [host, `www.${host}`] : [];
+  } catch {
+    return [];
+  }
+}
+
 const shopBase = process.env.SHOP_BASE_DOMAIN?.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 const previewHosts = [
@@ -32,8 +44,12 @@ const previewHosts = [
   "*.hstgr.io",
   "*.hstgr.cloud",
   "*.hostinger.com",
+  "*.onrender.com",
+  "*.railway.app",
+  "*.up.railway.app",
   "*.local",
   ...(shopBase ? [shopBase, `*.${shopBase}`] : []),
+  ...hostFromAppBase(),
   ...lanIPv4s(),
   ...extraAllowedOrigins(),
 ];

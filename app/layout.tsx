@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { BRAND_NAME } from "@/lib/brand-name";
+import { BRAND_DISCLAIMER, BRAND_NAME } from "@/lib/brand-name";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: BRAND_NAME,
-  description: "Multi-merchant commerce operations dashboard",
+  description: `Multi-merchant commerce operations dashboard. ${BRAND_DISCLAIMER}`,
   icons: {
     icon: [{ url: "/brand-mark.webp", type: "image/webp" }, { url: "/icon.png" }],
     apple: "/apple-icon.png",

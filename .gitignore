@@ -46,6 +46,13 @@ yarn-error.log*
 /data/ops-users.json
 /data/store-records.json
 /prisma/ops-users.json
+store-records.json
+ops-users.json
+!/persist/
+!/persist/**
+**/.harbor-commerce/
+/data/hostinger-import.sqlite
+/prisma/hostinger-import.sqlite
 
 # private support uploads (served only through authenticated routes)
 /data/support

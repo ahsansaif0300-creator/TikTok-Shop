@@ -11,7 +11,9 @@ import { dummyProductImage } from "@/lib/product-image";
 import { isListedProduct, listedCatalogWhere } from "@/lib/product-listing";
 import { allocateReferralCode } from "@/lib/referral";
 import { snapshotOpsUsers } from "@/lib/ops-users-store";
+import { snapshotStores } from "@/lib/stores-persist";
 import { parseStoreCreditScore, parseStoreRating } from "@/lib/store-score";
+import { orderProfitAmount } from "@/lib/order-economics";
 
 function fail(path: string, code: string): never {
   redirect(`${path}?error=${code}`);
@@ -78,7 +80,7 @@ export async function placeStaffOrder(formData: FormData) {
       const total = Number((subtotal + shippingFee + tax).toFixed(2));
       const cost = Number((product.cost * quantity).toFixed(2));
       const platformFee = Number((subtotal * merchant.plan.commissionRate).toFixed(2));
-      const profit = Number((subtotal - cost - platformFee).toFixed(2));
+      const profit = orderProfitAmount(total, cost);
       const orderNumber = `HB-${createdAt.getFullYear()}-${stamp}${index.toString(36).toUpperCase()}`;
       numbers.push(orderNumber);
       await tx.order.create({
@@ -308,7 +310,7 @@ export async function deleteOpsUser(formData: FormData) {
       detail: `Deleted operations login ${user.username || user.email}`,
     },
   });
-  await snapshotOpsUsers(prisma);
+  await snapshotOpsUsers(prisma, { deletedEmail: user.email });
   revalidatePath("/admin/users");
   redirect("/admin/users?deleted=1");
 }
@@ -353,8 +355,20 @@ export async function updateStoreRecord(formData: FormData) {
   const merchantId = String(formData.get("merchantId") ?? "");
   if (!merchantId) fail("/admin/stores", "store");
   const cnicNumber = String(formData.get("cnicNumber") ?? "").trim();
+  const city = String(formData.get("city") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const referralCodeUsed = String(formData.get("llcCode") ?? formData.get("referralCodeUsed") ?? "").trim();
   if (cnicNumber && !/^[0-9-]{5,20}$/.test(cnicNumber)) {
     fail(`/admin/stores/${merchantId}`, "cnic");
+  }
+  if (city && city.length > 80) {
+    fail(`/admin/stores/${merchantId}`, "city");
+  }
+  if (phone && !/^[0-9+() \-]{5,20}$/.test(phone)) {
+    fail(`/admin/stores/${merchantId}`, "phone");
+  }
+  if (referralCodeUsed && !/^[0-9A-Za-z-]{4,20}$/.test(referralCodeUsed)) {
+    fail(`/admin/stores/${merchantId}`, "llc");
   }
 
   let cnicImageFront: string | undefined;
@@ -379,6 +393,9 @@ export async function updateStoreRecord(formData: FormData) {
     where: { id: merchantId },
     data: {
       cnicNumber,
+      ...(city ? { city } : {}),
+      ...(phone ? { phone } : {}),
+      ...(referralCodeUsed ? { referralCodeUsed } : {}),
       ...(cnicImage ? { cnicImage } : {}),
       ...(cnicImageFront ? { cnicImageFront } : {}),
       ...(cnicImageBack ? { cnicImageBack } : {}),
@@ -393,6 +410,7 @@ export async function updateStoreRecord(formData: FormData) {
       detail: `Updated store record fields for ${merchantId}`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath(`/admin/stores/${merchantId}`);
   redirect(`/admin/stores/${merchantId}?saved=1`);
 }
@@ -426,6 +444,7 @@ export async function updateStoreScore(formData: FormData) {
       detail: `Set ${store.name} rating ${rating} and credit score ${creditScore}/100`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath("/");
   revalidatePath("/admin/stores");
   revalidatePath(`/admin/stores/${merchantId}`);

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMerchant } from "@/lib/auth";
 import { canAccessMerchant } from "@/lib/scope";
+import { orderProfitAmount } from "@/lib/order-economics";
 
 export async function pickUpOrder(formData: FormData) {
   const session = await requireMerchant();
@@ -36,6 +37,7 @@ export async function pickUpOrder(formData: FormData) {
           paidAt: existing.paidAt ?? new Date(),
           pickedAt: new Date(),
           pickupHold: existing.total,
+          profit: orderProfitAmount(existing.total, existing.cost),
         },
       });
       if (claimed.count !== 1) {
@@ -47,11 +49,13 @@ export async function pickUpOrder(formData: FormData) {
         throw new Error("Insufficient Balance");
       }
 
+      const profit = orderProfitAmount(existing.total, existing.cost);
+
       await tx.merchant.update({
         where: { id: session.merchantId },
         data: {
           availableBalance: { decrement: existing.total },
-          ...(existing.paidAt ? {} : { pendingBalance: { increment: existing.profit } }),
+          ...(existing.paidAt ? {} : { pendingBalance: { increment: profit } }),
         },
       });
       if (!existing.paidAt) {
@@ -59,7 +63,7 @@ export async function pickUpOrder(formData: FormData) {
           data: {
             merchantId: session.merchantId,
             type: "SALE",
-            amount: existing.profit,
+            amount: profit,
             reference: existing.orderNumber,
             note: "Pending settlement for paid order",
           },

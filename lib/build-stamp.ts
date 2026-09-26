@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 
-export const RELEASE_LABEL = "tiktok-shop-hostinger-build";
+export const RELEASE_LABEL = "tikitok-stores-persist";
 
 export function buildStamp() {
   try {
