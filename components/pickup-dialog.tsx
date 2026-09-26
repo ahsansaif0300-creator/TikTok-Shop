@@ -7,11 +7,13 @@ export function PickupDialog({
   orderId,
   orderNumber,
   amountLabel,
+  totalLabel,
   cancelHref = "/orders",
 }: {
   orderId: string;
   orderNumber: string;
   amountLabel: string;
+  totalLabel?: string;
   cancelHref?: string;
 }) {
   return (
@@ -25,8 +27,9 @@ export function PickupDialog({
           <div>
             <h2 className="text-lg font-semibold text-ink">Confirm pickup</h2>
             <p className="mt-1 text-sm text-muted">
-              Pick up {orderNumber} for {amountLabel}. Enter your payment password to continue. The password stays
-              hidden.
+              Pick up {orderNumber} at cost price {amountLabel}
+              {totalLabel ? `. Total price ${totalLabel} is only for viewing` : ""}. Enter your payment
+              password to continue. The password stays hidden.
             </p>
           </div>
           <label className="block space-y-1.5">

@@ -18,7 +18,7 @@ const TABS = [
 ];
 
 const ERRORS: Record<string, string> = {
-  balance: "Insufficient Balance",
+  balance: "Insufficient Balance. Pickup is charged at Cost Price, not Total Price.",
   paypass: "Payment password is incorrect.",
   picked: "That order was already picked up.",
   invalid: "That order is not available to pick up.",

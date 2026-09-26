@@ -68,7 +68,8 @@ export default async function OrderDetailPage({
           <PickupDialog
             orderId={order.id}
             orderNumber={order.orderNumber}
-            amountLabel={money(order.total)}
+            amountLabel={money(order.cost)}
+            totalLabel={money(order.total)}
             cancelHref={`/orders/${order.id}`}
           />
         ) : null}
@@ -172,8 +173,8 @@ export default async function OrderDetailPage({
             <Row label="Subtotal" value={money(order.subtotal)} />
             <Row label="Shipping" value={money(order.shippingFee)} />
             <Row label="Tax" value={money(order.tax)} />
-            <Row label="Customer paid" value={money(order.total)} />
-            <Row label="Cost of goods" value={money(order.cost)} />
+            <Row label="Total Price (view only)" value={money(order.total)} />
+            <Row label="Cost Price (pickup)" value={money(order.cost)} />
             <Row
               label={`Platform fee (${(order.merchant.plan.commissionRate * 100).toFixed(0)}%)`}
               value={money(order.platformFee)}

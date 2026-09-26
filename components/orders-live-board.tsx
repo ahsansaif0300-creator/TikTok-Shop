@@ -103,17 +103,24 @@ export function OrdersLiveBoard({
                   <div className="rounded-xl bg-soft px-3 py-2">
                     <dt className="text-[11px] uppercase tracking-wide text-muted">Cost Price</dt>
                     <dd className="mt-1 font-semibold text-ink">{money(order.cost)}</dd>
+                    <p className="mt-1 text-[11px] text-muted">Charged on pickup</p>
                   </div>
                   <div className="rounded-xl bg-soft px-3 py-2">
                     <dt className="text-[11px] uppercase tracking-wide text-muted">Total Price</dt>
                     <dd className="mt-1 font-semibold text-ink">{money(order.total)}</dd>
+                    <p className="mt-1 text-[11px] text-muted">View only</p>
                   </div>
                   <div className="rounded-xl bg-soft px-3 py-2">
                     <dt className="text-[11px] uppercase tracking-wide text-muted">Profit Amount</dt>
                     <dd className="mt-1 font-semibold text-ink">{money(order.profit)}</dd>
                   </div>
                 </dl>
-                <PickupDialog orderId={order.id} orderNumber={order.orderNumber} amountLabel={money(order.total)} />
+                <PickupDialog
+                  orderId={order.id}
+                  orderNumber={order.orderNumber}
+                  amountLabel={money(order.cost)}
+                  totalLabel={money(order.total)}
+                />
               </div>
             </Card>
           ))}
