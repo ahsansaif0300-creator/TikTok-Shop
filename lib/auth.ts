@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { LOGIN } from "@/lib/access";
 import { applyRuntimeEnv } from "@/lib/runtime-env";
+import { displayStaffName } from "@/lib/staff-display";
 
 export type SessionUser = {
   userId: string;
@@ -32,7 +33,8 @@ function secret() {
 }
 
 export async function createSession(user: SessionUser) {
-  const token = await new SignJWT(user)
+  const session = { ...user, name: displayStaffName(user) };
+  const token = await new SignJWT(session)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -57,13 +59,14 @@ export async function readSessionFromToken(token?: string | null): Promise<Sessi
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
-    return {
+    const user = {
       userId: String(payload.userId),
       email: String(payload.email),
       name: String(payload.name),
       role: payload.role as Role,
       merchantId: payload.merchantId ? String(payload.merchantId) : null,
     };
+    return { ...user, name: displayStaffName(user) };
   } catch {
     return null;
   }

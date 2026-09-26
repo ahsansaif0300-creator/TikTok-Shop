@@ -1,0 +1,94 @@
+name: Persist users and stores
+
+on:
+  schedule:
+    - cron: "* * * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [harbor-persist]
+
+jobs:
+  persist:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use persist branch
+        run: |
+          git fetch origin harbor-persist || true
+          if git show-ref --verify --quiet refs/remotes/origin/harbor-persist; then
+            git checkout harbor-persist
+          else
+            git checkout --orphan harbor-persist
+            git rm -rf . || true
+            mkdir -p persist
+            git commit --allow-empty -m "Start persist branch"
+          fi
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Checkout persist script from default branch
+        uses: actions/checkout@v4
+        with:
+          path: _harbor_src
+          sparse-checkout: |
+            scripts/harbor-persist-sync.mjs
+            scripts/harbor-heal-live-stores.py
+            persist/shops.json
+            persist/seen-stores.json
+            prisma/recovered-stores.json
+            scripts/harbor-keep-awake.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Wake live site
+        env:
+          HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
+        run: |
+          BASE="${HARBOR_PERSIST_LIVE_URL:-https://tikitok-shop.onrender.com}"
+          BASE="${BASE%/}"
+          for i in 1 2 3 4 5 6 7 8; do
+            code=$(curl -sS -m 60 -o /dev/null -w "%{http_code}" "$BASE/welcome" || true)
+            echo "wake $i $code"
+            if echo "$code" | grep -qE '200|301|302|303|307|308'; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "site still waking; heal will retry"
+
+      - name: Recreate missing live stores
+        env:
+          HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
+          HARBOR_PERSIST_OUT: ${{ github.workspace }}/_harbor_src
+        run: python3 _harbor_src/scripts/harbor-heal-live-stores.py
+
+      - name: Export live records
+        continue-on-error: true
+        env:
+          HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
+          HARBOR_PERSIST_ADMIN_EMAIL: ${{ secrets.HARBOR_PERSIST_ADMIN_EMAIL }}
+          HARBOR_PERSIST_ADMIN_PASSWORD: ${{ secrets.HARBOR_PERSIST_ADMIN_PASSWORD }}
+          HARBOR_PERSIST_SECRET: ${{ secrets.HARBOR_PERSIST_SECRET }}
+          HARBOR_PERSIST_OUT: ${{ github.workspace }}
+        run: node _harbor_src/scripts/harbor-persist-sync.mjs --heal
+
+      - name: Commit persist snapshot
+        run: |
+          rm -rf _harbor_src
+          git config user.name "harbor-persist"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add persist/backend-users.json persist/shops.json
+          if git diff --cached --quiet; then
+            echo "No persist changes"
+            exit 0
+          fi
+          git commit -m "Save live users and stores"
+          git push origin harbor-persist

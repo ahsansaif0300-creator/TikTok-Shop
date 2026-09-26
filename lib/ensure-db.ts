@@ -1,4 +1,4 @@
-import { existingSqliteFiles, installDemoDb, repoRoot } from "../scripts/copy-demo-db.mjs";
+import { existingSqliteFiles, repoRoot, resolveLiveSqlite } from "../scripts/copy-demo-db.mjs";
 import { applyRuntimeEnv } from "./runtime-env";
 import { getPrisma, resetPrisma } from "./db";
 import { STORE_CATEGORIES, categorySlug } from "./store-categories";
@@ -8,6 +8,9 @@ import { BRAND_NAME } from "./brand-name";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING, STORE_RATING_MAX } from "./store-score";
 import { bumpGrowthCatalogCap, syncDistributionCatalog } from "./sync-distribution-catalog";
 import { restoreOpsUsers, snapshotOpsUsers } from "./ops-users-store";
+import { restoreStores, snapshotStores } from "./stores-persist";
+import { pullRemotePersist } from "./remote-persist";
+import { SUPER_ADMIN_PUBLIC_NAME } from "./staff-display";
 
 async function backfill() {
   const prisma = getPrisma();
@@ -178,11 +181,33 @@ async function backfill() {
     const name = await prisma.setting.findUnique({ where: { key: "storeName" } });
     if (!name) {
       await prisma.setting.create({ data: { key: "storeName", value: BRAND_NAME } });
-    } else if (name.value === "Harbor Commerce" || name.value === "TikiTok Shop") {
+    } else if (name.value === "Harbor Commerce" || name.value === "TikTok Shop") {
       await prisma.setting.update({ where: { key: "storeName" }, data: { value: BRAND_NAME } });
     }
   } catch (error) {
     console.warn("[harbor] storeName backfill skipped", error);
+  }
+  try {
+    await prisma.user.updateMany({
+      where: {
+        OR: [{ email: "oscar.d@example.net" }, { role: "SUPER_ADMIN", name: "Amina Shah" }],
+      },
+      data: { name: SUPER_ADMIN_PUBLIC_NAME },
+    });
+  } catch (error) {
+    console.warn("[harbor] super admin name backfill skipped", error);
+  }
+  try {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "Order" SET profit = ROUND(total - cost, 2) WHERE paidAt IS NULL`,
+    );
+  } catch (error) {
+    console.warn("[harbor] order profit backfill skipped", error);
+  }
+  try {
+    await pullRemotePersist();
+  } catch (error) {
+    console.warn("[harbor] remote persist pull skipped", error);
   }
   try {
     const restored = await restoreOpsUsers(prisma);
@@ -190,6 +215,13 @@ async function backfill() {
     await snapshotOpsUsers(prisma);
   } catch (error) {
     console.warn("[harbor] ops user snapshot skipped", error);
+  }
+  try {
+    const restoredStores = await restoreStores(prisma);
+    if (restoredStores > 0) console.log(`[harbor] Restored ${restoredStores} stores`);
+    await snapshotStores(prisma);
+  } catch (error) {
+    console.warn("[harbor] store snapshot skipped", error);
   }
 }
 
@@ -232,6 +264,43 @@ function scheduleBackfill() {
 let dbReady = false;
 let backfillStarted = false;
 let backfillDone = false;
+let persistReady = false;
+let persistInflight: Promise<void> | null = null;
+
+async function restorePersistedRecordsNow() {
+  if (persistReady) return;
+  if (persistInflight) {
+    await persistInflight;
+    return;
+  }
+  persistInflight = (async () => {
+    const prisma = getPrisma();
+    try {
+      await pullRemotePersist();
+    } catch (error) {
+      console.warn("[harbor] remote persist pull skipped", error);
+    }
+    let ok = true;
+    try {
+      const restored = await restoreOpsUsers(prisma);
+      if (restored > 0) console.log(`[harbor] Restored ${restored} Normal Backend users`);
+    } catch (error) {
+      ok = false;
+      console.warn("[harbor] ops user restore skipped", error);
+    }
+    try {
+      const restoredStores = await restoreStores(prisma);
+      if (restoredStores > 0) console.log(`[harbor] Restored ${restoredStores} stores`);
+    } catch (error) {
+      ok = false;
+      console.warn("[harbor] store restore skipped", error);
+    }
+    persistReady = ok;
+  })().finally(() => {
+    persistInflight = null;
+  });
+  await persistInflight;
+}
 
 export async function ensureDatabase() {
   const root = repoRoot();
@@ -240,6 +309,7 @@ export async function ensureDatabase() {
   if (dbReady) {
     try {
       if (await peekAnyUser()) {
+        await restorePersistedRecordsNow();
         scheduleBackfill();
         return;
       }
@@ -252,9 +322,9 @@ export async function ensureDatabase() {
   const tried = new Set<string>();
   const queue: string[] = [];
   try {
-    queue.push(installDemoDb(root));
+    queue.push(resolveLiveSqlite(root));
   } catch (error) {
-    console.warn("[harbor] installDemoDb skipped", error);
+    console.warn("[harbor] resolveLiveSqlite skipped", error);
   }
   for (const file of existingSqliteFiles(root)) queue.push(file);
 
@@ -265,6 +335,7 @@ export async function ensureDatabase() {
       openSqlite(dest);
       if (await peekAnyUser()) {
         dbReady = true;
+        await restorePersistedRecordsNow();
         scheduleBackfill();
         return;
       }
@@ -274,10 +345,11 @@ export async function ensureDatabase() {
   }
 
   try {
-    const restored = installDemoDb(root, { overwrite: true });
+    const restored = resolveLiveSqlite(root);
     openSqlite(restored);
     if (await peekAnyUser()) {
       dbReady = true;
+      await restorePersistedRecordsNow();
       scheduleBackfill();
       return;
     }
@@ -285,5 +357,5 @@ export async function ensureDatabase() {
     console.warn("[harbor] packed SQLite restore failed", error);
   }
 
-  throw new Error("TikTok Shop could not open a readable SQLite database with a login user.");
+  throw new Error(`${BRAND_NAME} could not open a readable SQLite database with a login user.`);
 }

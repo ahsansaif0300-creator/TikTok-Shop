@@ -1,0 +1,24 @@
+name: Render build
+
+on:
+  push:
+    branches:
+      - cursor/tikitok-rebrand-host-7442
+      - cursor/stores-survive-wake-7442
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:render
+        env:
+          AUTH_SECRET: ci-build-secret
+          DATABASE_URL: file:./prisma/demo.sqlite

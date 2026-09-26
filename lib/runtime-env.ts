@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import path from "node:path";
+import { resolveLiveSqlite } from "../scripts/copy-demo-db.mjs";
 
 function sqliteFileFromUrl(url: string) {
   const rest = url.replace(/^file:/, "");
@@ -10,7 +11,20 @@ export function applyRuntimeEnv(root = process.cwd()) {
   const raw = (process.env.DATABASE_URL || "file:./dev.db").trim();
   if (raw.startsWith("file:")) {
     let filePath = sqliteFileFromUrl(raw);
-    if (!path.isAbsolute(filePath)) {
+    const alreadyLive = path.isAbsolute(filePath) && filePath.includes("harbor-commerce.sqlite");
+    if (!alreadyLive && process.env.HARBOR_USE_DEPLOY_DB !== "1") {
+      try {
+        filePath = resolveLiveSqlite(root);
+      } catch {
+        if (!path.isAbsolute(filePath)) {
+          const normalized = filePath.replace(/^\.\//, "");
+          filePath =
+            normalized === "dev.db"
+              ? path.join(root, "prisma", "dev.db")
+              : path.resolve(root, normalized);
+        }
+      }
+    } else if (!path.isAbsolute(filePath)) {
       const normalized = filePath.replace(/^\.\//, "");
       filePath =
         normalized === "dev.db"

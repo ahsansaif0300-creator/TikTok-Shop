@@ -1,0 +1,30 @@
+{
+  "updatedAt": "2026-09-24T14:19:21.421Z",
+  "deletedEmails": [],
+  "users": [
+    {
+      "email": "sarah.b@example.net",
+      "username": "harborops",
+      "name": "Jonah Reed",
+      "passwordHash": "$2b$10$A5tv8b4m1aHzr5oSooO.9eAH2NIGEzVtuYHZ8HouSg.9QusoTxkJy",
+      "referralCode": "10000001",
+      "createdAt": "2026-09-15T19:03:17.596Z"
+    },
+    {
+      "email": "keepuser1@ops.harbor.local",
+      "username": "keepuser1",
+      "name": "keepuser1",
+      "passwordHash": "$2b$10$kf6VD7TW9zUQhDUyYCOuCuRvYyuCU1Kn0TkO/RRuhFzYAOUW82MjO",
+      "referralCode": "82222679",
+      "createdAt": "2026-09-20T09:41:46.331Z"
+    },
+    {
+      "email": "keepuser2@ops.harbor.local",
+      "username": "keepuser2",
+      "name": "keepuser2",
+      "passwordHash": "$2b$10$XTaZeqGcG/G4agDBpwdAFOhU6ONGqciPGvIFWINDAw6LC3N6o.pOq",
+      "referralCode": "59828358",
+      "createdAt": "2026-09-20T09:43:21.775Z"
+    }
+  ]
+}
