@@ -2,7 +2,7 @@ name: Persist users and stores
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/2 * * * *"
   workflow_dispatch:
   repository_dispatch:
     types: [harbor-persist]

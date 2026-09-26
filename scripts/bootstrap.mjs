@@ -54,3 +54,9 @@ try {
   );
   console.log("SQLite schema is current.");
 }
+
+{
+  const tsxBin = require.resolve("tsx/dist/cli.mjs");
+  console.log("Restoring packed stores and users so they cannot vanish on boot…");
+  run(tsxBin, [path.join(root, "scripts", "restore-live-records.ts")]);
+}

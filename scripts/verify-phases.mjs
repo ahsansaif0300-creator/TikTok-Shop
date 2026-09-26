@@ -1512,6 +1512,9 @@ async function phase7Static() {
     assert(read("prisma/recovered-stores.json").includes("harbor-review-shop"), "Recovered snapshot dropped review stores");
     assert(read("prisma/recovered-stores.json").includes("ali-collections"), "Recovered snapshot dropped Ali Collections");
     assert(read("prisma/recovered-stores.json").includes("ak-shopping-store"), "Recovered snapshot dropped AK shopping store");
+    assert(exists("scripts/restore-live-records.ts"), "Boot restore script missing");
+    assert(read("scripts/bootstrap.mjs").includes("restore-live-records.ts"), "Boot must restore packed stores");
+    assert(read(".github/workflows/harbor-persist.yml").includes("*/2 * * * *"), "Live heal schedule must run every 2 minutes");
     assert(exists("scripts/harbor-heal-live-stores.py"), "Live store heal script missing");
     assert(read("scripts/copy-demo-db.mjs").includes("storeRecordsReadPaths"), "Store restore must read the packed recovery snapshot");
     assert(read("scripts/copy-demo-db.mjs").includes("hostinger-import.sqlite"), "Hostinger SQLite import path missing");
