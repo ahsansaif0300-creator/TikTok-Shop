@@ -151,13 +151,23 @@ export function packedRecoveredStoresPath(root = repoRoot()) {
   return path.join(root, "prisma", "recovered-stores.json");
 }
 
+export function packedShopsPath(root = repoRoot()) {
+  return path.join(root, "persist", "shops.json");
+}
+
 export function packedRecoveredOpsUsersPath(root = repoRoot()) {
   return path.join(root, "prisma", "recovered-ops-users.json");
 }
 
 /** Read packed recovery first, then live snapshots (later files win on the same slug). */
 export function storeRecordsReadPaths(root = process.cwd()) {
-  return [...new Set([packedRecoveredStoresPath(root), ...storeRecordsSnapshotPaths(root)])];
+  return [
+    ...new Set([
+      packedRecoveredStoresPath(root),
+      packedShopsPath(root),
+      ...storeRecordsSnapshotPaths(root),
+    ]),
+  ];
 }
 
 /** Packed recovery first, then live snapshots (later files win on the same email). */

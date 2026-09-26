@@ -71,6 +71,13 @@ const CLIENT_STORES: ClientStore[] = [
     cnicNumber: "35202-1234567-1",
     referralCodeUsed: "19935858",
   },
+  {
+    name: "Stay Check Store",
+    slug: "stay-check-store",
+    email: "stay.check.7442@gmail.com",
+    storeCode: "STORE109",
+    contactName: "Stay Check",
+  },
 ];
 
 const now = new Date().toISOString();
@@ -140,6 +147,23 @@ async function main() {
     stores: [...bySlug.values()].sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)),
   };
   writeFileSync(packed, `${JSON.stringify(payload)}\n`);
+  const shopsFile = path.join(path.resolve(import.meta.dirname, ".."), "persist", "shops.json");
+  try {
+    const shops = JSON.parse(await import("node:fs").then((fs) => fs.readFileSync(shopsFile, "utf8")));
+    const shopBySlug = new Map((shops.stores || []).map((store: { slug: string }) => [store.slug, store]));
+    for (const store of payload.stores.filter((row: { slug: string }) =>
+      CLIENT_STORES.some((client) => client.slug === row.slug),
+    )) {
+      const previous = shopBySlug.get(store.slug) || {};
+      shopBySlug.set(store.slug, { ...previous, ...store });
+    }
+    writeFileSync(
+      shopsFile,
+      `${JSON.stringify({ updatedAt: now, stores: [...shopBySlug.values()].sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)) })}\n`,
+    );
+  } catch (error) {
+    console.warn("[harbor] persist/shops.json pack skipped", error);
+  }
 
   const demo = path.join(path.resolve(import.meta.dirname, ".."), "prisma", "demo.sqlite");
   process.env.HARBOR_USE_DEPLOY_DB = "1";

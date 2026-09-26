@@ -27,6 +27,7 @@ const CLIENT = [
   "royal-lucky-store",
   "luqman-humi-store",
   "ola-here",
+  "stay-check-store",
 ];
 
 try {

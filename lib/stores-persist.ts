@@ -85,6 +85,34 @@ function parseSnapshot(raw: string): StoreSnapshot | null {
   }
 }
 
+function mergeStoreSnap(previous: StoreSnap, incoming: StoreSnap): StoreSnap {
+  const prevUsers = previous.users ?? [];
+  const nextUsers = incoming.users ?? [];
+  const prevHasHash = prevUsers.some((user) => Boolean(user.passwordHash));
+  const nextHasHash = nextUsers.some((user) => Boolean(user.passwordHash));
+  const users = nextHasHash || !prevHasHash ? (nextUsers.length ? nextUsers : prevUsers) : prevUsers;
+  const incomingCityIsDefault = !incoming.city || incoming.city === incoming.country;
+  const previousCityUseful = Boolean(previous.city && previous.city !== previous.country);
+  return {
+    ...previous,
+    ...incoming,
+    users,
+    applications: incoming.applications?.length ? incoming.applications : previous.applications,
+    phone: incoming.phone || previous.phone,
+    city: incomingCityIsDefault && previousCityUseful ? previous.city : incoming.city || previous.city,
+    cnicNumber: incoming.cnicNumber || previous.cnicNumber,
+    cnicImage: incoming.cnicImage || previous.cnicImage,
+    cnicImageFront: incoming.cnicImageFront || previous.cnicImageFront,
+    cnicImageBack: incoming.cnicImageBack || previous.cnicImageBack,
+    referralCodeUsed: incoming.referralCodeUsed || previous.referralCodeUsed,
+    storeCode: incoming.storeCode || previous.storeCode,
+    availableBalance:
+      (incoming.availableBalance ?? 0) > 0 ? incoming.availableBalance : previous.availableBalance,
+    pendingBalance: (incoming.pendingBalance ?? 0) > 0 ? incoming.pendingBalance : previous.pendingBalance,
+    email: incoming.email || previous.email,
+  };
+}
+
 function readSnapshotBundle(): StoreSnapshot {
   const bySlug = new Map<string, StoreSnap>();
   const deleted = new Set<string>();
@@ -96,7 +124,8 @@ function readSnapshotBundle(): StoreSnapshot {
       if (!parsed) continue;
       for (const slug of parsed.deletedSlugs ?? []) deleted.add(slug);
       for (const store of parsed.stores) {
-        bySlug.set(store.slug, store);
+        const previous = bySlug.get(store.slug);
+        bySlug.set(store.slug, previous ? mergeStoreSnap(previous, store) : store);
       }
       for (const application of parsed.orphanApplications ?? []) {
         orphans.set(`${application.email}::${application.businessName}`, application);

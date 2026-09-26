@@ -23,6 +23,7 @@ slugs = {
     "royal-lucky-store",
     "luqman-humi-store",
     "ola-here",
+    "stay-check-store",
 }
 for rel in ("persist/seen-stores.json", "persist/shops.json"):
     path = root / rel

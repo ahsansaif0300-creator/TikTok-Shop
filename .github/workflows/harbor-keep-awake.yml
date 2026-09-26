@@ -20,3 +20,7 @@ jobs:
             echo "wake $i $code"
             sleep 12
           done
+          for slug in ali-collections stay-check-store butt-store; do
+            code=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" "$BASE/s/$slug" || true)
+            echo "shop $slug $code"
+          done

@@ -29,6 +29,7 @@ CLIENT_SLUGS = {
     "royal-lucky-store",
     "luqman-humi-store",
     "ola-here",
+    "stay-check-store",
 }
 DEMO_SLUGS = {
     "atlas-fitness",

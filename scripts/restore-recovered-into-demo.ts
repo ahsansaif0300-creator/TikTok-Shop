@@ -21,7 +21,7 @@ async function main() {
   const names = (await prisma.merchant.findMany({ select: { name: true, slug: true, status: true }, orderBy: { name: "asc" } }))
     .map((row) => `${row.name} (${row.slug}/${row.status})`);
   console.log(JSON.stringify({ before, restored, after, names }, null, 2));
-  if (after < 10) throw new Error(`demo.sqlite should have 10 stores after recovery, found ${after}`);
+  if (after < 17) throw new Error(`demo.sqlite should have 17 stores after recovery, found ${after}`);
 }
 
 main()
