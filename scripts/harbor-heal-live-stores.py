@@ -85,8 +85,12 @@ def find_action(html, needle, required=True):
     return None
 
 
-def parse_money(html, label="Available"):
-    match = re.search(rf"{label}[^$]*\$([0-9,]+\.[0-9]{{2}})", html)
+def parse_selected_available(html):
+    """Read only the selected store form, never the first list card."""
+    match = re.search(
+        r"Available(?:<!-- -->|\s)*\$([0-9,]+\.[0-9]{2})(?:<!-- -->|\s)* · Pending",
+        html,
+    )
     if not match:
         return None
     return float(match.group(1).replace(",", ""))
@@ -257,7 +261,10 @@ def restore_funds(store, mid):
     if want <= 0:
         return
     page = curl(["-L", f"{BASE}/admin/funds?merchantId={mid}"], f"/tmp/heal-funds-{mid}.html")
-    live = parse_money(page, "Available")
+    if store["name"] not in page or f'name="merchantId" value="{mid}"' not in page:
+        print("funds page not selected", store["name"])
+        return
+    live = parse_selected_available(page)
     if live is None:
         print("funds parse failed", store["name"])
         return
@@ -289,7 +296,7 @@ def restore_funds(store, mid):
         ],
         f"/tmp/heal-funds-post-{mid}.html",
     )
-    after = parse_money(result, "Available")
+    after = parse_selected_available(result)
     print("funds after", store["name"], after)
 
 
@@ -298,11 +305,9 @@ def restore_identity(store, mid):
     if "Sign in" in page and "ID number" not in page and "Registered information" not in page:
         print("identity page missing", store["name"])
         return
-    action = find_action(page, "cnicNumber", required=False) or find_action(
-        page, "ID number", required=False
-    )
+    action = find_action(page, "cnicNumber", required=False)
     if not action:
-        print("identity no form", store["name"])
+        print("identity no server form", store["name"])
         return
     city = store.get("city") or ""
     phone = store.get("phone") or ""
@@ -385,7 +390,7 @@ def main():
         if not mid or want <= 0:
             continue
         page = curl(["-L", f"{BASE}/admin/funds?merchantId={mid}"], f"/tmp/heal-funds-check-{mid}.html")
-        live = parse_money(page, "Available")
+        live = parse_selected_available(page)
         print("funds check", store["name"], live, "want", want)
         if live is None or live + 0.001 < want:
             funds_ok = False
