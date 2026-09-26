@@ -399,6 +399,9 @@ export async function restoreStores(prisma: PrismaClient) {
         cnicImageFront: true,
         cnicImageBack: true,
         referralCodeUsed: true,
+        storeCode: true,
+        availableBalance: true,
+        pendingBalance: true,
       },
     });
     if (existing) {
@@ -411,6 +414,9 @@ export async function restoreStores(prisma: PrismaClient) {
         cnicImageFront?: string;
         cnicImageBack?: string;
         referralCodeUsed?: string;
+        storeCode?: string;
+        availableBalance?: number;
+        pendingBalance?: number;
         status?: "ACTIVE" | "PENDING" | "SUSPENDED";
       } = {};
       if (!existing.phone && row.phone) patch.phone = row.phone;
@@ -425,6 +431,14 @@ export async function restoreStores(prisma: PrismaClient) {
       }
       if (!existing.cnicImageBack && row.cnicImageBack) patch.cnicImageBack = row.cnicImageBack;
       if (!existing.referralCodeUsed && row.referralCodeUsed) patch.referralCodeUsed = row.referralCodeUsed;
+      if (!existing.storeCode && row.storeCode) patch.storeCode = row.storeCode;
+      // Fill recovered funds only when the live row is empty. Never increment on every boot.
+      if ((existing.availableBalance ?? 0) <= 0 && (row.availableBalance ?? 0) > 0) {
+        patch.availableBalance = row.availableBalance;
+      }
+      if ((existing.pendingBalance ?? 0) <= 0 && (row.pendingBalance ?? 0) > 0) {
+        patch.pendingBalance = row.pendingBalance;
+      }
       if (existing.status === "PENDING" && row.status === "ACTIVE") patch.status = "ACTIVE";
       if (Object.keys(patch).length > 0) {
         await prisma.merchant.update({ where: { id: existing.id }, data: patch });

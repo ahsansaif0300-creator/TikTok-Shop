@@ -62,11 +62,75 @@ try {
   const restored = await restoreStores(prisma);
   const back = await prisma.merchant.findMany({
     where: { slug: { in: CLIENT } },
-    select: { name: true, slug: true, status: true },
+    select: {
+      name: true,
+      slug: true,
+      status: true,
+      city: true,
+      phone: true,
+      availableBalance: true,
+      cnicNumber: true,
+      referralCodeUsed: true,
+    },
     orderBy: { name: "asc" },
   });
   if (back.length < CLIENT.length) {
     throw new Error(`restore missed stores: ${CLIENT.filter((slug) => !back.some((row) => row.slug === slug)).join(",")}`);
+  }
+  const ali = back.find((row) => row.slug === "ali-collections");
+  const ak = back.find((row) => row.slug === "ak-shopping-store");
+  if (!ali || ali.availableBalance < 10.1 || ali.city !== "Lahore") {
+    throw new Error(`Ali Collections restore missing balance/city: ${JSON.stringify(ali)}`);
+  }
+  if (!ak || ak.city !== "karachi" || ak.phone !== "03172466894" || ak.cnicNumber !== "35202-1234567-1" || ak.referralCodeUsed !== "19935858") {
+    throw new Error(`AK shopping store restore missing identity: ${JSON.stringify(ak)}`);
+  }
+
+  await prisma.merchant.update({
+    where: { slug: "ali-collections" },
+    data: { availableBalance: 0, pendingBalance: 0, city: "Pakistan" },
+  });
+  await prisma.merchant.update({
+    where: { slug: "ak-shopping-store" },
+    data: { city: "Pakistan", phone: "", cnicNumber: "", referralCodeUsed: "" },
+  });
+  await restoreStores(prisma);
+  const filled = await prisma.merchant.findMany({
+    where: { slug: { in: ["ali-collections", "ak-shopping-store"] } },
+    select: {
+      slug: true,
+      city: true,
+      phone: true,
+      availableBalance: true,
+      cnicNumber: true,
+      referralCodeUsed: true,
+    },
+  });
+  const aliFilled = filled.find((row) => row.slug === "ali-collections");
+  const akFilled = filled.find((row) => row.slug === "ak-shopping-store");
+  if (!aliFilled || aliFilled.availableBalance < 10.1 || aliFilled.city !== "Lahore") {
+    throw new Error(`existing Ali fill-in missed balance/city: ${JSON.stringify(aliFilled)}`);
+  }
+  if (
+    !akFilled ||
+    akFilled.city !== "karachi" ||
+    akFilled.phone !== "03172466894" ||
+    akFilled.cnicNumber !== "35202-1234567-1" ||
+    akFilled.referralCodeUsed !== "19935858"
+  ) {
+    throw new Error(`existing AK fill-in missed identity: ${JSON.stringify(akFilled)}`);
+  }
+  await prisma.merchant.update({
+    where: { slug: "ali-collections" },
+    data: { availableBalance: 4.2 },
+  });
+  await restoreStores(prisma);
+  const noDouble = await prisma.merchant.findUnique({
+    where: { slug: "ali-collections" },
+    select: { availableBalance: true },
+  });
+  if (!noDouble || noDouble.availableBalance !== 4.2) {
+    throw new Error(`restore overwrote a live balance: ${noDouble?.availableBalance}`);
   }
 
   console.log(
@@ -74,6 +138,13 @@ try {
       ok: true,
       restored,
       stores: back.map((row) => row.name),
+      ali: { availableBalance: aliFilled.availableBalance, city: aliFilled.city },
+      ak: {
+        city: akFilled.city,
+        phone: akFilled.phone,
+        cnicNumber: akFilled.cnicNumber,
+        llc: akFilled.referralCodeUsed,
+      },
     }),
   );
 } finally {

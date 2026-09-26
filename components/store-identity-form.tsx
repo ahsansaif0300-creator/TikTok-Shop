@@ -8,9 +8,15 @@ import { Button } from "@/components/ui";
 export function StoreIdentityForm({
   merchantId,
   cnicNumber,
+  city,
+  phone,
+  llcCode,
 }: {
   merchantId: string;
   cnicNumber: string;
+  city: string;
+  phone: string;
+  llcCode: string;
 }) {
   const [front, setFront] = useState<File | null>(null);
   const [back, setBack] = useState<File | null>(null);
@@ -30,6 +36,23 @@ export function StoreIdentityForm({
           name="cnicNumber"
           defaultValue={cnicNumber}
           placeholder="35202-1234567-1"
+          className="h-11 w-full rounded-xl border border-line px-3"
+        />
+      </label>
+      <label className="block space-y-1.5 text-sm">
+        <span className="font-medium">City</span>
+        <input name="city" defaultValue={city} className="h-11 w-full rounded-xl border border-line px-3" />
+      </label>
+      <label className="block space-y-1.5 text-sm">
+        <span className="font-medium">Phone</span>
+        <input name="phone" defaultValue={phone} className="h-11 w-full rounded-xl border border-line px-3" />
+      </label>
+      <label className="block space-y-1.5 text-sm">
+        <span className="font-medium">LLC code</span>
+        <input
+          name="llcCode"
+          defaultValue={llcCode}
+          placeholder="19935858"
           className="h-11 w-full rounded-xl border border-line px-3"
         />
       </label>
