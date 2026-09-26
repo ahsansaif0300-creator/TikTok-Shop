@@ -40,7 +40,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
           <Link href="/login/store" className="rounded-full bg-white/10 px-3 py-1.5 font-medium hover:bg-white/15">
             Sign in
           </Link>
-          <Link href="/signup" className="rounded-full bg-accent px-3 py-1.5 font-semibold text-white hover:bg-[#e11d48]">
+          <Link href="/signup" className="rounded-full bg-accent px-3 py-1.5 font-semibold text-white hover:bg-[#9f1840]">
             Sign up
           </Link>
         </div>
@@ -68,7 +68,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ slu
           <div className="mt-5 grid grid-cols-2 gap-2">
             <Link
               href={loginHref}
-              className="grid h-11 place-items-center rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#e11d48]"
+              className="grid h-11 place-items-center rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#9f1840]"
             >
               Seller login
             </Link>

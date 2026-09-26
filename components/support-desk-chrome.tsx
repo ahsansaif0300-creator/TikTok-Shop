@@ -3,6 +3,7 @@ import Link from "next/link";
 import { HarborMark } from "@/components/brand";
 import { logoutSupportAction } from "@/lib/actions/auth";
 import type { SessionUser } from "@/lib/auth";
+import { displayStaffName } from "@/lib/staff-display";
 
 export function SupportDeskChrome({
   session,
@@ -31,7 +32,9 @@ export function SupportDeskChrome({
               Operations
             </Link>
           )}
-          <span className="hidden max-w-[180px] truncate text-xs text-white/70 sm:inline">{session.name}</span>
+          <span className="hidden max-w-[180px] truncate text-xs text-white/70 sm:inline">
+            {displayStaffName(session)}
+          </span>
           <form action={logoutSupportAction}>
             <button type="submit" className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium hover:bg-white/15">
               Logout

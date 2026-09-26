@@ -6,8 +6,15 @@ import { shopAbsoluteUrl } from "@/lib/shop-url";
 import { processDueReleases } from "@/lib/process-releases";
 import { WorkspaceChrome } from "@/components/workspace-chrome";
 import { StorePendingReview } from "@/components/store-pending-review";
+import { displayStaffName } from "@/lib/staff-display";
+import { ensureDatabase } from "@/lib/ensure-db";
 
 export async function AppShell({ children }: { children: ReactNode }) {
+  try {
+    await ensureDatabase();
+  } catch (error) {
+    console.warn("[harbor] workspace database restore skipped", error);
+  }
   const session = await requireSession();
   await processDueReleases();
   const [unread, store] = await Promise.all([
@@ -31,7 +38,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   return (
     <WorkspaceChrome
       role={session.role}
-      name={session.name}
+      name={displayStaffName(session)}
       roleLabel={ROLE_LABEL[session.role]}
       unread={unread}
       storeName={store?.name ?? null}
