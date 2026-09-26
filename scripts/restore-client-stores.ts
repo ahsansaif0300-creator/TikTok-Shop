@@ -5,7 +5,21 @@ import { PrismaClient } from "@prisma/client";
 import { restoreStores, snapshotStores } from "../lib/stores-persist";
 import { packedRecoveredStoresPath } from "./copy-demo-db.mjs";
 
-const CLIENT_STORES = [
+type ClientStore = {
+  name: string;
+  slug: string;
+  email: string;
+  storeCode: string;
+  contactName: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+  availableBalance?: number;
+  cnicNumber?: string;
+  referralCodeUsed?: string;
+};
+
+const CLIENT_STORES: ClientStore[] = [
   {
     name: "Butt store",
     slug: "butt-store",
@@ -34,6 +48,29 @@ const CLIENT_STORES = [
     storeCode: "STORE104",
     contactName: "Ola Here",
   },
+  {
+    name: "Ali Collections",
+    slug: "ali-collections",
+    email: "wendy.h@example.net",
+    storeCode: "STORE107",
+    contactName: "Ali Collections",
+    phone: "",
+    city: "Lahore",
+    country: "Pakistan",
+    availableBalance: 10.1,
+  },
+  {
+    name: "AK shopping store",
+    slug: "ak-shopping-store",
+    email: "akchandio156000955@gmail.com",
+    storeCode: "STORE108",
+    contactName: "AK Shopping",
+    phone: "03172466894",
+    city: "karachi",
+    country: "Pakistan",
+    cnicNumber: "35202-1234567-1",
+    referralCodeUsed: "19935858",
+  },
 ];
 
 const now = new Date().toISOString();
@@ -49,13 +86,13 @@ async function main() {
       slug: store.slug,
       legalName: store.name,
       email: store.email,
-      phone: "",
-      country: "Pakistan",
-      city: "Pakistan",
+      phone: store.phone ?? "",
+      country: store.country ?? "Pakistan",
+      city: store.city ?? store.country ?? "Pakistan",
       address: "Address pending",
       status: "ACTIVE",
       planName: "Starter",
-      availableBalance: 0,
+      availableBalance: store.availableBalance ?? 0,
       pendingBalance: 0,
       rating: 5,
       creditScore: 100,
@@ -63,12 +100,12 @@ async function main() {
       bankName: null,
       bankAccountLast4: null,
       logo: "",
-      cnicNumber: "",
+      cnicNumber: store.cnicNumber ?? "",
       cnicImage: "",
       cnicImageFront: "",
       cnicImageBack: "",
       storeCode: store.storeCode,
-      referralCodeUsed: "",
+      referralCodeUsed: store.referralCodeUsed ?? "",
       createdAt: now,
       users: [
         {
@@ -86,8 +123,8 @@ async function main() {
           businessName: store.name,
           contactName: store.contactName,
           email: store.email,
-          phone: "",
-          country: "Pakistan",
+          phone: store.phone ?? "",
+          country: store.country ?? "Pakistan",
           category: "Public signup",
           notes: "Client-requested store recovery",
           status: "APPROVED",
@@ -117,7 +154,7 @@ async function main() {
       orderBy: { name: "asc" },
     });
     console.log(JSON.stringify({ packed: payload.stores.length, restored, names }, null, 2));
-    if (names.length < 4) throw new Error("packed demo is missing client stores");
+    if (names.length < CLIENT_STORES.length) throw new Error("packed demo is missing client stores");
   } finally {
     await prisma.$disconnect();
   }

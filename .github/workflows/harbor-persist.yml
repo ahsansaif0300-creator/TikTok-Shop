@@ -41,9 +41,13 @@ jobs:
           path: _harbor_src
           sparse-checkout: |
             scripts/harbor-persist-sync.mjs
+            scripts/harbor-heal-live-stores.py
+            persist/shops.json
+            prisma/recovered-stores.json
           sparse-checkout-cone-mode: false
 
       - name: Export live records
+        continue-on-error: true
         env:
           HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
           HARBOR_PERSIST_ADMIN_EMAIL: ${{ secrets.HARBOR_PERSIST_ADMIN_EMAIL }}
@@ -51,6 +55,12 @@ jobs:
           HARBOR_PERSIST_SECRET: ${{ secrets.HARBOR_PERSIST_SECRET }}
           HARBOR_PERSIST_OUT: ${{ github.workspace }}
         run: node _harbor_src/scripts/harbor-persist-sync.mjs --heal
+
+      - name: Recreate missing live stores
+        env:
+          HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
+          HARBOR_PERSIST_OUT: ${{ github.workspace }}/_harbor_src
+        run: python3 _harbor_src/scripts/harbor-heal-live-stores.py
 
       - name: Commit persist snapshot
         run: |

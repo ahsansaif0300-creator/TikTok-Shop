@@ -23,8 +23,9 @@ const { snapshotStores, restoreStores, readStoreSnapshots } = await import("../l
 const prisma = new PrismaClient({ datasources: { db: { url: `file:${db}` } } });
 
 try {
-  const slug = "keep-forever-store";
-  const email = "keep.forever@example.test";
+  const stamp = Date.now();
+  const slug = `keep-forever-store-${stamp}`;
+  const email = `keep.forever.${stamp}@example.test`;
   const plan = await prisma.plan.findFirst({ orderBy: { monthlyFee: "asc" } });
   if (!plan) throw new Error("demo plan missing");
 

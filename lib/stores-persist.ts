@@ -345,9 +345,48 @@ export async function restoreStores(prisma: PrismaClient) {
   for (const row of saved) {
     const existing = await prisma.merchant.findUnique({
       where: { slug: row.slug },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        phone: true,
+        city: true,
+        country: true,
+        email: true,
+        cnicNumber: true,
+        cnicImageFront: true,
+        cnicImageBack: true,
+        referralCodeUsed: true,
+      },
     });
     if (existing) {
+      const patch: {
+        phone?: string;
+        city?: string;
+        email?: string;
+        cnicNumber?: string;
+        cnicImage?: string;
+        cnicImageFront?: string;
+        cnicImageBack?: string;
+        referralCodeUsed?: string;
+        status?: "ACTIVE" | "PENDING" | "SUSPENDED";
+      } = {};
+      if (!existing.phone && row.phone) patch.phone = row.phone;
+      if ((!existing.city || existing.city === existing.country) && row.city) patch.city = row.city;
+      if (row.email && existing.email !== row.email && !existing.email.includes("@gmail.com")) {
+        patch.email = row.email;
+      }
+      if (!existing.cnicNumber && row.cnicNumber) patch.cnicNumber = row.cnicNumber;
+      if (!existing.cnicImageFront && row.cnicImageFront) {
+        patch.cnicImageFront = row.cnicImageFront;
+        patch.cnicImage = row.cnicImage || row.cnicImageFront;
+      }
+      if (!existing.cnicImageBack && row.cnicImageBack) patch.cnicImageBack = row.cnicImageBack;
+      if (!existing.referralCodeUsed && row.referralCodeUsed) patch.referralCodeUsed = row.referralCodeUsed;
+      if (existing.status === "PENDING" && row.status === "ACTIVE") patch.status = "ACTIVE";
+      if (Object.keys(patch).length > 0) {
+        await prisma.merchant.update({ where: { id: existing.id }, data: patch });
+        restored += 1;
+      }
       restored += await restoreStoreUsers(prisma, existing.id, row.users);
       restored += await restoreStoreApplications(prisma, existing.id, row.applications);
       continue;
@@ -389,7 +428,11 @@ export async function restoreStores(prisma: PrismaClient) {
 
     const products = await prisma.product.count({ where: { merchantId: merchant.id } });
     if (products === 0 && merchant.status === "ACTIVE") {
-      await ensureMerchantCatalog(prisma, merchant.id);
+      try {
+        await ensureMerchantCatalog(prisma, merchant.id);
+      } catch (error) {
+        console.warn("[harbor] catalog restore skipped", merchant.slug, error);
+      }
     }
   }
   return restored;

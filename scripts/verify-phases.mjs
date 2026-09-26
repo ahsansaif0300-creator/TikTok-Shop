@@ -1510,6 +1510,9 @@ async function phase7Static() {
     assert(exists("lib/stores-persist.ts"), "Store snapshot helper missing");
     assert(exists("prisma/recovered-stores.json"), "Packed last-known store snapshot missing");
     assert(read("prisma/recovered-stores.json").includes("harbor-review-shop"), "Recovered snapshot dropped review stores");
+    assert(read("prisma/recovered-stores.json").includes("ali-collections"), "Recovered snapshot dropped Ali Collections");
+    assert(read("prisma/recovered-stores.json").includes("ak-shopping-store"), "Recovered snapshot dropped AK shopping store");
+    assert(exists("scripts/harbor-heal-live-stores.py"), "Live store heal script missing");
     assert(read("scripts/copy-demo-db.mjs").includes("storeRecordsReadPaths"), "Store restore must read the packed recovery snapshot");
     assert(read("scripts/copy-demo-db.mjs").includes("hostinger-import.sqlite"), "Hostinger SQLite import path missing");
     assert(read("lib/actions/signup.ts").includes("snapshotStores"), "Signup must persist new stores");
