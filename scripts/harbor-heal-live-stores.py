@@ -30,6 +30,24 @@ DEMO_SLUGS = {
     "northline-outfitters",
     "willow-baby",
 }
+SKIP_SLUG_PREFIXES = (
+    "approved-catalog-",
+    "pending-review-",
+    "harbor-review-shop",
+    "keep-forever-store",
+)
+
+
+def skip_store(slug, email=""):
+    slug = (slug or "").strip()
+    email = (email or "").strip().lower()
+    if slug in DEMO_SLUGS:
+        return True
+    if any(slug.startswith(prefix) or slug == prefix.rstrip("-") for prefix in SKIP_SLUG_PREFIXES):
+        return True
+    if email.endswith("@example.test"):
+        return True
+    return False
 
 
 def load_stores():
@@ -187,7 +205,7 @@ def write_seen(stores):
         by_slug = {row.get("slug"): row for row in (current.get("stores") or []) if row.get("slug")}
         for row in stores:
             slug = row.get("slug")
-            if not slug or slug in DEMO_SLUGS:
+            if not slug or skip_store(slug, row.get("email") or ""):
                 continue
             by_slug[slug] = merge_store_row(by_slug.get(slug), row)
         current["stores"] = list(by_slug.values())
@@ -208,7 +226,7 @@ def parse_ops_store(page):
     city = (city_match.group(1) if city_match else "").strip()
     if phone in {"—", "-"}:
         phone = ""
-    if not name or not slug or not email or slug in DEMO_SLUGS:
+    if not name or not slug or not email or skip_store(slug, email):
         return None
     return {
         "name": name,
@@ -237,7 +255,7 @@ def remember_live_stores(merchants_html):
     known = {}
     for row in read_store_lists() + live:
         slug = row.get("slug")
-        if not slug or slug in DEMO_SLUGS:
+        if not slug or skip_store(slug, row.get("email") or ""):
             continue
         known[slug] = merge_store_row(known.get(slug), row)
     remembered = list(known.values())
@@ -255,7 +273,7 @@ def wanted_stores(extra=None):
         email = (store.get("email") or "").lower()
         if not name or not slug or not email:
             continue
-        if slug in DEMO_SLUGS:
+        if skip_store(slug, email):
             continue
         store = dict(store)
         store["email"] = email
@@ -500,7 +518,21 @@ def restore_details(wanted):
     return mapping, merchants
 
 
+def cleanup_tmp():
+    for path in Path("/tmp").glob("heal-*.html"):
+        try:
+            path.unlink()
+        except OSError:
+            pass
+    for path in Path("/tmp").glob("heal-m-*.html"):
+        try:
+            path.unlink()
+        except OSError:
+            pass
+
+
 def main():
+    cleanup_tmp()
     merchants = login()
     remembered = remember_live_stores(merchants)
     wanted = wanted_stores(remembered)
@@ -528,6 +560,7 @@ def main():
             funds_ok = False
     if not funds_ok:
         raise SystemExit("recovered store balances still missing on live")
+    cleanup_tmp()
 
 
 if __name__ == "__main__":
