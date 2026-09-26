@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMerchant } from "@/lib/auth";
 import { canAccessMerchant } from "@/lib/scope";
+import { orderPickupCharge } from "@/lib/order-pickup";
 
 export async function pickUpOrder(formData: FormData) {
   const session = await requireMerchant();
@@ -27,6 +28,8 @@ export async function pickUpOrder(formData: FormData) {
     redirect("/orders?error=invalid");
   }
 
+  const charge = orderPickupCharge(existing);
+
   try {
     await prisma.$transaction(async (tx) => {
       const claimed = await tx.order.updateMany({
@@ -35,7 +38,7 @@ export async function pickUpOrder(formData: FormData) {
           status: "PAID",
           paidAt: existing.paidAt ?? new Date(),
           pickedAt: new Date(),
-          pickupHold: existing.total,
+          pickupHold: charge,
         },
       });
       if (claimed.count !== 1) {
@@ -43,14 +46,14 @@ export async function pickUpOrder(formData: FormData) {
       }
 
       const merchant = await tx.merchant.findUnique({ where: { id: session.merchantId } });
-      if (!merchant || merchant.availableBalance < existing.total) {
+      if (!merchant || merchant.availableBalance < charge) {
         throw new Error("Insufficient Balance");
       }
 
       await tx.merchant.update({
         where: { id: session.merchantId },
         data: {
-          availableBalance: { decrement: existing.total },
+          availableBalance: { decrement: charge },
           ...(existing.paidAt ? {} : { pendingBalance: { increment: existing.profit } }),
         },
       });
@@ -69,9 +72,9 @@ export async function pickUpOrder(formData: FormData) {
         data: {
           merchantId: session.merchantId,
           type: "ADJUSTMENT",
-          amount: -existing.total,
+          amount: -charge,
           reference: existing.orderNumber,
-          note: "Pickup reserve",
+          note: "Pickup reserve at cost price",
         },
       });
       await tx.auditLog.create({

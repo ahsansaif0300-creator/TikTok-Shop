@@ -496,6 +496,88 @@ async function phase3Database(prisma) {
     assert(read("prisma/seed.ts").includes("status: OrderStatus.PENDING_PAYMENT"), "Pickup demo seed must start unpaid");
   });
 
+  await check(3, "Pickup charges cost price when the store only has cost funds", async () => {
+    const plan = await prisma.plan.findFirst({ orderBy: { monthlyFee: "asc" } });
+    assert(plan, "Need a plan");
+    const cost = 12.16;
+    const total = 24.07;
+    const charge = Math.round(cost * 100) / 100;
+    assert(charge === 12.16, `Cost charge was ${charge}`);
+    assert(charge < total, "Cost price must be below total price");
+
+    const merchant = await prisma.merchant.create({
+      data: {
+        name: "VERIFY Cost Pickup Store",
+        slug: `verify-cost-pickup-${Date.now()}`,
+        legalName: "VERIFY Cost Pickup LLC",
+        email: "verify-cost-pickup@example.test",
+        phone: "+1-555-0016",
+        country: "US",
+        city: "Test",
+        address: "16 Verify Way",
+        status: "ACTIVE",
+        planId: plan.id,
+        availableBalance: cost,
+        pendingBalance: 0,
+      },
+    });
+    const customer = await prisma.customer.create({
+      data: {
+        name: "VERIFY Cost Buyer",
+        email: `verify.cost.buyer.${Date.now()}@example.test`,
+        phone: "+1-555-0017",
+        address: "17 Verify Way",
+        city: "Test",
+        country: "US",
+      },
+    });
+    const profit = Math.round((total - cost) * 100) / 100;
+    const order = await prisma.order.create({
+      data: {
+        orderNumber: `VERIFY-COST-${Date.now()}`,
+        merchantId: merchant.id,
+        customerId: customer.id,
+        status: "PENDING_PAYMENT",
+        subtotal: total,
+        shippingFee: 0,
+        tax: 0,
+        total,
+        cost,
+        profit,
+        platformFee: 0,
+      },
+    });
+
+    const started = await prisma.merchant.findUnique({ where: { id: merchant.id } });
+    assert(started.availableBalance >= charge, "Store must have cost-price funds");
+    assert(started.availableBalance < total, "Store must not need total-price funds");
+
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status: "PAID", paidAt: new Date(), pickedAt: new Date(), pickupHold: charge },
+      });
+      await tx.merchant.update({
+        where: { id: merchant.id },
+        data: {
+          availableBalance: { decrement: charge },
+          pendingBalance: { increment: profit },
+        },
+      });
+    });
+
+    const fresh = await prisma.merchant.findUnique({ where: { id: merchant.id } });
+    const paid = await prisma.order.findUnique({ where: { id: order.id } });
+    assert(paid.status === "PAID", `Pickup status ${paid.status}`);
+    assert(paid.pickupHold === charge, `Pickup hold ${paid.pickupHold} should be cost price`);
+    assert(fresh.availableBalance === 0, `Available after cost pickup was ${fresh.availableBalance}`);
+    assert(fresh.pendingBalance === profit, `Pending after cost pickup was ${fresh.pendingBalance}`);
+
+    await prisma.order.delete({ where: { id: order.id } });
+    await prisma.customer.delete({ where: { id: customer.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  });
+
   await check(3, "Isolated order lifecycle: pay → ship → complete moves balances", async () => {
     const plan = await prisma.plan.findFirst({ orderBy: { monthlyFee: "asc" } });
     const category = await prisma.category.findFirst();
@@ -1048,6 +1130,7 @@ async function phase6Static() {
       "lib/actions/payouts.ts",
       "lib/actions/users.ts",
       "lib/actions/pickup.ts",
+      "lib/order-pickup.ts",
       "lib/actions/support.ts",
       "lib/actions/account.ts",
       "lib/service-bot.ts",
@@ -1074,6 +1157,9 @@ async function phase6Static() {
     assert(pickup.includes('status: "PENDING_PAYMENT"'), "Pickup must claim unpaid orders");
     assert(pickup.includes('status: "PAID"'), "Pickup must mark the order Paid");
     assert(!pickup.includes('status: "PROCESSING"'), "Pickup must not jump to Processing");
+    assert(pickup.includes("orderPickupCharge"), "Pickup must charge cost price");
+    assert(pickup.includes("availableBalance < charge"), "Pickup must check cost-price funds");
+    assert(!pickup.includes("availableBalance < existing.total"), "Pickup must not require total-price funds");
     const staffOrder = read("lib/actions/admin.ts");
     assert(staffOrder.includes('status: "PENDING_PAYMENT"'), "Order Sender must create unpaid orders");
     assert(staffOrder.includes("updatedAt: now"), "Order Sender must stamp updatedAt so new orders sort first");
@@ -1085,6 +1171,8 @@ async function phase6Static() {
     assert(liveBoard.includes("/ol1"), "Orders board does not poll the uncached live path");
     assert(liveBoard.includes("PENDING_PAYMENT"), "Orders board must show unpaid pickup cards");
     assert(liveBoard.includes("Cost Price") && liveBoard.includes("Total Price") && liveBoard.includes("Profit Amount"), "Store orders missing cost/total/profit");
+    assert(liveBoard.includes("amountLabel={money(order.cost)}"), "Pickup dialog must show cost price");
+    assert(!liveBoard.includes("amountLabel={money(order.total)}"), "Pickup dialog must not charge total price");
     assert(read("app/(app)/orders/page.tsx").includes("OrdersLiveBoard"), "Orders page missing live board");
     assert(read("lib/labels.ts").includes('PENDING_PAYMENT: "Unpaid"'), "Unpaid label missing");
     assert(read("lib/dashboard.ts").includes('status: "PENDING_PAYMENT"'), "Ready-to-pick-up must count unpaid orders");
