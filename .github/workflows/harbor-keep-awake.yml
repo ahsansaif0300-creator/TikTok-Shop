@@ -1,0 +1,22 @@
+name: Keep live awake
+
+on:
+  schedule:
+    - cron: "* * * * *"
+  workflow_dispatch:
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping live so Render does not idle
+        env:
+          HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
+        run: |
+          BASE="${HARBOR_PERSIST_LIVE_URL:-https://tikitok-shop.onrender.com}"
+          BASE="${BASE%/}"
+          for i in 1 2 3 4; do
+            code=$(curl -sS -m 30 -o /dev/null -w "%{http_code}" "$BASE/welcome" || true)
+            echo "wake $i $code"
+            sleep 12
+          done

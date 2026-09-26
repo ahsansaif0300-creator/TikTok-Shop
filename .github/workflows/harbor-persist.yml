@@ -43,7 +43,9 @@ jobs:
             scripts/harbor-persist-sync.mjs
             scripts/harbor-heal-live-stores.py
             persist/shops.json
+            persist/seen-stores.json
             prisma/recovered-stores.json
+            scripts/harbor-keep-awake.sh
           sparse-checkout-cone-mode: false
 
       - name: Wake live site

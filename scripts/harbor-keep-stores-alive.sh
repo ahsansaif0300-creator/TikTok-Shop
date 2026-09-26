@@ -45,6 +45,8 @@ for slug in sorted(slugs):
         code = str(error)
     print(slug, code)
 PY
-  curl -sS -m 20 -o /dev/null "$BASE/welcome" || true
-  sleep 45
+  for _ in 1 2 3; do
+    curl -sS -m 20 -o /dev/null -w "wake %{http_code}\n" "$BASE/welcome" || true
+    sleep 15
+  done
 done
