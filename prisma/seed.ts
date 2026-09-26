@@ -16,6 +16,8 @@ import { STORE_CATEGORIES, categorySlug } from "../lib/store-categories";
 import { GROWTH_MAX_PRODUCTS, ON_SHELF_TITLES, pricedDistributionCatalog, pricedExtraProducts } from "../lib/distribution-catalog";
 import { BRAND_NAME } from "../lib/brand-name";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "../lib/store-score";
+import { orderProfitAmount } from "../lib/order-economics";
+import { SUPER_ADMIN_PUBLIC_NAME } from "../lib/staff-display";
 
 const prisma = new PrismaClient();
 
@@ -186,7 +188,7 @@ async function main() {
     data: {
       email: "oscar.d@example.net",
       username: "harboradmin",
-      name: "Amina Shah",
+      name: SUPER_ADMIN_PUBLIC_NAME,
       passwordHash,
       role: "SUPER_ADMIN",
     },
@@ -354,7 +356,7 @@ async function main() {
     const cost = product.cost * qty;
     const plan = [starter, growth, scale].find((p) => p.id === merchant.planId) ?? growth;
     const platformFee = Number((subtotal * plan.commissionRate).toFixed(2));
-    const profit = Number((subtotal - cost - platformFee).toFixed(2));
+    const profit = orderProfitAmount(total, cost);
     const status = pick(statuses, i);
     const createdAt = daysAgo(18 - (i % 18), i % 12);
 
@@ -491,7 +493,7 @@ async function main() {
     const extraTotal = Number((extraSubtotal + extraTax).toFixed(2));
     const extraCost = product.cost * extraQty;
     const extraFee = Number((extraSubtotal * growth.commissionRate).toFixed(2));
-    const extraProfit = Number((extraSubtotal - extraCost - extraFee).toFixed(2));
+    const extraProfit = orderProfitAmount(extraTotal, extraCost);
     const orderNumber = `HB-2026-PICKUP-0${index + 1}`;
     await prisma.order.create({
       data: {
