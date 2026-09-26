@@ -4,16 +4,24 @@
 Works on the current Render build, which has no persist API.
 Stores, funds, and identity stay until an admin delete/remove/suspend.
 """
+import fcntl
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
 
 BASE = (os.environ.get("HARBOR_PERSIST_LIVE_URL") or "https://tikitok-shop.onrender.com").rstrip("/")
-COOKIE = "/tmp/heal-live-cookies.txt"
+RUN_DIR = Path(f"/tmp/heal-run-{os.getpid()}")
+RUN_DIR.mkdir(parents=True, exist_ok=True)
+COOKIE = str(RUN_DIR / "cookies.txt")
 ROOT = Path(os.environ.get("HARBOR_PERSIST_OUT") or Path.cwd())
+
+
+def out(name: str) -> str:
+    return str(RUN_DIR / name)
 CLIENT_SLUGS = {
     "ali-collections",
     "ak-shopping-store",
@@ -77,7 +85,7 @@ def wake():
     for attempt in range(8):
         try:
             subprocess.check_call(
-                ["curl", "-sS", "-m", "60", "-o", "/tmp/heal-wake.html", f"{BASE}/welcome"]
+                ["curl", "-sS", "-m", "60", "-o", out("wake.html"), f"{BASE}/welcome"]
             )
             return
         except subprocess.CalledProcessError:
@@ -112,7 +120,7 @@ def parse_selected_available(html):
 def login():
     Path(COOKIE).unlink(missing_ok=True)
     wake()
-    html = curl([f"{BASE}/login/admin"], "/tmp/heal-login.html")
+    html = curl([f"{BASE}/login/admin"], out("login.html"))
     curl(
         [
             "-X",
@@ -125,9 +133,9 @@ def login():
             "-F",
             "password=HarborAdmin!2026",
         ],
-        "/tmp/heal-login-post.html",
+        out("login-post.html"),
     )
-    merchants = curl(["-L", f"{BASE}/merchants"], "/tmp/heal-mer.html")
+    merchants = curl(["-L", f"{BASE}/merchants"], out("mer.html"))
     if "All merchants" not in merchants and "Merchants" not in merchants:
         raise SystemExit("admin login failed")
     return merchants
@@ -243,7 +251,7 @@ def remember_live_stores(merchants_html):
     ids = sorted(set(re.findall(r"/merchants/(cmu[a-z0-9]+)", merchants_html)))
     live = []
     for mid in ids:
-        page = curl(["-L", f"{BASE}/merchants/{mid}"], f"/tmp/heal-m-{mid}.html")
+        page = curl(["-L", f"{BASE}/merchants/{mid}"], out(f"m-{mid}.html"))
         row = parse_ops_store(page)
         if row:
             live.append(row)
@@ -281,7 +289,7 @@ def recreate_missing(missing):
     if not missing:
         print("heal ok, all saved stores already on live")
         return
-    apps = curl(["-L", f"{BASE}/merchants/applications"], "/tmp/heal-apps.html")
+    apps = curl(["-L", f"{BASE}/merchants/applications"], out("apps.html"))
     create_action = find_action(apps, "Business name")
     for store in missing:
         email = (store.get("email") or "").lower()
@@ -312,11 +320,11 @@ def recreate_missing(missing):
                 "-F",
                 "notes=Automatic persist heal",
             ],
-            "/tmp/heal-create.html",
+            out("create.html"),
         )
         create_action = find_action(apps, "Business name")
 
-    apps = curl(["-L", f"{BASE}/merchants/applications"], "/tmp/heal-apps2.html")
+    apps = curl(["-L", f"{BASE}/merchants/applications"], out("apps2.html"))
     review_action = find_action(apps, "Review note")
     blocks = re.split(r"<tr", apps)
     for store in missing:
@@ -347,13 +355,13 @@ def recreate_missing(missing):
                 "-F",
                 "decision=APPROVED",
             ],
-            "/tmp/heal-approve.html",
+            out("approve.html"),
         )
 
-    merchants = curl(["-L", f"{BASE}/merchants"], "/tmp/heal-mer2.html")
+    merchants = curl(["-L", f"{BASE}/merchants"], out("mer2.html"))
     ids = sorted(set(re.findall(r"/merchants/(cmu[a-z0-9]+)", merchants)))
     for mid in ids:
-        page = curl(["-L", f"{BASE}/merchants/{mid}"], f"/tmp/heal-m-{mid}.html")
+        page = curl(["-L", f"{BASE}/merchants/{mid}"], out(f"m-{mid}.html"))
         store = next((item for item in missing if (item.get("email") or "").lower() in page), None)
         if not store:
             continue
@@ -380,16 +388,16 @@ def recreate_missing(missing):
                 "-F",
                 "password=HarborMerchant!2026",
             ],
-            f"/tmp/heal-user-{mid}.html",
+            out(f"user-{mid}.html"),
         )
 
 
 def resolve_ids(wanted):
-    merchants = curl(["-L", f"{BASE}/merchants"], "/tmp/heal-mer-map.html")
+    merchants = curl(["-L", f"{BASE}/merchants"], out("mer-map.html"))
     ids = sorted(set(re.findall(r"/merchants/(cmu[a-z0-9]+)", merchants)))
     mapping = {}
     for mid in ids:
-        page = curl(["-L", f"{BASE}/merchants/{mid}"], f"/tmp/heal-m-{mid}.html")
+        page = curl(["-L", f"{BASE}/merchants/{mid}"], out(f"m-{mid}.html"))
         for store in wanted:
             email = (store.get("email") or "").lower()
             if email and email in page.lower():
@@ -401,7 +409,7 @@ def restore_funds(store, mid):
     want = float(store.get("availableBalance") or 0)
     if want <= 0:
         return
-    page = curl(["-L", f"{BASE}/admin/funds?merchantId={mid}"], f"/tmp/heal-funds-{mid}.html")
+    page = curl(["-L", f"{BASE}/admin/funds?merchantId={mid}"], out(f"funds-{mid}.html"))
     if store["name"] not in page or f'name="merchantId" value="{mid}"' not in page:
         print("funds page not selected", store["name"])
         return
@@ -435,14 +443,14 @@ def restore_funds(store, mid):
             "-F",
             "note=Restore recovered store balance",
         ],
-        f"/tmp/heal-funds-post-{mid}.html",
+        out(f"funds-post-{mid}.html"),
     )
     after = parse_selected_available(result)
     print("funds after", store["name"], after)
 
 
 def restore_identity(store, mid):
-    page = curl(["-L", f"{BASE}/admin/stores/{mid}"], f"/tmp/heal-store-{mid}.html")
+    page = curl(["-L", f"{BASE}/admin/stores/{mid}"], out(f"store-{mid}.html"))
     if "Sign in" in page and "ID number" not in page and "Registered information" not in page:
         print("identity page missing", store["name"])
         return
@@ -486,7 +494,7 @@ def restore_identity(store, mid):
             "-F",
             f"llcCode={llc}",
         ],
-        f"/tmp/heal-identity-post-{mid}.html",
+        out(f"identity-post-{mid}.html"),
     )
     print(
         "identity after",
@@ -514,27 +522,23 @@ def restore_details(wanted):
 
 
 def cleanup_tmp():
-    for path in Path("/tmp").glob("heal-*.html"):
-        try:
-            path.unlink()
-        except OSError:
-            pass
-    for path in Path("/tmp").glob("heal-m-*.html"):
-        try:
-            path.unlink()
-        except OSError:
-            pass
+    shutil.rmtree(RUN_DIR, ignore_errors=True)
 
 
 def main():
-    cleanup_tmp()
+    lock = open("/tmp/harbor-heal.lock", "a+")
+    try:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("heal already running")
+        return
     merchants = login()
     remembered = remember_live_stores(merchants)
     wanted = wanted_stores(remembered)
     missing = [store for store in wanted if store["name"] not in merchants and store["slug"] not in merchants]
     print("heal missing", [store["name"] for store in missing])
     recreate_missing(missing)
-    merchants = curl(["-L", f"{BASE}/merchants"], "/tmp/heal-mer-after.html")
+    merchants = curl(["-L", f"{BASE}/merchants"], out("mer-after.html"))
     remembered = remember_live_stores(merchants)
     wanted = wanted_stores(remembered)
     mapping, final = restore_details(wanted)
@@ -548,7 +552,7 @@ def main():
         want = float(store.get("availableBalance") or 0)
         if not mid or want <= 0:
             continue
-        page = curl(["-L", f"{BASE}/admin/funds?merchantId={mid}"], f"/tmp/heal-funds-check-{mid}.html")
+        page = curl(["-L", f"{BASE}/admin/funds?merchantId={mid}"], out(f"funds-check-{mid}.html"))
         live = parse_selected_available(page)
         print("funds check", store["name"], live, "want", want)
         if live is None or live + 0.001 < want:
