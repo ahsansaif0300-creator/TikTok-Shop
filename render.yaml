@@ -1,5 +1,7 @@
 # Free failover host. No payment card.
 # After the first boot, set APP_BASE_URL to the https://….onrender.com URL.
+# Auto-Deploy stays on so persist + packed stores ship after every push.
+# Boot restore puts Merchants back after a Render sleep/splash.
 
 services:
   - type: web
@@ -7,6 +9,10 @@ services:
     runtime: node
     plan: free
     region: oregon
+    repo: https://github.com/ahsansaif0300-creator/TikTok-Shop
+    branch: cursor/tikitok-rebrand-host-7442
+    autoDeploy: true
+    autoDeployTrigger: commit
     buildCommand: npm ci && npm run build:render
     startCommand: npm run start
     healthCheckPath: /welcome

@@ -22,7 +22,7 @@ Use the **Free** instance. Do **not** add a payment card. The old Blueprint used
 8. Copy `https://….onrender.com`, put that in `APP_BASE_URL`, Manual Deploy.
 9. Open `/welcome` and send the client that URL.
 
-Free instances sleep after ~15 minutes. Sleep does **not** delete stores. A **new deploy** does, unless the live SQLite lives in `HARBOR_DATA_DIR`. Latest code writes stores to a persistent file and a `store-records.json` snapshot so created shops are restored on boot. On Render: turn **Auto-Deploy** off after the site is Live, and do not click Manual Deploy unless you mean to ship code. For deploys that must keep data, attach a disk at `/data` and set `HARBOR_DATA_DIR=/data`.
+Free instances sleep after ~15 minutes and wipe the ephemeral disk. Keep **Auto-Deploy** **on** for branch `cursor/tikitok-rebrand-host-7442` so the persist boot (`restore-live-records` + packed `prisma/demo.sqlite` + `persist/shops.json`) is what Render starts after splash. Stores then come back as they were unless an admin deletes, removes, or suspends them. Keep `AUTH_SECRET` set in Render Environment (do not leave it blank). For deploys that must keep the SQLite file itself across sleep, attach a disk at `/data` and set `HARBOR_DATA_DIR=/data`.
 
 **Bring back stores wiped on Hostinger:** in hPanel File Manager / the old Node app folder, download any of `harbor-commerce.sqlite`, `prisma/dev.db`, `data/store-records.json`, or `~/.harbor-commerce/harbor-commerce.sqlite`. Put the SQLite file in the live app as `data/hostinger-import.sqlite` (or set `HARBOR_IMPORT_DB` to its path) and restart. Boot uses that file when it is larger than the packed demo. The last known snapshot is also packed at `prisma/recovered-stores.json` and is restored automatically.
 
