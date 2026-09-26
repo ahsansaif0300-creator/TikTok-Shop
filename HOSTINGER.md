@@ -1,5 +1,43 @@
 # Go live on Hostinger with a temporary domain
 
+## Failover if Hostinger suspended the site
+
+Do **not** attach another domain to the same Hostinger website. That slot is frozen, so a new Namecheap domain pointed at Hostinger will stay dark.
+
+**Fastest live URL (today):** Render’s free `https://….onrender.com` hostname. The client can use that immediately. Attach any new domain afterward.
+
+Use the **Free** instance. Do **not** add a payment card. The old Blueprint used a paid disk; that is why Render asked for a card.
+
+**If Render is asking for a card right now:** click Back / cancel. Do not enter a card.
+
+**Then create a Free web service (clearest path):**
+
+1. [dashboard.render.com](https://dashboard.render.com) → **New** → **Web Service** (not Blueprint).
+2. Connect GitHub `TikTok-Shop`.
+3. Branch: **`cursor/tikitok-rebrand-host-7442`**.
+4. Runtime **Node**. Build `npm ci && npm run build`. Start `npm run start`.
+5. Instance type: **Free**.
+6. Environment: `DATABASE_URL=file:./dev.db`, `AUTH_COOKIE_SECURE=true`, `AUTH_SECRET` = any long random string, `APP_BASE_URL` = leave blank until you have the URL. The app remaps that file to a persistent `harbor-commerce.sqlite` so created stores are not replaced by the packed demo.
+7. Create Web Service. Wait until **Live**.
+8. Copy `https://….onrender.com`, put that in `APP_BASE_URL`, Manual Deploy.
+9. Open `/welcome` and send the client that URL.
+
+Free instances sleep after ~15 minutes. Sleep does **not** delete stores. A **new deploy** does, unless the live SQLite lives in `HARBOR_DATA_DIR`. Latest code writes stores to a persistent file and a `store-records.json` snapshot so created shops are restored on boot. On Render: turn **Auto-Deploy** off after the site is Live, and do not click Manual Deploy unless you mean to ship code. For deploys that must keep data, attach a disk at `/data` and set `HARBOR_DATA_DIR=/data`.
+
+**Bring back stores wiped on Hostinger:** in hPanel File Manager / the old Node app folder, download any of `harbor-commerce.sqlite`, `prisma/dev.db`, `data/store-records.json`, or `~/.harbor-commerce/harbor-commerce.sqlite`. Put the SQLite file in the live app as `data/hostinger-import.sqlite` (or set `HARBOR_IMPORT_DB` to its path) and restart. Boot uses that file when it is larger than the packed demo. The last known snapshot is also packed at `prisma/recovered-stores.json` and is restored automatically.
+
+**Or retry Blueprint** after this `render.yaml` (plan `free`, no disk) is on the same branch, then click Retry. If it still demands a card, use Web Service → Free above.
+
+**Then attach another domain** (Namecheap → the new name):
+
+1. In Render → **Settings** → **Custom Domains** → add `yournewdomain.com` and `www.yournewdomain.com`.
+2. In Namecheap → **Advanced DNS** add the A / CNAME records Render shows. Do **not** keep `hermes.dns-parking.com` / `artemis.dns-parking.com` if this site is no longer on Hostinger.
+3. Change `APP_BASE_URL` to `https://yournewdomain.com` and redeploy.
+
+Railway works the same way (`railway.toml`). Add a volume mounted at `/data` and set `DATABASE_URL=file:/data/harbor-commerce.sqlite`, `HARBOR_DATA_DIR=/data`. Vercel serverless is a poor fit (no persistent SQLite disk).
+
+---
+
 Use this when you **do not have your own domain**. Hostinger gives you a free URL like:
 
 ```
@@ -140,7 +178,8 @@ Change these under **Profile** before you invite anyone.
 - **TypeScript errors** (`Cannot find name 'isListedProduct'`, `implicit any` in `lib/ensure-db.ts`): that is an **old GitHub commit**. Latest **`main`** already imports `isListedProduct` and types the SQLite PRAGMA rows. In hPanel, Deploy **`main` again** (do not click “Fix and redeploy” on the failed old build). Then **Restart**. `npm run build` on current `main` completes TypeScript successfully.
 - **Site not reachable / 403:** do not edit `public_html/.htaccess`. Redeploy so Hostinger regenerates it.
 - **Build failed: GLIBC / SWC / next.config / hashed `*.next.config.mjs`:** Do **not** click **Fix and redeploy**. Latest **`main`** uses CommonJS `next.config.js` and `next build --webpack`. It does **not** delete Next’s temporary config files. Click **Close**, Deploy GitHub **`main`**, then **Restart**.
-- **“TikTok Shop could not open the packed demo database”:** That sentence exists only on the **old** Hostinger build. GitHub `main` already removed it. **Clear cache does not install that GitHub commit.** In hPanel → Node.js app → **Deployments** → set branch **`main`** → click **Deploy** → wait until **Running** → **Restart**. Then open `https://tiktokshop.site/login/admin` with no `?error=setup`. You should see **Release tiktok-shop-login-always** under the Login button. Keep `AUTH_SECRET` set.
+- **“TikTok Shop could not open the packed demo database”:** That sentence exists only on the **old** Hostinger build. GitHub `main` already removed it. **Clear cache does not install that GitHub commit.** In hPanel → Node.js app → **Deployments** → set branch **`main`** → click **Deploy** → wait until **Running** → **Restart**. Then open `https://tikitokshop.site/login/admin` with no `?error=setup`. You should see the current **Release** stamp under the Login button. Keep `AUTH_SECRET` set.
+- **Hostinger email “suspended for phishing/mirroring”:** This is a Hostinger abuse hold, not an app crash. The live name used to say **TikTok Shop** with TikTok’s magenta/cyan colors, so their scanner treated `tikitokshop.site` as a copy of the official TikTok Shop. Latest **`main`** brands the product **TikiTok Shop**, uses different colors, and prints “Not affiliated with TikTok or ByteDance.” You cannot clear-cache this away. In hPanel open **Websites** → the suspended site → **Appeals / Contact** (or Hostinger chat) and say it is an independent seller-operations dashboard, not TikTok. Then Deploy **`main`** after they unsuspend. If they will not unsuspend, do **not** create a second Hostinger site with the same TikTok look. Use **Railway** or **Render** (Web Service + persistent disk) with `npm ci`, `npm run build`, `npm run start`, Node 20+, and the same env vars from `hostinger.env.example`. Point Namecheap nameservers at that new host, or use the Railway/Render URL until DNS is updated. Vercel serverless is a poor fit because this app keeps SQLite on disk.
 - **App built but login loop:** confirm `AUTH_SECRET` is set and you are on `https://`, not `http://`.
 - **Empty data after every deploy:** Live SQLite and Normal Backend users now live in a folder outside the deploy tree (`~/.harbor-commerce`). Created ops users stay until you delete them. If an old deploy still resets, Redeploy **`main`** then Restart.
 - **npm audit / “7 vulnerabilities” after a green Next.js build:** Hostinger is blocking install on `next@16.3.1` and nested Prisma/js-yaml/sharp advisories. Latest **`main`** uses Next.js **16.3.5** and `package.json` overrides. Deploy **`main` again** (do not “Fix and redeploy” the old failed snapshot). Then **Restart**. Do not upgrade Prisma to 7 on Hostinger; SQLite `db push` stays on Prisma 6.

@@ -70,6 +70,14 @@ function isHealthy(file) {
   }
 }
 
+function isNonEmpty(file) {
+  try {
+    return existsSync(/*turbopackIgnore: true*/ file) && statSync(/*turbopackIgnore: true*/ file).size > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function demoSqlitePath(root = repoRoot()) {
   return path.join(root, "prisma", "demo.sqlite");
 }
@@ -139,6 +147,32 @@ export function storeRecordsSnapshotPaths(root = process.cwd()) {
   return [...new Set(paths)];
 }
 
+export function packedRecoveredStoresPath(root = repoRoot()) {
+  return path.join(root, "prisma", "recovered-stores.json");
+}
+
+export function packedRecoveredOpsUsersPath(root = repoRoot()) {
+  return path.join(root, "prisma", "recovered-ops-users.json");
+}
+
+/** Read packed recovery first, then live snapshots (later files win on the same slug). */
+export function storeRecordsReadPaths(root = process.cwd()) {
+  return [...new Set([packedRecoveredStoresPath(root), ...storeRecordsSnapshotPaths(root)])];
+}
+
+/** Packed recovery first, then live snapshots (later files win on the same email). */
+export function opsUserReadPaths(root = process.cwd()) {
+  return [...new Set([packedRecoveredOpsUsersPath(root), ...opsUserSnapshotPaths(root)])];
+}
+
+export function hostingerImportCandidates(root = repoRoot()) {
+  return [
+    process.env.HARBOR_IMPORT_DB?.trim(),
+    path.join(root, "data", "hostinger-import.sqlite"),
+    path.join(root, "prisma", "hostinger-import.sqlite"),
+  ].filter(Boolean);
+}
+
 export function existingSqliteFiles(root = repoRoot()) {
   const files = [];
   for (const dest of liveSqliteCandidates(root)) {
@@ -153,17 +187,68 @@ export function existingSqliteFiles(root = repoRoot()) {
   return files;
 }
 
+function importHostingerSqlite(root) {
+  const source = hostingerImportCandidates(root).find(isNonEmpty);
+  if (!source) return null;
+  const persistent = persistentDataDirs(root).map((dir) => path.join(dir, LIVE_SQLITE));
+  const live = persistent.find(isNonEmpty);
+  const importSize = statSync(/*turbopackIgnore: true*/ source).size;
+  const liveSize = live ? statSync(/*turbopackIgnore: true*/ live).size : 0;
+  if (live && importSize <= liveSize && process.env.HARBOR_IMPORT_DB?.trim() !== source) {
+    return live;
+  }
+  for (const dest of persistent) {
+    if (!canWrite(path.dirname(dest))) continue;
+    try {
+      if (path.resolve(dest) !== path.resolve(source)) copyFileSync(source, dest);
+      console.log(`[harbor] Restored Hostinger/import database at ${dest}`);
+      return dest;
+    } catch (error) {
+      console.warn("[harbor] Could not import Hostinger database to", dest, error);
+    }
+  }
+  return source;
+}
+
+/** Always prefer a persistent live file so deploys cannot wipe stores. */
+export function resolveLiveSqlite(_root = process.cwd()) {
+  const root = repoRoot(_root);
+  const imported = importHostingerSqlite(root);
+  if (imported) return imported;
+  const persistent = persistentDataDirs(root).map((dir) => path.join(dir, LIVE_SQLITE));
+  const existingPersistent = persistent.find(isNonEmpty);
+  if (existingPersistent) return existingPersistent;
+
+  const existingAny = liveSqliteCandidates(root).find(isNonEmpty);
+  if (existingAny) {
+    for (const dest of persistent) {
+      if (!canWrite(path.dirname(dest))) continue;
+      try {
+        copyFileSync(existingAny, dest);
+        console.log(`[harbor] Preserved live database at ${dest}`);
+        return dest;
+      } catch (error) {
+        console.warn("[harbor] Could not copy live database to persistent path", dest, error);
+      }
+    }
+    return existingAny;
+  }
+
+  return installDemoDb(root, { overwrite: false });
+}
+
 export function installDemoDb(_root = process.cwd(), { overwrite = false } = {}) {
   const root = repoRoot(_root);
   const destinations = liveSqliteCandidates(root);
   const persistent = persistentDataDirs(root).map((dir) => path.join(dir, LIVE_SQLITE));
   const demo = findPackedDemoSqlite(root);
+  const force = overwrite && process.env.HARBOR_FORCE_DB === "1";
 
-  if (!overwrite) {
-    const existingPersistent = persistent.find(isHealthy);
+  if (!force) {
+    const existingPersistent = persistent.find(isNonEmpty);
     if (existingPersistent) return existingPersistent;
 
-    const existingAny = destinations.find(isHealthy);
+    const existingAny = destinations.find(isNonEmpty);
     if (existingAny) {
       for (const dest of persistent) {
         if (!canWrite(path.dirname(dest))) continue;
@@ -200,15 +285,8 @@ export function installDemoDb(_root = process.cwd(), { overwrite = false } = {})
     if (!canWrite(dir)) continue;
     try {
       const missing = !existsSync(/*turbopackIgnore: true*/ dest);
-      const tiny = !missing && statSync(/*turbopackIgnore: true*/ dest).size < MIN_SEEDED_BYTES;
-      if (overwrite || missing || tiny) {
-        if (overwrite && !missing && !tiny) {
-          try {
-            copyFileSync(dest, `${dest}.bak`);
-          } catch (error) {
-            console.warn("[harbor] Could not backup SQLite before restore", dest, error);
-          }
-        }
+      const empty = !missing && statSync(/*turbopackIgnore: true*/ dest).size === 0;
+      if (force || missing || empty) {
         copyFileSync(demo, dest);
         console.log(`[harbor] Installed demo database at ${dest}`);
       }
@@ -225,6 +303,20 @@ export function installDemoDb(_root = process.cwd(), { overwrite = false } = {})
   }
 
   throw lastError ?? new Error("No writable directory for SQLite on this host.");
+}
+
+/** Copy the live file to every writable persist folder so a remapped deploy path cannot drop stores. */
+export function preserveLiveSqlite(source, root = process.cwd()) {
+  if (!source || !isNonEmpty(source)) return;
+  for (const dest of persistentDataDirs(root).map((dir) => path.join(dir, LIVE_SQLITE))) {
+    if (path.resolve(dest) === path.resolve(source)) continue;
+    if (!canWrite(path.dirname(dest))) continue;
+    try {
+      copyFileSync(source, dest);
+    } catch (error) {
+      console.warn("[harbor] Could not preserve live database at", dest, error);
+    }
+  }
 }
 
 if (fileURLToPath(import.meta.url) === path.resolve(/*turbopackIgnore: true*/ process.argv[1] ?? "")) {

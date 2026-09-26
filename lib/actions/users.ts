@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { canManageTeam, isStaff, requireSession } from "@/lib/auth";
 import { allocateReferralCode } from "@/lib/referral";
 import { snapshotOpsUsers } from "@/lib/ops-users-store";
+import { snapshotStores } from "@/lib/stores-persist";
 
 export async function createTeamUser(formData: FormData) {
   const session = await requireSession();
@@ -29,7 +30,7 @@ export async function createTeamUser(formData: FormData) {
       referralCode: roleValue === "OPS" ? await allocateReferralCode() : null,
     },
   });
-  if (roleValue === "OPS") await snapshotOpsUsers(prisma);
+  await snapshotOpsUsers(prisma);
   revalidatePath("/users");
   redirect("/users?created=1");
 }
@@ -68,6 +69,7 @@ export async function createStoreUser(formData: FormData) {
       detail: `Created store login ${email} for ${merchant.name}`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath(`/merchants/${merchantId}`);
   redirect(`/merchants/${merchantId}?created=1`);
 }

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createSession, requireMerchant } from "@/lib/auth";
 import { fileToDataUrl, logoError } from "@/lib/logo";
+import { snapshotStores } from "@/lib/stores-persist";
 
 export async function updatePersonalInformation(formData: FormData) {
   const session = await requireMerchant();
@@ -31,6 +32,7 @@ export async function updatePersonalInformation(formData: FormData) {
       data: { phone, email },
     }),
   ]);
+  await snapshotStores(prisma);
   await createSession({ ...session, name, email });
   redirect("/account?saved=1");
 }
@@ -46,6 +48,7 @@ export async function updateStoreLogo(formData: FormData) {
     where: { id: session.merchantId },
     data: { logo },
   });
+  await snapshotStores(prisma);
   redirect("/account?logo=1");
 }
 
@@ -60,6 +63,7 @@ export async function changePaymentPassword(formData: FormData) {
     where: { id: session.userId },
     data: { paymentPasswordHash: await bcrypt.hash(next, 10) },
   });
+  await snapshotStores(prisma);
   redirect("/account?pay=1");
 }
 
@@ -74,6 +78,7 @@ export async function changeLoginPassword(formData: FormData) {
     where: { id: session.userId },
     data: { passwordHash: await bcrypt.hash(next, 10) },
   });
+  await snapshotStores(prisma);
   await createSession(session);
   redirect("/account?login=1");
 }
