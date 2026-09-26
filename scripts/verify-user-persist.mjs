@@ -47,6 +47,11 @@ try {
     throw new Error("wipe did not remove the user");
   }
 
+  await snapshotOpsUsers(prisma);
+  if (!readOpsSnapshots().users.some((user) => user.email === email)) {
+    throw new Error("automatic wipe dropped the Normal Backend user from the snapshot");
+  }
+
   const restored = await restoreOpsUsers(prisma);
   if (restored < 1) throw new Error("restore did not bring the user back");
   const again = await prisma.user.findUnique({ where: { email } });

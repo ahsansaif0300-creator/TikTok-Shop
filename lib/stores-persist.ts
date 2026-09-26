@@ -122,7 +122,74 @@ function readSnapshots() {
   return readSnapshotBundle().stores;
 }
 
-export async function snapshotStores(prisma: PrismaClient) {
+function snapApplication(application: {
+  businessName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  country: string;
+  category: string;
+  notes: string;
+  status: string;
+  reviewNote: string | null;
+  referralCode: string;
+  createdAt: Date | string;
+}): StoreAppSnap {
+  return {
+    businessName: application.businessName,
+    contactName: application.contactName,
+    email: application.email,
+    phone: application.phone,
+    country: application.country,
+    category: application.category,
+    notes: application.notes,
+    status: application.status,
+    reviewNote: application.reviewNote,
+    referralCode: application.referralCode,
+    createdAt:
+      application.createdAt instanceof Date
+        ? application.createdAt.toISOString()
+        : application.createdAt,
+  };
+}
+
+function keepUntilAdminRemoves(
+  previous: StoreSnapshot,
+  liveStores: StoreSnap[],
+  liveOrphans: StoreAppSnap[],
+  extra?: { deletedSlug?: string },
+): StoreSnapshot {
+  const liveSlugs = new Set(liveStores.map((store) => store.slug));
+  const deleted = new Set((previous.deletedSlugs ?? []).filter((slug) => !liveSlugs.has(slug)));
+  const extraSlug = extra?.deletedSlug?.trim();
+  if (extraSlug && !liveSlugs.has(extraSlug)) deleted.add(extraSlug);
+
+  const bySlug = new Map<string, StoreSnap>();
+  for (const store of previous.stores) {
+    if (!deleted.has(store.slug)) bySlug.set(store.slug, store);
+  }
+  for (const store of liveStores) {
+    bySlug.set(store.slug, store);
+  }
+  for (const slug of deleted) bySlug.delete(slug);
+
+  const orphans = new Map<string, StoreAppSnap>();
+  for (const application of previous.orphanApplications ?? []) {
+    orphans.set(`${application.email}::${application.businessName}`, application);
+  }
+  for (const application of liveOrphans) {
+    orphans.set(`${application.email}::${application.businessName}`, application);
+  }
+
+  return {
+    updatedAt: new Date().toISOString(),
+    stores: [...bySlug.values()],
+    deletedSlugs: [...deleted],
+    orphanApplications: [...orphans.values()],
+  };
+}
+
+export async function snapshotStores(prisma: PrismaClient, extra?: { deletedSlug?: string }) {
   const merchants = await prisma.merchant.findMany({
     include: {
       plan: { select: { name: true } },
@@ -156,7 +223,6 @@ export async function snapshotStores(prisma: PrismaClient) {
     orderBy: { createdAt: "asc" },
   });
   const previous = readSnapshotBundle();
-  const liveSlugs = new Set(merchants.map((merchant) => merchant.slug));
   const orphanApplications = await prisma.merchantApplication.findMany({
     where: { merchantId: null },
     select: {
@@ -173,72 +239,49 @@ export async function snapshotStores(prisma: PrismaClient) {
       createdAt: true,
     },
   });
-  const payload: StoreSnapshot = {
-    updatedAt: new Date().toISOString(),
-    deletedSlugs: (previous.deletedSlugs ?? []).filter((slug) => !liveSlugs.has(slug)),
-    orphanApplications: orphanApplications.map((application) => ({
-      businessName: application.businessName,
-      contactName: application.contactName,
-      email: application.email,
-      phone: application.phone,
-      country: application.country,
-      category: application.category,
-      notes: application.notes,
-      status: application.status,
-      reviewNote: application.reviewNote,
-      referralCode: application.referralCode,
-      createdAt: application.createdAt.toISOString(),
+  const liveStores: StoreSnap[] = merchants.map((merchant) => ({
+    name: merchant.name,
+    slug: merchant.slug,
+    legalName: merchant.legalName,
+    email: merchant.email,
+    phone: merchant.phone,
+    country: merchant.country,
+    city: merchant.city,
+    address: merchant.address,
+    status: merchant.status,
+    planName: merchant.plan.name,
+    availableBalance: merchant.availableBalance,
+    pendingBalance: merchant.pendingBalance,
+    rating: merchant.rating,
+    creditScore: merchant.creditScore,
+    reviewCount: merchant.reviewCount,
+    bankName: merchant.bankName,
+    bankAccountLast4: merchant.bankAccountLast4,
+    logo: merchant.logo,
+    cnicNumber: merchant.cnicNumber,
+    cnicImage: merchant.cnicImage,
+    cnicImageFront: merchant.cnicImageFront,
+    cnicImageBack: merchant.cnicImageBack,
+    storeCode: merchant.storeCode,
+    referralCodeUsed: merchant.referralCodeUsed,
+    createdAt: merchant.createdAt.toISOString(),
+    users: merchant.users.map((user) => ({
+      email: user.email,
+      username: user.username,
+      name: user.name,
+      passwordHash: user.passwordHash,
+      paymentPasswordHash: user.paymentPasswordHash,
+      role: "MERCHANT" as const,
+      createdAt: user.createdAt.toISOString(),
     })),
-    stores: merchants.map((merchant) => ({
-      name: merchant.name,
-      slug: merchant.slug,
-      legalName: merchant.legalName,
-      email: merchant.email,
-      phone: merchant.phone,
-      country: merchant.country,
-      city: merchant.city,
-      address: merchant.address,
-      status: merchant.status,
-      planName: merchant.plan.name,
-      availableBalance: merchant.availableBalance,
-      pendingBalance: merchant.pendingBalance,
-      rating: merchant.rating,
-      creditScore: merchant.creditScore,
-      reviewCount: merchant.reviewCount,
-      bankName: merchant.bankName,
-      bankAccountLast4: merchant.bankAccountLast4,
-      logo: merchant.logo,
-      cnicNumber: merchant.cnicNumber,
-      cnicImage: merchant.cnicImage,
-      cnicImageFront: merchant.cnicImageFront,
-      cnicImageBack: merchant.cnicImageBack,
-      storeCode: merchant.storeCode,
-      referralCodeUsed: merchant.referralCodeUsed,
-      createdAt: merchant.createdAt.toISOString(),
-      users: merchant.users.map((user) => ({
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        passwordHash: user.passwordHash,
-        paymentPasswordHash: user.paymentPasswordHash,
-        role: "MERCHANT" as const,
-        createdAt: user.createdAt.toISOString(),
-      })),
-      applications: merchant.applications.map((application) => ({
-        businessName: application.businessName,
-        contactName: application.contactName,
-        email: application.email,
-        phone: application.phone,
-        country: application.country,
-        category: application.category,
-        notes: application.notes,
-        status: application.status,
-        reviewNote: application.reviewNote,
-        referralCode: application.referralCode,
-        createdAt: application.createdAt.toISOString(),
-      })),
-    })),
-  };
+    applications: merchant.applications.map((application) => snapApplication(application)),
+  }));
+  const payload = keepUntilAdminRemoves(
+    previous,
+    liveStores,
+    orphanApplications.map((application) => snapApplication(application)),
+    extra,
+  );
   const body = `${JSON.stringify(payload)}\n`;
   for (const file of storeRecordsSnapshotPaths()) {
     try {

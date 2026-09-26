@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { persistentDataDirs, repoRoot } from "../scripts/copy-demo-db.mjs";
 
@@ -61,11 +61,74 @@ function cacheDirs(fileName: string) {
   return persistentDataDirs(repoRoot()).map((dir) => path.join(dir, fileName));
 }
 
+function parseJson(raw: string | null) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function mergePersistBody(fileName: string, incomingRaw: string) {
+  const incoming = parseJson(incomingRaw);
+  if (!incoming) return incomingRaw;
+  const locals = cacheDirs(fileName)
+    .map((file) => {
+      try {
+        return existsSync(file) ? parseJson(readFileSync(file, "utf8")) : null;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean) as Record<string, unknown>[];
+  if (fileName === "store-records.json") {
+    const stores = new Map<string, unknown>();
+    const deleted = new Set<string>();
+    for (const part of [...locals, incoming]) {
+      for (const slug of (part.deletedSlugs as string[] | undefined) ?? []) deleted.add(String(slug));
+      for (const store of (part.stores as Array<{ slug?: string }> | undefined) ?? []) {
+        if (store?.slug) stores.set(store.slug, store);
+      }
+    }
+    for (const slug of deleted) stores.delete(slug);
+    if (stores.size < ((incoming.stores as unknown[] | undefined)?.length ?? 0)) return incomingRaw;
+    return `${JSON.stringify({
+      ...incoming,
+      updatedAt: new Date().toISOString(),
+      stores: [...stores.values()],
+      deletedSlugs: [...deleted],
+    })}\n`;
+  }
+  if (fileName === "ops-users.json") {
+    const users = new Map<string, unknown>();
+    const deleted = new Set<string>();
+    for (const part of [...locals, incoming]) {
+      for (const email of (part.deletedEmails as string[] | undefined) ?? []) {
+        deleted.add(String(email).trim().toLowerCase());
+      }
+      for (const user of (part.users as Array<{ email?: string }> | undefined) ?? []) {
+        const email = String(user?.email || "").trim().toLowerCase();
+        if (email) users.set(email, { ...user, email });
+      }
+    }
+    for (const email of deleted) users.delete(email);
+    return `${JSON.stringify({
+      ...incoming,
+      updatedAt: new Date().toISOString(),
+      users: [...users.values()],
+      deletedEmails: [...deleted],
+    })}\n`;
+  }
+  return incomingRaw;
+}
+
 function writeCaches(fileName: string, body: string) {
+  const merged = mergePersistBody(fileName, body);
   for (const file of cacheDirs(fileName)) {
     try {
       mkdirSync(path.dirname(file), { recursive: true });
-      writeFileSync(file, body.endsWith("\n") ? body : `${body}\n`);
+      writeFileSync(file, merged.endsWith("\n") ? merged : `${merged}\n`);
     } catch (error) {
       console.warn("[harbor] remote persist cache write skipped", file, error);
     }

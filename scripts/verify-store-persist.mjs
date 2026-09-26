@@ -67,6 +67,11 @@ try {
     throw new Error("wipe did not remove the store");
   }
 
+  await snapshotStores(prisma);
+  if (!readStoreSnapshots().some((store) => store.slug === slug)) {
+    throw new Error("automatic wipe dropped the store from the keep-forever snapshot");
+  }
+
   const restored = await restoreStores(prisma);
   const store = await prisma.merchant.findUnique({
     where: { slug },
@@ -83,6 +88,18 @@ try {
   }
   if (!merchants.some((row) => row.slug === "northline-outfitters")) {
     throw new Error("Merchants list dropped an existing store");
+  }
+
+  await prisma.user.deleteMany({ where: { email } });
+  await prisma.merchantApplication.deleteMany({ where: { email } });
+  await prisma.merchant.delete({ where: { slug } });
+  await snapshotStores(prisma, { deletedSlug: slug });
+  await restoreStores(prisma);
+  if (await prisma.merchant.findUnique({ where: { slug } })) {
+    throw new Error("admin-deleted store came back after restore");
+  }
+  if (readStoreSnapshots().some((store) => store.slug === slug)) {
+    throw new Error("admin-deleted store remained in the snapshot");
   }
 
   console.log(

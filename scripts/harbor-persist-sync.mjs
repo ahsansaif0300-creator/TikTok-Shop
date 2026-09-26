@@ -3,7 +3,7 @@
  * Pull live persist snapshots and write data/ops-users.json plus data/store-records.json.
  * Used by .github/workflows/harbor-persist.yml
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const BASE = (process.env.HARBOR_PERSIST_LIVE_URL || "https://tikitok-shop.onrender.com").replace(/\/$/, "");
@@ -89,17 +89,76 @@ async function main() {
   }
 }
 
+function readJson(file) {
+  try {
+    if (!existsSync(file)) return null;
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function mergeOps(existing, incoming) {
+  const users = new Map();
+  const deleted = new Set();
+  for (const part of [existing, incoming]) {
+    for (const email of part?.deletedEmails ?? []) deleted.add(String(email).trim().toLowerCase());
+    for (const user of part?.users ?? []) {
+      const email = String(user?.email || "").trim().toLowerCase();
+      if (email) users.set(email, { ...user, email });
+    }
+  }
+  for (const email of deleted) users.delete(email);
+  return {
+    updatedAt: new Date().toISOString(),
+    users: [...users.values()],
+    deletedEmails: [...deleted],
+  };
+}
+
+function mergeStores(existing, incoming) {
+  const stores = new Map();
+  const deleted = new Set();
+  const orphans = new Map();
+  for (const part of [existing, incoming]) {
+    for (const slug of part?.deletedSlugs ?? []) deleted.add(String(slug).trim());
+    for (const store of part?.stores ?? []) {
+      if (store?.slug) stores.set(store.slug, store);
+    }
+    for (const application of part?.orphanApplications ?? []) {
+      const key = `${application?.email || ""}::${application?.businessName || ""}`;
+      if (key !== "::") orphans.set(key, application);
+    }
+  }
+  for (const slug of deleted) stores.delete(slug);
+  return {
+    updatedAt: new Date().toISOString(),
+    stores: [...stores.values()],
+    deletedSlugs: [...deleted],
+    orphanApplications: [...orphans.values()],
+  };
+}
+
 async function writePayload(payload) {
   if (!payload?.ok || !payload.ops) throw new Error("persist payload missing ops");
   mkdirSync(path.join(OUT, "persist"), { recursive: true });
-  writeFileSync(path.join(OUT, "persist", "backend-users.json"), `${JSON.stringify(payload.ops, null, 2)}\n`);
+  const opsFile = path.join(OUT, "persist", "backend-users.json");
+  const shopsFile = path.join(OUT, "persist", "shops.json");
+  const packedShops = path.join(OUT, "prisma", "recovered-stores.json");
+  const ops = mergeOps(readJson(opsFile), payload.ops);
+  writeFileSync(opsFile, `${JSON.stringify(ops, null, 2)}\n`);
   if (payload.stores) {
-    writeFileSync(path.join(OUT, "persist", "shops.json"), `${JSON.stringify(payload.stores)}\n`);
+    const shops = mergeStores(readJson(shopsFile) || readJson(packedShops), payload.stores);
+    if ((readJson(shopsFile)?.stores?.length || 0) > shops.stores.length) {
+      console.log("skip shrinking shops.json", readJson(shopsFile).stores.length, "->", shops.stores.length);
+    } else {
+      writeFileSync(shopsFile, `${JSON.stringify(shops)}\n`);
+    }
   }
   console.log(
     JSON.stringify({
       ok: true,
-      users: payload.ops.users?.length ?? 0,
+      users: ops.users?.length ?? 0,
       stores: payload.stores?.stores?.length ?? 0,
     }),
   );

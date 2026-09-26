@@ -93,16 +93,27 @@ export async function snapshotOpsUsers(prisma: PrismaClient, extra?: { deletedEm
   ]
     .filter((email) => email && !liveEmails.has(email))
     .sort();
-  const payload: OpsSnapshot = {
-    updatedAt: new Date().toISOString(),
-    users: users.map((user) => ({
-      email: user.email.trim().toLowerCase(),
+  const byEmail = new Map<string, OpsSnapshotUser>();
+  for (const user of previous.users) {
+    const email = user.email.trim().toLowerCase();
+    if (!email || deletedEmails.includes(email)) continue;
+    byEmail.set(email, { ...user, email });
+  }
+  for (const user of users) {
+    const email = user.email.trim().toLowerCase();
+    if (!email) continue;
+    byEmail.set(email, {
+      email,
       username: user.username,
       name: user.name,
       passwordHash: user.passwordHash,
       referralCode: user.referralCode,
       createdAt: user.createdAt.toISOString(),
-    })),
+    });
+  }
+  const payload: OpsSnapshot = {
+    updatedAt: new Date().toISOString(),
+    users: [...byEmail.values()].sort((a, b) => a.email.localeCompare(b.email)),
     deletedEmails,
   };
   const body = `${JSON.stringify(payload, null, 2)}\n`;

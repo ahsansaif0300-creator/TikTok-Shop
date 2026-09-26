@@ -46,6 +46,28 @@ jobs:
             prisma/recovered-stores.json
           sparse-checkout-cone-mode: false
 
+      - name: Wake live site
+        env:
+          HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
+        run: |
+          BASE="${HARBOR_PERSIST_LIVE_URL:-https://tikitok-shop.onrender.com}"
+          BASE="${BASE%/}"
+          for i in 1 2 3 4 5 6 7 8; do
+            code=$(curl -sS -m 60 -o /dev/null -w "%{http_code}" "$BASE/welcome" || true)
+            echo "wake $i $code"
+            if echo "$code" | grep -qE '200|301|302|303|307|308'; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "site still waking; heal will retry"
+
+      - name: Recreate missing live stores
+        env:
+          HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
+          HARBOR_PERSIST_OUT: ${{ github.workspace }}/_harbor_src
+        run: python3 _harbor_src/scripts/harbor-heal-live-stores.py
+
       - name: Export live records
         continue-on-error: true
         env:
@@ -55,12 +77,6 @@ jobs:
           HARBOR_PERSIST_SECRET: ${{ secrets.HARBOR_PERSIST_SECRET }}
           HARBOR_PERSIST_OUT: ${{ github.workspace }}
         run: node _harbor_src/scripts/harbor-persist-sync.mjs --heal
-
-      - name: Recreate missing live stores
-        env:
-          HARBOR_PERSIST_LIVE_URL: ${{ vars.HARBOR_PERSIST_LIVE_URL }}
-          HARBOR_PERSIST_OUT: ${{ github.workspace }}/_harbor_src
-        run: python3 _harbor_src/scripts/harbor-heal-live-stores.py
 
       - name: Commit persist snapshot
         run: |

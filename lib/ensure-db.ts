@@ -280,19 +280,22 @@ async function restorePersistedRecordsNow() {
     } catch (error) {
       console.warn("[harbor] remote persist pull skipped", error);
     }
+    let ok = true;
     try {
       const restored = await restoreOpsUsers(prisma);
       if (restored > 0) console.log(`[harbor] Restored ${restored} Normal Backend users`);
     } catch (error) {
+      ok = false;
       console.warn("[harbor] ops user restore skipped", error);
     }
     try {
       const restoredStores = await restoreStores(prisma);
       if (restoredStores > 0) console.log(`[harbor] Restored ${restoredStores} stores`);
     } catch (error) {
+      ok = false;
       console.warn("[harbor] store restore skipped", error);
     }
-    persistReady = true;
+    persistReady = ok;
   })().finally(() => {
     persistInflight = null;
   });
