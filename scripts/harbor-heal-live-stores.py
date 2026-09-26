@@ -120,9 +120,136 @@ def login():
     return merchants
 
 
-def wanted_stores():
+def seen_paths():
+    paths = [
+        ROOT / "persist" / "seen-stores.json",
+        Path("/tmp/heal-seen-stores.json"),
+    ]
+    extra = os.environ.get("HARBOR_SEEN_STORES")
+    if extra:
+        paths.insert(0, Path(extra))
+    return paths
+
+
+def read_store_lists():
+    rows = []
+    rows.extend(load_stores())
+    for path in seen_paths():
+        if not path.exists():
+            continue
+        try:
+            rows.extend((json.loads(path.read_text()).get("stores") or []))
+        except json.JSONDecodeError:
+            continue
+    return rows
+
+
+def merge_store_row(old, new):
+    if not old:
+        return dict(new)
+    out = dict(old)
+    for key, value in new.items():
+        if key in ("users", "applications"):
+            if not value:
+                continue
+            if old.get(key):
+                continue
+        if key == "city" and value in ("", new.get("country"), "Pakistan") and old.get("city") and old.get("city") not in ("", old.get("country"), "Pakistan"):
+            continue
+        if key in ("availableBalance", "pendingBalance"):
+            out[key] = max(float(old.get(key) or 0), float(value or 0))
+            continue
+        if value in (None, "", []) and old.get(key) not in (None, "", []):
+            continue
+        if value not in (None, "", []):
+            out[key] = value
+    return out
+
+
+def write_seen(stores):
+    payload = {
+        "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "stores": stores,
+    }
+    text = json.dumps(payload, indent=2) + "\n"
+    for path in seen_paths():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    shops = ROOT / "persist" / "shops.json"
+    if shops.exists() or ROOT.joinpath("persist").exists():
+        shops.parent.mkdir(parents=True, exist_ok=True)
+        current = {"stores": []}
+        if shops.exists():
+            try:
+                current = json.loads(shops.read_text())
+            except json.JSONDecodeError:
+                current = {"stores": []}
+        by_slug = {row.get("slug"): row for row in (current.get("stores") or []) if row.get("slug")}
+        for row in stores:
+            slug = row.get("slug")
+            if not slug or slug in DEMO_SLUGS:
+                continue
+            by_slug[slug] = merge_store_row(by_slug.get(slug), row)
+        current["stores"] = list(by_slug.values())
+        current["updatedAt"] = payload["updatedAt"]
+        shops.write_text(json.dumps(current) + "\n")
+
+
+def parse_ops_store(page):
+    name_match = re.search(r"<h1[^>]*>([^<]+)</h1>", page)
+    slug_match = re.search(r"/s/([a-z0-9-]+)", page)
+    email_match = re.search(r"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})", page)
+    phone_match = re.search(r">Phone</dt><dd[^>]*>([^<]+)", page)
+    city_match = re.search(r">City</dt><dd[^>]*>([^<]+)", page)
+    name = (name_match.group(1) if name_match else "").strip()
+    slug = (slug_match.group(1) if slug_match else "").strip()
+    email = (email_match.group(1) if email_match else "").strip().lower()
+    phone = (phone_match.group(1) if phone_match else "").strip()
+    city = (city_match.group(1) if city_match else "").strip()
+    if phone in {"—", "-"}:
+        phone = ""
+    if not name or not slug or not email or slug in DEMO_SLUGS:
+        return None
+    return {
+        "name": name,
+        "slug": slug,
+        "legalName": name,
+        "email": email,
+        "phone": phone,
+        "country": "Pakistan" if city in {"Pakistan", "karachi", "Lahore", ""} else "",
+        "city": city,
+        "status": "ACTIVE",
+        "availableBalance": 0,
+        "pendingBalance": 0,
+        "cnicNumber": "",
+        "referralCodeUsed": "",
+    }
+
+
+def remember_live_stores(merchants_html):
+    ids = sorted(set(re.findall(r"/merchants/(cmu[a-z0-9]+)", merchants_html)))
+    live = []
+    for mid in ids:
+        page = curl(["-L", f"{BASE}/merchants/{mid}"], f"/tmp/heal-m-{mid}.html")
+        row = parse_ops_store(page)
+        if row:
+            live.append(row)
+    known = {}
+    for row in read_store_lists() + live:
+        slug = row.get("slug")
+        if not slug or slug in DEMO_SLUGS:
+            continue
+        known[slug] = merge_store_row(known.get(slug), row)
+    remembered = list(known.values())
+    write_seen(remembered)
+    print("heal remembered", [row["name"] for row in remembered])
+    return remembered
+
+
+def wanted_stores(extra=None):
     wanted = []
-    for store in load_stores():
+    seen = {}
+    for store in read_store_lists() + (extra or []):
         name = store.get("name") or ""
         slug = store.get("slug") or ""
         email = (store.get("email") or "").lower()
@@ -130,9 +257,10 @@ def wanted_stores():
             continue
         if slug in DEMO_SLUGS:
             continue
-        if slug not in CLIENT_SLUGS and not email.endswith("@gmail.com"):
-            continue
-        wanted.append(store)
+        store = dict(store)
+        store["email"] = email
+        seen[slug] = merge_store_row(seen.get(slug), store)
+    wanted = list(seen.values())
     return wanted
 
 
@@ -374,10 +502,14 @@ def restore_details(wanted):
 
 def main():
     merchants = login()
-    wanted = wanted_stores()
+    remembered = remember_live_stores(merchants)
+    wanted = wanted_stores(remembered)
     missing = [store for store in wanted if store["name"] not in merchants and store["slug"] not in merchants]
     print("heal missing", [store["name"] for store in missing])
     recreate_missing(missing)
+    merchants = curl(["-L", f"{BASE}/merchants"], "/tmp/heal-mer-after.html")
+    remembered = remember_live_stores(merchants)
+    wanted = wanted_stores(remembered)
     mapping, final = restore_details(wanted)
     print("FINAL", [(store["name"], store["name"] in final) for store in wanted])
     missing_after = [store["name"] for store in wanted if store["name"] not in final]
