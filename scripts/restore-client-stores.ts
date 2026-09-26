@@ -19,6 +19,8 @@ type ClientStore = {
   referralCodeUsed?: string;
 };
 
+type PackedStore = Record<string, unknown> & { name: string; slug: string };
+
 const CLIENT_STORES: ClientStore[] = [
   {
     name: "Butt store",
@@ -85,8 +87,12 @@ const now = new Date().toISOString();
 async function main() {
   const passwordHash = await bcrypt.hash("HarborMerchant!2026", 10);
   const packed = packedRecoveredStoresPath();
-  const current = JSON.parse(await import("node:fs").then((fs) => fs.readFileSync(packed, "utf8")));
-  const bySlug = new Map((current.stores || []).map((store: { slug: string }) => [store.slug, store]));
+  const current = JSON.parse(await import("node:fs").then((fs) => fs.readFileSync(packed, "utf8"))) as {
+    stores?: PackedStore[];
+  };
+  const bySlug = new Map<string, PackedStore>(
+    (current.stores || []).map((store) => [store.slug, store]),
+  );
   for (const store of CLIENT_STORES) {
     bySlug.set(store.slug, {
       name: store.name,
@@ -144,22 +150,25 @@ async function main() {
   }
   const payload = {
     updatedAt: now,
-    stores: [...bySlug.values()].sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)),
+    stores: [...bySlug.values()].sort((a, b) => a.name.localeCompare(b.name)),
   };
   writeFileSync(packed, `${JSON.stringify(payload)}\n`);
   const shopsFile = path.join(path.resolve(import.meta.dirname, ".."), "persist", "shops.json");
   try {
-    const shops = JSON.parse(await import("node:fs").then((fs) => fs.readFileSync(shopsFile, "utf8")));
-    const shopBySlug = new Map((shops.stores || []).map((store: { slug: string }) => [store.slug, store]));
-    for (const store of payload.stores.filter((row: { slug: string }) =>
-      CLIENT_STORES.some((client) => client.slug === row.slug),
-    )) {
-      const previous = shopBySlug.get(store.slug) || {};
+    const shops = JSON.parse(await import("node:fs").then((fs) => fs.readFileSync(shopsFile, "utf8"))) as {
+      stores?: PackedStore[];
+    };
+    const shopBySlug = new Map<string, PackedStore>((shops.stores || []).map((store) => [store.slug, store]));
+    for (const store of payload.stores.filter((row) => CLIENT_STORES.some((client) => client.slug === row.slug))) {
+      const previous = shopBySlug.get(store.slug) || { name: store.name, slug: store.slug };
       shopBySlug.set(store.slug, { ...previous, ...store });
     }
     writeFileSync(
       shopsFile,
-      `${JSON.stringify({ updatedAt: now, stores: [...shopBySlug.values()].sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)) })}\n`,
+      `${JSON.stringify({
+        updatedAt: now,
+        stores: [...shopBySlug.values()].sort((a, b) => a.name.localeCompare(b.name)),
+      })}\n`,
     );
   } catch (error) {
     console.warn("[harbor] persist/shops.json pack skipped", error);
