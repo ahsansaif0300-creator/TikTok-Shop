@@ -89,7 +89,7 @@ export function Button({
   variant?: "primary" | "secondary" | "ghost" | "danger";
 }) {
   const styles = {
-    primary: "bg-accent text-white hover:bg-[#e11d48] hover:shadow-[0_0_0_1px_var(--cyan)]",
+    primary: "bg-accent text-white hover:bg-[#9f1840] hover:shadow-[0_0_0_1px_var(--cyan)]",
     secondary: "bg-white text-ink border border-line hover:bg-soft",
     ghost: "text-ink hover:bg-soft",
     danger: "bg-rose-600 text-white hover:bg-rose-700",

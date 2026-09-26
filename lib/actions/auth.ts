@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { findLoginUser } from "@/lib/login-db";
 import { clearSession, createSession, getSession, isStaff, requireSession } from "@/lib/auth";
 import { LOGIN, loginPathForRole } from "@/lib/access";
+import { displayStaffName } from "@/lib/staff-display";
 
 async function loginWithRole(formData: FormData, expectedRole: Role, failPath: string) {
   const identifier = String(formData.get("email") ?? formData.get("identifier") ?? "")
@@ -33,7 +34,7 @@ async function loginWithRole(formData: FormData, expectedRole: Role, failPath: s
     await createSession({
       userId: user.id,
       email: user.email,
-      name: user.name,
+      name: displayStaffName(user),
       role: user.role,
       merchantId: user.merchantId,
     });
@@ -44,7 +45,7 @@ async function loginWithRole(formData: FormData, expectedRole: Role, failPath: s
       await createSession({
         userId: user.id,
         email: user.email,
-        name: user.name,
+        name: displayStaffName(user),
         role: user.role,
         merchantId: user.merchantId,
       });
@@ -92,7 +93,7 @@ export async function loginSupportAction(formData: FormData) {
     await createSession({
       userId: user.id,
       email: user.email,
-      name: user.name,
+      name: displayStaffName(user),
       role: user.role,
       merchantId: user.merchantId,
     });
@@ -103,7 +104,7 @@ export async function loginSupportAction(formData: FormData) {
       await createSession({
         userId: user.id,
         email: user.email,
-        name: user.name,
+        name: displayStaffName(user),
         role: user.role,
         merchantId: user.merchantId,
       });
@@ -140,13 +141,14 @@ export async function updateProfileAction(formData: FormData) {
   if (!name) redirect("/profile?error=invalid");
   if (password && password.length < 8) redirect("/profile?error=password");
 
+  const publicName = displayStaffName({ name, role: session.role });
   await prisma.user.update({
     where: { id: session.userId },
     data: {
-      name,
+      name: publicName,
       ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
     },
   });
-  await createSession({ ...session, name });
+  await createSession({ ...session, name: publicName });
   redirect("/profile?saved=1");
 }
