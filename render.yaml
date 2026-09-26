@@ -12,7 +12,7 @@ services:
     repo: https://github.com/ahsansaif0300-creator/TikTok-Shop
     branch: cursor/tikitok-rebrand-host-7442
     autoDeploy: true
-    autoDeployTrigger: commit
+    autoDeployTrigger: checksPass
     buildCommand: npm ci && npm run build:render
     startCommand: npm run start
     healthCheckPath: /welcome
