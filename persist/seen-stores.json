@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-27T08:37:19Z",
+  "updatedAt": "2026-09-27T22:28:31Z",
   "stores": [
     {
       "name": "AK shopping store",
@@ -570,6 +570,20 @@
       "phone": "",
       "country": "",
       "city": "US",
+      "status": "ACTIVE",
+      "availableBalance": 0.0,
+      "pendingBalance": 0.0,
+      "cnicNumber": "",
+      "referralCodeUsed": ""
+    },
+    {
+      "name": "Ali Collections",
+      "slug": "ali-collections-2",
+      "legalName": "Ali Collections",
+      "email": "ta3374494@gmail.com",
+      "phone": "03075649452",
+      "country": "Pakistan",
+      "city": "Lahore",
       "status": "ACTIVE",
       "availableBalance": 0.0,
       "pendingBalance": 0.0,
