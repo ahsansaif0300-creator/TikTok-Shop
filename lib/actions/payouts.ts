@@ -108,5 +108,9 @@ export async function decidePayout(payoutId: string, action: PayoutDecision) {
       detail: `${payout.payoutNumber} ${action}`,
     },
   });
+  if (action === "PAID") {
+    const { snapshotStores } = await import("@/lib/stores-persist");
+    await snapshotStores(prisma);
+  }
   revalidatePath("/", "layout");
 }

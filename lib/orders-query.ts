@@ -3,14 +3,20 @@ import type { SessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { LiveOrder } from "@/lib/orders-live";
 import { merchantScope } from "@/lib/scope";
+import { orderProfitAmount } from "@/lib/order-economics";
+import { merchantVisibleOrdersWhere } from "@/lib/order-schedule";
+import { processDueStaffOrders } from "@/lib/process-due-orders";
 
 export async function listLiveOrders(
   session: SessionUser,
   { status = "", q = "" }: { status?: string; q?: string },
 ): Promise<LiveOrder[]> {
+  await processDueStaffOrders();
+  const merchantOnly = session.role === "MERCHANT" ? merchantVisibleOrdersWhere() : {};
   const orders = await prisma.order.findMany({
     where: {
       ...merchantScope(session),
+      ...merchantOnly,
       ...(status ? { status: status as OrderStatus } : {}),
       ...(q
         ? {
@@ -34,7 +40,7 @@ export async function listLiveOrders(
     updatedAt: order.updatedAt.toISOString(),
     total: order.total,
     cost: order.cost,
-    profit: order.profit,
+    profit: orderProfitAmount(order.total, order.cost),
     merchant: { name: order.merchant.name },
     customer: { name: order.customer.name, city: order.customer.city },
     items: order.items.map((item) => ({

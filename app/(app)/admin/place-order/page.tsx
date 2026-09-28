@@ -18,10 +18,10 @@ const ERRORS: Record<string, string> = {
 export default async function OrderSenderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ merchantId?: string; placed?: string; error?: string }>;
+  searchParams: Promise<{ merchantId?: string; placed?: string; error?: string; scheduled?: string; at?: string }>;
 }) {
   await requireSuperAdmin();
-  const { merchantId = "", placed, error } = await searchParams;
+  const { merchantId = "", placed, error, scheduled, at } = await searchParams;
   const selected = merchantId
     ? await prisma.merchant.findUnique({
         where: { id: merchantId },
@@ -73,12 +73,16 @@ export default async function OrderSenderPage({
       />
       {placedOrders.length === 1 ? (
         <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          Order {placedOrders[0]} was placed and is visible in the store backend.
+          {scheduled
+            ? `Order ${placedOrders[0]} is scheduled${at ? ` for ${at}` : ""} and will appear in the store at that time.`
+            : `Order ${placedOrders[0]} was placed and is visible in the store backend.`}
         </p>
       ) : null}
       {placedOrders.length > 1 ? (
         <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {placedOrders.length} orders were placed and are visible in the store backend.
+          {scheduled
+            ? `${placedOrders.length} orders are scheduled${at ? ` for ${at}` : ""} and will appear in the store at that time.`
+            : `${placedOrders.length} orders were placed and are visible in the store backend.`}
         </p>
       ) : null}
       {error && ERRORS[error] ? (

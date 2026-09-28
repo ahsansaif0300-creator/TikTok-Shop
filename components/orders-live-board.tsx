@@ -113,7 +113,12 @@ export function OrdersLiveBoard({
                     <dd className="mt-1 font-semibold text-ink">{money(order.profit)}</dd>
                   </div>
                 </dl>
-                <PickupDialog orderId={order.id} orderNumber={order.orderNumber} amountLabel={money(order.total)} />
+                <PickupDialog
+                  orderId={order.id}
+                  orderNumber={order.orderNumber}
+                  amountLabel={money(order.cost)}
+                  totalLabel={money(order.total)}
+                />
               </div>
             </Card>
           ))}

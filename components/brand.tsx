@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { BRAND_NAME } from "@/lib/brand-name";
+import { BRAND_DISCLAIMER, BRAND_NAME } from "@/lib/brand-name";
 
 /** Client-supplied mark. Served as-is from /public — do not redraw. */
 export const BRAND_MARK_SRC = "/brand-mark.webp";
@@ -66,12 +66,15 @@ export function BrandFooter({ light = true }: { light?: boolean }) {
   return (
     <div
       className={cn(
-        "mt-auto flex items-center justify-center gap-2 pt-10 text-[11px]",
+        "mt-auto flex flex-col items-center justify-center gap-2 pt-10 text-center text-[11px]",
         light ? "text-white/50" : "text-muted",
       )}
     >
-      <BrandMark size="xs" />
-      <span>{BRAND_NAME}</span>
+      <span className="flex items-center gap-2">
+        <BrandMark size="xs" />
+        <span>{BRAND_NAME}</span>
+      </span>
+      <span className={light ? "max-w-sm text-white/35" : "max-w-sm text-muted"}>{BRAND_DISCLAIMER}</span>
     </div>
   );
 }

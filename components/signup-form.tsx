@@ -175,7 +175,7 @@ export function SignupForm({ error }: { error?: string }) {
           />
           <span className="block text-xs text-muted">Numbers only.</span>
         </label>
-        <button className="h-11 w-full rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#e11d48]">
+        <button className="h-11 w-full rounded-xl bg-accent text-sm font-semibold text-white hover:bg-[#9f1840]">
           Create shop
         </button>
         <p className="text-center text-sm text-muted">

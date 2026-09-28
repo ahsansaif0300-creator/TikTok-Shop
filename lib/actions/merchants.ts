@@ -8,6 +8,7 @@ import { uniqueMerchantSlug } from "@/lib/slug";
 import { allocateStoreCode } from "@/lib/store-code";
 import { DEFAULT_STORE_CREDIT, DEFAULT_STORE_RATING } from "@/lib/store-score";
 import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
+import { snapshotStores } from "@/lib/stores-persist";
 
 export async function setMerchantStatus(merchantId: string, status: MerchantStatus) {
   const session = await requireSession();
@@ -28,6 +29,7 @@ export async function setMerchantStatus(merchantId: string, status: MerchantStat
       detail: `Set merchant status to ${status}`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath("/", "layout");
 }
 
@@ -48,6 +50,7 @@ export async function assignPlan(formData: FormData) {
       detail: `Assigned plan ${plan.name}`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath(`/merchants/${merchantId}`);
 }
 
@@ -75,6 +78,7 @@ export async function createApplication(formData: FormData) {
       detail: `Logged inbound application for ${businessName}`,
     },
   });
+  await snapshotStores(prisma);
   revalidatePath("/merchants/applications");
 }
 
@@ -112,6 +116,7 @@ export async function reviewApplication(formData: FormData) {
         detail: `Rejected ${application.businessName}`,
       },
     });
+    await snapshotStores(prisma);
     revalidatePath("/", "layout");
     return;
   }
@@ -190,5 +195,6 @@ export async function reviewApplication(formData: FormData) {
       });
     }
   }
+  await snapshotStores(prisma);
   revalidatePath("/", "layout");
 }
