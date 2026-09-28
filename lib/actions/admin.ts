@@ -153,7 +153,7 @@ export async function placeStaffOrder(formData: FormData) {
   });
   if (!dueNow) {
     placedQuery.set("scheduled", "1");
-    placedQuery.set("at", createdAt.toISOString());
+    placedQuery.set("at", orderTimeRaw.replace("T", " "));
   }
   redirect(`/admin/place-order?${placedQuery.toString()}`);
 }

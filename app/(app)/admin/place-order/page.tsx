@@ -74,14 +74,14 @@ export default async function OrderSenderPage({
       {placedOrders.length === 1 ? (
         <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {scheduled
-            ? `Order ${placedOrders[0]} is scheduled${at ? ` for ${new Date(at).toLocaleString()}` : ""} and will appear in the store at that time.`
+            ? `Order ${placedOrders[0]} is scheduled${at ? ` for ${at}` : ""} and will appear in the store at that time.`
             : `Order ${placedOrders[0]} was placed and is visible in the store backend.`}
         </p>
       ) : null}
       {placedOrders.length > 1 ? (
         <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {scheduled
-            ? `${placedOrders.length} orders are scheduled${at ? ` for ${new Date(at).toLocaleString()}` : ""} and will appear in the store at that time.`
+            ? `${placedOrders.length} orders are scheduled${at ? ` for ${at}` : ""} and will appear in the store at that time.`
             : `${placedOrders.length} orders were placed and are visible in the store backend.`}
         </p>
       ) : null}
