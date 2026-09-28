@@ -3,12 +3,17 @@ import type { SessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { merchantScope } from "@/lib/scope";
 import { ensureMerchantCatalog } from "@/lib/sync-distribution-catalog";
+import { merchantVisibleOrdersWhere } from "@/lib/order-schedule";
+import { processDueStaffOrders } from "@/lib/process-due-orders";
 
 export async function getDashboardData(session: SessionUser) {
   if (session.role === "MERCHANT" && session.merchantId) {
     await ensureMerchantCatalog(prisma, session.merchantId);
   }
+  await processDueStaffOrders();
   const scope = merchantScope(session);
+  const visible = session.role === "MERCHANT" ? merchantVisibleOrdersWhere() : {};
+  const orderScope = { ...scope, ...visible };
   const now = new Date();
   const since = subDays(now, 14);
   const startOfDay = new Date(now);
@@ -31,17 +36,17 @@ export async function getDashboardData(session: SessionUser) {
     chartOrders,
     lowStock,
   ] = await Promise.all([
-    prisma.order.count({ where: scope }),
+    prisma.order.count({ where: orderScope }),
     prisma.order.aggregate({
-      where: { ...scope, status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] } },
+      where: { ...orderScope, status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] } },
       _sum: { total: true },
     }),
     prisma.order.count({
-      where: { ...scope, createdAt: { gte: startOfDay }, status: { not: "CANCELLED" } },
+      where: { ...orderScope, createdAt: { gte: startOfDay }, status: { not: "CANCELLED" } },
     }),
     prisma.order.aggregate({
       where: {
-        ...scope,
+        ...orderScope,
         createdAt: { gte: startOfDay },
         status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] },
       },
@@ -56,10 +61,10 @@ export async function getDashboardData(session: SessionUser) {
       ? Promise.resolve(0)
       : prisma.merchantApplication.count({ where: { status: "PENDING" } }),
     prisma.order.count({
-      where: { ...scope, status: { in: ["PAID", "PROCESSING"] } },
+      where: { ...orderScope, status: { in: ["PAID", "PROCESSING"] } },
     }),
     prisma.order.count({
-      where: { ...scope, status: "PENDING_PAYMENT" },
+      where: { ...orderScope, status: "PENDING_PAYMENT" },
     }),
     isMerchant && session.merchantId
       ? prisma.merchant.findUnique({
@@ -77,13 +82,13 @@ export async function getDashboardData(session: SessionUser) {
         })
       : Promise.resolve(null),
     prisma.order.findMany({
-      where: scope,
+      where: orderScope,
       include: { merchant: true, customer: true, items: true },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
       take: 8,
     }),
     prisma.order.findMany({
-      where: { ...scope, createdAt: { gte: since }, status: { not: "CANCELLED" } },
+      where: { ...orderScope, createdAt: { gte: since }, status: { not: "CANCELLED" } },
       select: { createdAt: true, total: true },
     }),
     prisma.product.findMany({

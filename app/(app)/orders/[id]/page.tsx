@@ -13,6 +13,7 @@ import { PickupDialog } from "@/components/pickup-dialog";
 import { ProductThumb } from "@/components/product-thumb";
 import { Button, Card, Field, PageHeader, StatusBadge, TableWrap, Td, Th } from "@/components/ui";
 import { orderProfitAmount } from "@/lib/order-economics";
+import { isOrderDue } from "@/lib/order-schedule";
 
 export default async function OrderDetailPage({
   params,
@@ -32,6 +33,7 @@ export default async function OrderDetailPage({
     },
   });
   if (!order || !canAccessMerchant(session, order.merchantId)) notFound();
+  if (session.role === "MERCHANT" && !isOrderDue(order.createdAt)) notFound();
   const [carriers, logs] = await Promise.all([
     prisma.carrier.findMany({ where: { active: true } }),
     prisma.auditLog.findMany({
@@ -69,7 +71,8 @@ export default async function OrderDetailPage({
           <PickupDialog
             orderId={order.id}
             orderNumber={order.orderNumber}
-            amountLabel={money(order.total)}
+            amountLabel={money(order.cost)}
+            totalLabel={money(order.total)}
             cancelHref={`/orders/${order.id}`}
           />
         ) : null}

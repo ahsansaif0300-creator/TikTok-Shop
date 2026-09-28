@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { requireMerchant } from "@/lib/auth";
 import { canAccessMerchant } from "@/lib/scope";
 import { orderProfitAmount } from "@/lib/order-economics";
+import { orderPickupCharge } from "@/lib/order-pickup";
+import { isOrderDue } from "@/lib/order-schedule";
 
 export async function pickUpOrder(formData: FormData) {
   const session = await requireMerchant();
@@ -24,9 +26,11 @@ export async function pickUpOrder(formData: FormData) {
   }
 
   const existing = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!existing || !canAccessMerchant(session, existing.merchantId)) {
+  if (!existing || !canAccessMerchant(session, existing.merchantId) || !isOrderDue(existing.createdAt)) {
     redirect("/orders?error=invalid");
   }
+
+  const charge = orderPickupCharge(existing);
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -36,7 +40,7 @@ export async function pickUpOrder(formData: FormData) {
           status: "PAID",
           paidAt: existing.paidAt ?? new Date(),
           pickedAt: new Date(),
-          pickupHold: existing.total,
+          pickupHold: charge,
           profit: orderProfitAmount(existing.total, existing.cost),
         },
       });
@@ -45,7 +49,7 @@ export async function pickUpOrder(formData: FormData) {
       }
 
       const merchant = await tx.merchant.findUnique({ where: { id: session.merchantId } });
-      if (!merchant || merchant.availableBalance < existing.total) {
+      if (!merchant || merchant.availableBalance < charge) {
         throw new Error("Insufficient Balance");
       }
 
@@ -54,7 +58,7 @@ export async function pickUpOrder(formData: FormData) {
       await tx.merchant.update({
         where: { id: session.merchantId },
         data: {
-          availableBalance: { decrement: existing.total },
+          availableBalance: { decrement: charge },
           ...(existing.paidAt ? {} : { pendingBalance: { increment: profit } }),
         },
       });
@@ -73,9 +77,9 @@ export async function pickUpOrder(formData: FormData) {
         data: {
           merchantId: session.merchantId,
           type: "ADJUSTMENT",
-          amount: -existing.total,
+          amount: -charge,
           reference: existing.orderNumber,
-          note: "Pickup reserve",
+          note: "Pickup reserve at cost price",
         },
       });
       await tx.auditLog.create({

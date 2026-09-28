@@ -14,6 +14,7 @@ import { snapshotOpsUsers } from "@/lib/ops-users-store";
 import { snapshotStores } from "@/lib/stores-persist";
 import { parseStoreCreditScore, parseStoreRating } from "@/lib/store-score";
 import { orderProfitAmount } from "@/lib/order-economics";
+import { isOrderDue, parseOrderWallTime, PLACED_STAFF_NOTE, SCHEDULED_STAFF_NOTE } from "@/lib/order-schedule";
 
 function fail(path: string, code: string): never {
   redirect(`${path}?error=${code}`);
@@ -43,6 +44,7 @@ export async function placeStaffOrder(formData: FormData) {
   const intent = String(formData.get("intent") ?? "selected");
   const quantity = Number(formData.get("quantity") ?? 1);
   const orderTimeRaw = String(formData.get("orderTime") ?? "").trim();
+  const orderTimeOffset = String(formData.get("orderTimeOffset") ?? "").trim();
   if (!merchantId || !customerId) failPlace("invalid", merchantId);
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) failPlace("qty", merchantId);
 
@@ -65,10 +67,11 @@ export async function placeStaffOrder(formData: FormData) {
   const sendable = intent === "all" ? products.filter((product) => product.stock >= quantity) : products;
   if (sendable.length === 0 || sendable.some((product) => product.stock < quantity)) failPlace("stock", merchant.id);
 
-  const createdAt = orderTimeRaw ? new Date(orderTimeRaw) : new Date();
+  const createdAt = orderTimeRaw ? parseOrderWallTime(orderTimeRaw, orderTimeOffset) : new Date();
   if (Number.isNaN(createdAt.getTime())) failPlace("time", merchant.id);
 
   const now = new Date();
+  const dueNow = isOrderDue(createdAt, now);
   const stamp = Date.now().toString(36).toUpperCase();
   const numbers: string[] = [];
 
@@ -96,7 +99,7 @@ export async function placeStaffOrder(formData: FormData) {
           cost,
           profit,
           platformFee,
-          notes: "Placed by super admin",
+          notes: dueNow ? PLACED_STAFF_NOTE : SCHEDULED_STAFF_NOTE,
           walletReleased: false,
           placedByUserId: session.userId,
           paidAt: null,
@@ -132,17 +135,27 @@ export async function placeStaffOrder(formData: FormData) {
   });
 
   const first = sendable[0];
-  await notifyStore(
-    merchant.id,
-    numbers.length === 1 ? "New order" : "New orders",
-    numbers.length === 1
-      ? `${numbers[0]} for ${first?.title ?? "a product"} × ${quantity} is unpaid and waiting for pickup.`
-      : `${numbers.length} unpaid orders are waiting for pickup.`,
-    "/orders",
-  );
+  if (dueNow) {
+    await notifyStore(
+      merchant.id,
+      numbers.length === 1 ? "New order" : "New orders",
+      numbers.length === 1
+        ? `${numbers[0]} for ${first?.title ?? "a product"} × ${quantity} is unpaid and waiting for pickup.`
+        : `${numbers.length} unpaid orders are waiting for pickup.`,
+      "/orders",
+    );
+  }
   revalidatePath("/", "layout");
   revalidatePath("/orders");
-  redirect(`/admin/place-order?placed=${encodeURIComponent(numbers.join(","))}&merchantId=${merchant.id}`);
+  const placedQuery = new URLSearchParams({
+    placed: numbers.join(","),
+    merchantId: merchant.id,
+  });
+  if (!dueNow) {
+    placedQuery.set("scheduled", "1");
+    placedQuery.set("at", createdAt.toISOString());
+  }
+  redirect(`/admin/place-order?${placedQuery.toString()}`);
 }
 
 export async function addStoreFunds(formData: FormData) {

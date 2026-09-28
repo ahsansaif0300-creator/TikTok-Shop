@@ -81,8 +81,17 @@ export function OrderSenderBoard({
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [localError, setLocalError] = useState("");
   const [sending, setSending] = useState(false);
+  const [orderTime, setOrderTime] = useState(timeValue);
+  const [timeOffset, setTimeOffset] = useState(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const now = new Date();
+    setTimeOffset(now.getTimezoneOffset());
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+    setOrderTime(local.toISOString().slice(0, 16));
+  }, []);
 
   const allIds = useMemo(() => products.map((item) => item.id), [products]);
   const allSelected = products.length > 0 && allIds.every((id) => picked.has(id));
@@ -268,13 +277,15 @@ export function OrderSenderBoard({
                     className="h-11 w-full rounded-xl border border-line px-3"
                   />
                 </label>
+                <input type="hidden" name="orderTimeOffset" value={String(timeOffset)} />
                 <label className="block space-y-1.5 text-sm">
                   <span className="font-medium">Order time</span>
                   <input
                     name="orderTime"
                     type="datetime-local"
                     required
-                    defaultValue={timeValue}
+                    value={orderTime}
+                    onChange={(event) => setOrderTime(event.target.value)}
                     className="h-11 w-full rounded-xl border border-line px-3"
                   />
                 </label>
