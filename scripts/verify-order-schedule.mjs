@@ -14,7 +14,10 @@ function parseOrderWallTime(raw, offsetMinutesRaw = "") {
   const minute = Number(match[5]);
   const second = Number(match[6] ?? 0);
   const parsedOffset = Number(offsetMinutesRaw);
-  const offsetMinutes = Number.isFinite(parsedOffset) ? parsedOffset : FALLBACK_TIMEZONE_OFFSET_MINUTES;
+  const offsetMinutes =
+    offsetMinutesRaw.trim() !== "" && Number.isFinite(parsedOffset)
+      ? parsedOffset
+      : FALLBACK_TIMEZONE_OFFSET_MINUTES;
   return new Date(Date.UTC(year, month - 1, day, hour, minute, second) + offsetMinutes * 60_000);
 }
 
@@ -26,6 +29,16 @@ const pakistanOffset = -300;
 const wall = parseOrderWallTime("2026-09-27T17:57", String(pakistanOffset));
 if (wall.getUTCHours() !== 12 || wall.getUTCMinutes() !== 57) {
   throw new Error(`expected 12:57 UTC for 17:57 PKT, got ${wall.toISOString()}`);
+}
+
+const missingOffset = parseOrderWallTime("2026-09-27T17:57", "");
+if (missingOffset.getTime() !== wall.getTime()) {
+  throw new Error("empty timezone offset must fall back to Pakistan UTC+5, not UTC");
+}
+
+const utcOffset = parseOrderWallTime("2026-09-27T17:57", "0");
+if (utcOffset.getUTCHours() !== 17 || utcOffset.getUTCMinutes() !== 57) {
+  throw new Error("explicit UTC offset 0 must stay 17:57 UTC");
 }
 
 const wronglyUtc = Date.UTC(2026, 8, 27, 17, 57);

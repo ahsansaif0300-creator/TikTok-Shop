@@ -23,7 +23,10 @@ export function parseOrderWallTime(raw: string, offsetMinutesRaw = "") {
   const minute = Number(match[5]);
   const second = Number(match[6] ?? 0);
   const parsedOffset = Number(offsetMinutesRaw);
-  const offsetMinutes = Number.isFinite(parsedOffset) ? parsedOffset : FALLBACK_TIMEZONE_OFFSET_MINUTES;
+  const offsetMinutes =
+    offsetMinutesRaw.trim() !== "" && Number.isFinite(parsedOffset)
+      ? parsedOffset
+      : FALLBACK_TIMEZONE_OFFSET_MINUTES;
   return new Date(Date.UTC(year, month - 1, day, hour, minute, second) + offsetMinutes * 60_000);
 }
 

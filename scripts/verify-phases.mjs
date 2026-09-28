@@ -1188,6 +1188,8 @@ async function phase6Static() {
     assert(staffOrder.includes("SCHEDULED_STAFF_NOTE"), "Order Sender must hold future orders until the set time");
     assert(read("lib/orders-query.ts").includes("merchantVisibleOrdersWhere"), "Store orders must hide future scheduled orders");
     assert(read("components/order-sender-board.tsx").includes("orderTimeOffset"), "Order Sender must send the operator timezone");
+    assert(read("lib/order-schedule.ts").includes('offsetMinutesRaw.trim() !== ""'), "Missing timezone offset must not parse as UTC");
+    assert(read("components/order-sender-board.tsx").includes("min={minTime"), "Order time must not default to a past year");
     assert(exists("app/api/orders/live/route.ts"), "Store orders live API missing");
     assert(exists("app/ol1/route.ts"), "Hostinger-uncached orders live path missing");
     assert(exists("components/orders-live-board.tsx"), "Store orders live board missing");

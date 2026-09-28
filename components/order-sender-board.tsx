@@ -83,6 +83,7 @@ export function OrderSenderBoard({
   const [sending, setSending] = useState(false);
   const [orderTime, setOrderTime] = useState(timeValue);
   const [timeOffset, setTimeOffset] = useState(0);
+  const [minTime, setMinTime] = useState("");
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
@@ -90,7 +91,9 @@ export function OrderSenderBoard({
     const now = new Date();
     setTimeOffset(now.getTimezoneOffset());
     const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-    setOrderTime(local.toISOString().slice(0, 16));
+    const stamp = local.toISOString().slice(0, 16);
+    setOrderTime(stamp);
+    setMinTime(`${stamp.slice(0, 10)}T00:00`);
   }, []);
 
   const allIds = useMemo(() => products.map((item) => item.id), [products]);
@@ -284,6 +287,7 @@ export function OrderSenderBoard({
                     name="orderTime"
                     type="datetime-local"
                     required
+                    min={minTime || undefined}
                     value={orderTime}
                     onChange={(event) => setOrderTime(event.target.value)}
                     className="h-11 w-full rounded-xl border border-line px-3"
