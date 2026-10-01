@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-01T08:04:07Z",
+  "updatedAt": "2026-10-01T08:33:58Z",
   "stores": [
     {
       "name": "AK shopping store",
@@ -654,6 +654,20 @@
       "phone": "03264500572",
       "country": "Pakistan",
       "city": "Lahore",
+      "status": "ACTIVE",
+      "availableBalance": 0.0,
+      "pendingBalance": 0.0,
+      "cnicNumber": "",
+      "referralCodeUsed": ""
+    },
+    {
+      "name": "Alina Mart",
+      "slug": "alina-mart",
+      "legalName": "Alina Mart",
+      "email": "alinamalik200@gmail.com",
+      "phone": "030000000",
+      "country": "",
+      "city": "Maimi",
       "status": "ACTIVE",
       "availableBalance": 0.0,
       "pendingBalance": 0.0,
