@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-01T08:48:42Z",
+  "updatedAt": "2026-10-01T10:50:30Z",
   "stores": [
     {
       "name": "AK shopping store",
@@ -666,7 +666,7 @@
       "legalName": "Alina Mart",
       "email": "alinamalik200@gmail.com",
       "phone": "030000000",
-      "country": "",
+      "country": "Pakistan",
       "city": "Maimi",
       "status": "ACTIVE",
       "availableBalance": 0.0,
