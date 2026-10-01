@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-28T13:01:19Z",
+  "updatedAt": "2026-10-01T02:57:05Z",
   "stores": [
     {
       "name": "AK shopping store",
@@ -199,7 +199,7 @@
       "email": "pending.store@example.test",
       "phone": "",
       "country": "United States",
-      "city": "Austin",
+      "city": "United States",
       "address": "Address pending",
       "status": "ACTIVE",
       "planName": "Starter",
@@ -256,7 +256,7 @@
       "email": "review.shop.2026@example.test",
       "phone": "5550100",
       "country": "United States",
-      "city": "Austin",
+      "city": "United States",
       "address": "Address pending",
       "status": "ACTIVE",
       "planName": "Starter",
@@ -624,7 +624,7 @@
       "legalName": "Swift Cart",
       "email": "yousaf.ali86@hotmail.com",
       "phone": "00971565759177",
-      "country": "",
+      "country": "Pakistan",
       "city": "Abu Dhabi",
       "status": "ACTIVE",
       "availableBalance": 0.0,
